@@ -1,0 +1,164 @@
+{
+  "metricConfiguration": {
+    "version": "1.0",
+    "lastUpdated": "2025-10-07T09:00:00Z",
+    "categories": [
+      {
+        "categoryName": "General Evaluators",
+        "description": "Metrics applicable to most evaluation scenarios for general quality assessment.",
+        "metrics": [
+          {
+            "metricName": "accuracy",
+            "description": "Measures how often the output matches the correct or expected result.",
+            "defaultThreshold": 0.8,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "completeness",
+            "description": "Checks whether all parts of the expected answer are covered in the response.",
+            "defaultThreshold": 0.75,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "fluency",
+            "description": "Evaluates the grammatical and linguistic quality of the generated text.",
+            "defaultThreshold": 0.85,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "relevance",
+            "description": "Determines how relevant the response is to the input prompt or question.",
+            "defaultThreshold": 0.8,
+            "enabled": true,
+            "isMandatory": false
+          }
+        ]
+      },
+      {
+        "categoryName": "RAG Evaluators",
+        "description": "Metrics focused on Retrieval-Augmented Generation models that combine retrieval and generation steps.",
+        "metrics": [
+          {
+            "metricName": "contextRecall",
+            "description": "Measures how accurately the retrieved context supports the generated answer.",
+            "defaultThreshold": 0.7,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "contextPrecision",
+            "description": "Evaluates how relevant and non-redundant the retrieved documents are.",
+            "defaultThreshold": 0.75,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "faithfulness",
+            "description": "Checks if the generated response is consistent with retrieved facts.",
+            "defaultThreshold": 0.8,
+            "enabled": true,
+            "isMandatory": false
+          }
+        ]
+      },
+      {
+        "categoryName": "Textual Similarity Evaluators",
+        "description": "Metrics that assess similarity between generated and reference texts.",
+        "metrics": [
+          {
+            "metricName": "bleu",
+            "description": "Evaluates n-gram overlap between generated and reference texts.",
+            "defaultThreshold": 0.6,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "rougeL",
+            "description": "Measures longest common subsequence overlap between responses and references.",
+            "defaultThreshold": 0.65,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "bertScore",
+            "description": "Computes semantic similarity using contextual embeddings.",
+            "defaultThreshold": 0.85,
+            "enabled": true,
+            "isMandatory": false
+          }
+        ]
+      },
+      {
+        "categoryName": "Agent Evaluators",
+        "description": "Metrics specific to evaluating multi-step reasoning, tool use, and interaction in agentic workflows.",
+        "metrics": [
+          {
+            "metricName": "goalCompletion",
+            "description": "Determines whether the agent successfully completed the intended task or goal.",
+            "defaultThreshold": 0.8,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "actionEfficiency",
+            "description": "Evaluates how efficiently the agent achieved the goal (minimal steps or tool calls).",
+            "defaultThreshold": 0.7,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "toolInvocationAccuracy",
+            "description": "Assesses correctness and relevance of external tool or API calls by the agent.",
+            "defaultThreshold": 0.75,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "reasoningTraceQuality",
+            "description": "Measures the clarity and correctness of reasoning steps in the agent’s thought process.",
+            "defaultThreshold": 0.8,
+            "enabled": true,
+            "isMandatory": false
+          }
+        ]
+      },
+      {
+        "categoryName": "Safety & Security Evaluators",
+        "description": "Metrics for detecting harmful, biased, or unsafe outputs.",
+        "metrics": [
+          {
+            "metricName": "toxicity",
+            "description": "Checks for harmful, offensive, or inappropriate content in the response.",
+            "defaultThreshold": 0.9,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "bias",
+            "description": "Assesses the degree of demographic, cultural, or political bias in generated content.",
+            "defaultThreshold": 0.85,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "dataLeakage",
+            "description": "Ensures no private or sensitive information is exposed in the generated output.",
+            "defaultThreshold": 1.0,
+            "enabled": true,
+            "isMandatory": false
+          },
+          {
+            "metricName": "compliance",
+            "description": "Checks adherence to organization or domain-specific compliance standards.",
+            "defaultThreshold": 0.95,
+            "enabled": true,
+            "isMandatory": false
+          }
+        ]
+      }
+    ]
+  }
+}
