@@ -37,28 +37,5 @@ public class HealthController : ControllerBase
         return Ok(healthStatus);
     }
 
-    /// <summary>
-    /// Get detailed health information
-    /// </summary>
-    /// <returns>Detailed health information</returns>
-    // [HttpGet("detailed")]
-    // [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    // public IActionResult GetDetailedHealth()
-    // {
-    //     _logger.LogInformation("Detailed health check requested");
-        
-    //     var detailedHealth = new
-    //     {
-    //         Status = "Healthy",
-    //         Timestamp = DateTime.UtcNow,
-    //         Version = "1.0.0",
-    //         Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
-    //         MachineName = Environment.MachineName,
-    //         ProcessorCount = Environment.ProcessorCount,
-    //         WorkingSet = Environment.WorkingSet,
-    //         OSVersion = Environment.OSVersion.ToString()
-    //     };
-
-    //     return Ok(detailedHealth);
-    // }
+   
 }

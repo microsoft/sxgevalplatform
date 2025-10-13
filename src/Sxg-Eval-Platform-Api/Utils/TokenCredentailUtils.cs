@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 
-namespace SxgEvalPlatformApi.Services
+namespace SxgEvalPlatformApi.Utils
 {
     public class TokenCredentailUtils
     {

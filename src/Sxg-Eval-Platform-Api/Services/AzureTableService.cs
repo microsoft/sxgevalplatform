@@ -2,6 +2,7 @@ using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Utils;
 
 namespace SxgEvalPlatformApi.Services;
 
