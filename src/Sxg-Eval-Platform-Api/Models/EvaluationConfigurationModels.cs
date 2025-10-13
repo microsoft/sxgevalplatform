@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure;
+using Azure.Data.Tables;
 
 namespace SxgEvalPlatformApi.Models;
 
@@ -40,7 +42,7 @@ public class EvaluationConfigurationDto
 /// <summary>
 /// Data transfer object for creating evaluation configuration
 /// </summary>
-[JsonConverter(typeof(Converters.CreateMetricsConfigurationDtoConverter))]
+//[JsonConverter(typeof(Converters.CreateMetricsConfigurationDtoConverter))]
 public class CreateMetricsConfigurationDto
 {
     [Required]
@@ -58,10 +60,13 @@ public class CreateMetricsConfigurationDto
     
     [StringLength(500)]
     public string? Description { get; set; }
-    
+
+    //[Required]
+    //public JsonElement MetricsConfiguration { get; set; }
+
     [Required]
-    public JsonElement MetricsConfiguration { get; set; }
-   
+    public IList<MetricsConfiguration> MetricsConfiguration { get; set; } = new List<MetricsConfiguration>();
+
 }
 
 /// <summary>
@@ -141,4 +146,60 @@ public class DatasetSummaryDto
     public string Type { get; set; } = string.Empty;
     
     public string Source { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Azure Table entity for configuration metadata
+/// </summary>
+public class ConfigurationMetadataEntity : ITableEntity
+{
+    /// <summary>
+    /// Configuration ID - GUID generated automatically
+    /// </summary>
+    public string ConfigurationId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Type of configuration: PlatformConfiguration or ApplicationConfiguration
+    /// </summary>
+    public string ConfigurationType { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Last updated timestamp
+    /// </summary>
+    public DateTime LastUpdatedOn { get; set; }
+    
+    /// <summary>
+    /// Container name where blob is stored
+    /// </summary>
+    public string ContainerName { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Blob file path including folder and file name
+    /// </summary>
+    public string BlobFilePath { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Agent ID
+    /// </summary>
+    public string AgentId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Configuration name
+    /// </summary>
+    public string ConfigurationName { get; set; } = string.Empty;
+    
+    // ITableEntity implementation
+    public string PartitionKey { get; set; } = string.Empty;
+    public string RowKey { get; set; } = string.Empty;
+    public DateTimeOffset? Timestamp { get; set; }
+    public ETag ETag { get; set; }
+}
+
+/// <summary>
+/// Configuration types enum
+/// </summary>
+public static class ConfigurationTypes
+{
+    public const string PlatformConfiguration = "PlatformConfiguration";
+    public const string ApplicationConfiguration = "ApplicationConfiguration";
 }

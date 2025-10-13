@@ -49,8 +49,16 @@ builder.Services.AddAutoMapper(typeof(Program));
 
 // Add custom services
 builder.Services.AddScoped<IEvaluationService, EvaluationService>();
-builder.Services.AddScoped<IEvaluationConfigurationService, EvaluationConfigurationService>();
+
+// Register Azure services
+builder.Services.AddScoped<IAzureTableService, AzureTableService>();
 builder.Services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
+
+// Register the new evaluation configuration service
+builder.Services.AddScoped<IEvaluationConfigurationService, NewEvaluationConfigurationService>();
+
+// Register the dataset service
+builder.Services.AddScoped<IDatasetService, DatasetService>();
 
 // Add logging
 builder.Services.AddLogging();

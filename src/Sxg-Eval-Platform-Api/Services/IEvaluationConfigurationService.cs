@@ -15,18 +15,25 @@ public interface IEvaluationConfigurationService
     Task<ConfigurationSaveResponseDto> CreateOrSaveConfigurationAsync(CreateMetricsConfigurationDto createConfigDto);
     
     /// <summary>
+    /// Get specific configuration for an agent by configuration name
+    /// </summary>
+    /// <param name="agentId">Agent ID</param>
+    /// <param name="configurationName">Configuration name</param>
+    /// <returns>Configuration for the agent</returns>
+    Task<CreateMetricsConfigurationDto?> GetConfigurationsByAgentIdAsync(string agentId, string configurationName);
+    
+    /// <summary>
     /// Get all configurations for a specific agent
     /// </summary>
     /// <param name="agentId">Agent ID</param>
-    /// <returns>Configurations for the agent</returns>
-    Task<ConfigurationsResponseDto?> GetConfigurationsByAgentIdAsync(string agentId);
+    /// <returns>List of configurations for the agent</returns>
+    Task<List<CreateMetricsConfigurationDto>> GetConfigurationsByAgentIdAsync(string agentId);
     
     /// <summary>
-    /// Get all metrics configurations for a specific agent (returns actual stored CreateMetricsConfigurationDto objects)
+    /// Get the default platform configuration
     /// </summary>
-    /// <param name="agentId">Agent ID</param>
-    /// <returns>List of CreateMetricsConfigurationDto objects</returns>
-    Task<List<CreateMetricsConfigurationDto>> GetMetricsConfigurationsByAgentIdAsync(string agentId);
+    /// <returns>Default platform configuration</returns>
+    Task<CreateMetricsConfigurationDto?> GetConfigurationsByAgentIdAsync();
     
     /// <summary>
     /// Get single metrics configuration for a specific agent (returns the first/latest CreateMetricsConfigurationDto object)
