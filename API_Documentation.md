@@ -2,7 +2,14 @@
 
 ## Overview
 
-The SXG Evaluation Platform API is a RESTful web service built with .NET 8 that provides comprehensive functionality for managing evaluation configurations and datasets for AI agents. The API enables users to create, manage, and retrieve evaluation configurations and datasets, supporting both synthetic and golden standard data types.
+This API serves the integration touch point for systems to integrate with SXG EVAL Platform. Using this API systems can do following operations: 
+1. Create/Update/Read Metric Configuration for an Agent. 
+2. Create/Update/Read Evaluation Dataset for an Agent. The dataset can be of two types: Synthetic or Golden.
+3. Trigger EVAL Run for an Agent with a specific configuration and dataset. 
+4. Create/Update/Read EVAL run results.   
+5. Get Health status of the API.
+
+This API is developed using .NET 8 and follows RESTful principles. It uses JSON for data interchange and is designed to be stateless.
 
 ## Base Information
 
@@ -10,12 +17,20 @@ The SXG Evaluation Platform API is a RESTful web service built with .NET 8 that 
 - **API Version**: 1.0.0
 - **Framework**: .NET 8
 - **Content Type**: `application/json`
-- **Authentication**: Not implemented in current version
+- **Authentication**: oAuth using Azure Active Directory
 
-## Table of Contents
+
+## Authentication 
+
+This api supports oAuth authentication using Azure Active Directory. All the endpoints except health check endpoint are protected and require a valid bearer token.
+To acquire the token for this API the application needs to onboard this api in Azure AD and get the admin content done. 
+This api doesn't support App to App authentication as it needs user token to trigger the EVAL Run. 
+
+
+## API Endpoints
 
 1. [Health Check](#health-check)
-2. [Evaluation Configurations](#evaluation-configurations)
+2. [EVAL Configurations](#evaluation-configurations)
 3. [Dataset Management](#dataset-management)
 4. [Data Models](#data-models)
 5. [Error Handling](#error-handling)
@@ -44,9 +59,9 @@ The SXG Evaluation Platform API is a RESTful web service built with .NET 8 that 
 
 ---
 
-## Evaluation Configurations
+## EVAL Configurations
 
-The Evaluation Configuration endpoints allow you to manage metric configurations for AI agents.
+The Evaluation Configuration endpoints allow you to manage metric configurations for AI agents. This api provides methods to create, update, and retrieve metric configurations.
 
 ### GET /api/v1/eval/configurations/{agentId}
 
@@ -120,7 +135,7 @@ The Evaluation Configuration endpoints allow you to manage metric configurations
 
 ## Dataset Management
 
-The Dataset Management endpoints allow you to manage evaluation datasets for AI agents.
+The Dataset Management endpoints allow you to manage EVAL Datasets for AI agents.
 
 ### POST /api/v1/datasets
 
