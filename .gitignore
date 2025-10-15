@@ -26,3 +26,9 @@ TestResults.xml
 /src/Sxg-Eval-Platform-Api/obj
 /src/Sxg-Eval-Platform-Api/publish
 /src/Sxg-Eval-Platform-Api/src/Sxg-Eval-Platform-Api/publish
+/Sxg.EvalPlatform.API.Storage/bin/Debug/net8.0
+/Sxg.EvalPlatform.API.Storage/obj
+/Sxg.EvalPlatform.API.Storage.UnitTests/bin/Debug/net8.0
+/Sxg.EvalPlatform.API.Storage.UnitTests/obj
+/SXG.EvalPlatform.Common/bin/Debug/net8.0
+/SXG.EvalPlatform.Common/obj
