@@ -12,7 +12,7 @@ namespace SxgEvalPlatformApi.Models
         public string Prompt { get; set; } = string.Empty;
         public string GroundTruth { get; set; } = string.Empty;
         public string ActualResponse { get; set; } = string.Empty;
-        public string EstimatedResponse { get; set; } = string.Empty;
+        public string ExpectedResponse { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ namespace SxgEvalPlatformApi.Models
 
         [Required]
         [StringLength(100, MinimumLength = 1)]
-        public string FileName { get; set; } = string.Empty;
+        public string DatasetName { get; set; } = string.Empty;
 
         [Required]
         [MinLength(1)]
@@ -91,9 +91,9 @@ namespace SxgEvalPlatformApi.Models
         public string DatasetType { get; set; } = string.Empty;
 
         /// <summary>
-        /// Original filename
+        /// Dataset name
         /// </summary>
-        public string FileName { get; set; } = string.Empty;
+        public string DatasetName { get; set; } = string.Empty;
 
         /// <summary>
         /// Number of records in the dataset
@@ -116,7 +116,7 @@ namespace SxgEvalPlatformApi.Models
         public DateTime LastUpdatedOn { get; set; }
         public string AgentId { get; set; } = string.Empty;
         public string DatasetType { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
+        public string DatasetName { get; set; } = string.Empty;
         public int RecordCount { get; set; }
     }
 
@@ -129,3 +129,4 @@ namespace SxgEvalPlatformApi.Models
         public List<DatasetMetadataDto> Datasets { get; set; } = new();
     }
 }
+

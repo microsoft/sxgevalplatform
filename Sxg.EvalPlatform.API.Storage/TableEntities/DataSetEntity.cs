@@ -63,9 +63,9 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string DatasetType { get; set; } = string.Empty;
 
         /// <summary>
-        /// Original filename of the dataset
+        /// Dataset name
         /// </summary>
-        public string FileName { get; set; } = string.Empty;
+        public string DatasetName { get; set; } = string.Empty;
 
         /// <summary>
         /// When the dataset was last updated

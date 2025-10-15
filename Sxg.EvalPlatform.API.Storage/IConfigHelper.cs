@@ -6,6 +6,7 @@
         string EvalResultsFolderName();
         string GetAzureStorageAccountName();
         string GetDataSetFolderName();
+        string GetDatasetsFolderName();
         string GetDataSetsTable();
         string GetDefaultConfigurationBlob();
         string GetDefaultMetricsConfiguration();

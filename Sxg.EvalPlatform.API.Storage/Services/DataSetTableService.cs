@@ -208,30 +208,30 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<List<DataSetTableEntity>> GetDataSetsByFileNameAsync(string agentId, string fileName)
+        public async Task<List<DataSetTableEntity>> GetDataSetsByDatasetNameAsync(string agentId, string datasetName)
         {
             try
             {
-                _logger.LogInformation("Retrieving datasets by filename for Agent: {AgentId}, FileName: {FileName}",
-                    agentId, fileName);
+                _logger.LogInformation("Retrieving datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    agentId, datasetName);
 
                 var entities = new List<DataSetTableEntity>();
-                var filter = $"PartitionKey eq '{agentId}' and FileName eq '{fileName}'";
+                var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}'";
 
                 await foreach (var entity in TableClient.QueryAsync<DataSetTableEntity>(filter))
                 {
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, FileName: {FileName}",
-                    entities.Count, agentId, fileName);
+                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    entities.Count, agentId, datasetName);
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve datasets by filename for Agent: {AgentId}, FileName: {FileName}",
-                    agentId, fileName);
+                _logger.LogError(ex, "Failed to retrieve datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    agentId, datasetName);
                 throw;
             }
         }
@@ -242,30 +242,30 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             return entity != null;
         }
 
-        public async Task<DataSetTableEntity?> GetDataSetByFileNameAndTypeAsync(string agentId, string fileName, string datasetType)
+        public async Task<DataSetTableEntity?> GetDataSetByDatasetNameAndTypeAsync(string agentId, string datasetName, string datasetType)
         {
             try
             {
-                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, FileName: {FileName}, Type: {DatasetType}",
-                    agentId, fileName, datasetType);
+                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    agentId, datasetName, datasetType);
 
-                var filter = $"PartitionKey eq '{agentId}' and FileName eq '{fileName}' and DatasetType eq '{datasetType}'";
+                var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}' and DatasetType eq '{datasetType}'";
 
                 await foreach (var entity in TableClient.QueryAsync<DataSetTableEntity>(filter))
                 {
-                    _logger.LogInformation("Found dataset for Agent: {AgentId}, FileName: {FileName}, Type: {DatasetType}",
-                        agentId, fileName, datasetType);
+                    _logger.LogInformation("Found dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                        agentId, datasetName, datasetType);
                     return entity;
                 }
 
-                _logger.LogInformation("Dataset not found for Agent: {AgentId}, FileName: {FileName}, Type: {DatasetType}",
-                    agentId, fileName, datasetType);
+                _logger.LogInformation("Dataset not found for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    agentId, datasetName, datasetType);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, FileName: {FileName}, Type: {DatasetType}",
-                    agentId, fileName, datasetType);
+                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    agentId, datasetName, datasetType);
                 throw;
             }
         }

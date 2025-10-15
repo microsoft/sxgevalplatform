@@ -14,7 +14,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         /// <param name="blobFilePath">Path to the blob file</param>
         /// <param name="containerName">Container name</param>
         /// <param name="datasetType">Dataset type (e.g., Synthetic, Golden)</param>
-        /// <param name="fileName">Original filename</param>
+        /// <param name="datasetName">Dataset name</param>
         /// <param name="lastUpdatedBy">Who updated the dataset</param>
         /// <returns>DataSetTableEntity with keys properly set</returns>
         public static DataSetTableEntity CreateEntity(
@@ -22,7 +22,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             string blobFilePath, 
             string containerName, 
             string datasetType, 
-            string fileName, 
+            string datasetName, 
             string lastUpdatedBy = "system")
         {
             var entity = new DataSetTableEntity
@@ -31,7 +31,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
                 BlobFilePath = blobFilePath,
                 ContainerName = containerName,
                 DatasetType = datasetType,
-                FileName = fileName,
+                DatasetName = datasetName,
                 LastUpdatedBy = lastUpdatedBy,
                 LastUpdatedOn = DateTime.UtcNow
             };
@@ -48,7 +48,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         /// <param name="blobFilePath">Path to the blob file</param>
         /// <param name="containerName">Container name</param>
         /// <param name="datasetType">Dataset type (e.g., Synthetic, Golden)</param>
-        /// <param name="fileName">Original filename</param>
+        /// <param name="datasetName">Dataset name</param>
         /// <param name="lastUpdatedBy">Who updated the dataset</param>
         /// <returns>DataSetTableEntity with keys properly set</returns>
         public static DataSetTableEntity CreateEntity(
@@ -57,7 +57,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             string blobFilePath, 
             string containerName, 
             string datasetType, 
-            string fileName, 
+            string datasetName, 
             string lastUpdatedBy = "system")
         {
             var entity = new DataSetTableEntity
@@ -67,7 +67,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
                 BlobFilePath = blobFilePath,
                 ContainerName = containerName,
                 DatasetType = datasetType,
-                FileName = fileName,
+                DatasetName = datasetName,
                 LastUpdatedBy = lastUpdatedBy,
                 LastUpdatedOn = DateTime.UtcNow
             };
@@ -135,9 +135,9 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetType">Dataset type (optional)</param>
-        /// <param name="fileName">File name (optional)</param>
+        /// <param name="datasetName">Dataset name (optional)</param>
         /// <returns>Filter string for Azure Table Storage query</returns>
-        public static string BuildFilterString(string agentId, string? datasetType = null, string? fileName = null)
+        public static string BuildFilterString(string agentId, string? datasetType = null, string? datasetName = null)
         {
             var filter = $"PartitionKey eq '{agentId}'";
             
@@ -146,9 +146,9 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
                 filter += $" and DatasetType eq '{datasetType}'";
             }
             
-            if (!string.IsNullOrEmpty(fileName))
+            if (!string.IsNullOrEmpty(datasetName))
             {
-                filter += $" and FileName eq '{fileName}'";
+                filter += $" and DatasetName eq '{datasetName}'";
             }
             
             return filter;
@@ -159,12 +159,11 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Dataset ID</param>
-        /// <param name="fileName">Original filename</param>
+        /// <param name="datasetName">Dataset name</param>
         /// <returns>Blob file path</returns>
-        public static string CreateBlobFilePath(string agentId, string datasetId, string fileName)
+        public static string CreateBlobFilePath(string agentId, string datasetId, string datasetName)
         {
-            var fileExtension = Path.GetExtension(fileName);
-            return $"datasets/{agentId}/{datasetId}{fileExtension}";
+            return $"datasets/{agentId}/{datasetId}_{datasetName}.json";
         }
 
         /// <summary>
@@ -202,8 +201,8 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             if (string.IsNullOrEmpty(entity.DatasetType))
                 errors.Add("DatasetType is required");
 
-            if (string.IsNullOrEmpty(entity.FileName))
-                errors.Add("FileName is required");
+            if (string.IsNullOrEmpty(entity.DatasetName))
+                errors.Add("DatasetName is required");
 
             if (!ValidateKeys(entity))
                 errors.Add("Invalid PartitionKey/RowKey configuration");
@@ -226,7 +225,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
                 BlobFilePath = original.BlobFilePath,
                 ContainerName = original.ContainerName,
                 DatasetType = original.DatasetType,
-                FileName = original.FileName,
+                DatasetName = original.DatasetName,
                 LastUpdatedBy = lastUpdatedBy,
                 LastUpdatedOn = DateTime.UtcNow,
                 // Preserve Azure Table Storage metadata

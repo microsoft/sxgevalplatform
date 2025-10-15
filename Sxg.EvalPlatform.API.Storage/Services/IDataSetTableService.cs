@@ -45,12 +45,21 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         Task<List<DataSetTableEntity>> GetAllDataSetsByAgentIdAndTypeAsync(string agentId, string datasetType);
 
         /// <summary>
-        /// Get datasets by filename for an agent
+        /// Get datasets by dataset name for an agent
         /// </summary>
         /// <param name="agentId">Agent ID</param>
-        /// <param name="fileName">Filename to search for</param>
-        /// <returns>List of dataset entities with matching filename</returns>
-        Task<List<DataSetTableEntity>> GetDataSetsByFileNameAsync(string agentId, string fileName);
+        /// <param name="datasetName">Dataset name to search for</param>
+        /// <returns>List of dataset entities with matching dataset name</returns>
+        Task<List<DataSetTableEntity>> GetDataSetsByDatasetNameAsync(string agentId, string datasetName);
+
+        /// <summary>
+        /// Get dataset by dataset name and type for an agent
+        /// </summary>
+        /// <param name="agentId">Agent ID</param>
+        /// <param name="datasetName">Dataset name to search for</param>
+        /// <param name="datasetType">Dataset type</param>
+        /// <returns>Dataset entity or null if not found</returns>
+        Task<DataSetTableEntity?> GetDataSetByDatasetNameAndTypeAsync(string agentId, string datasetName, string datasetType);
 
         /// <summary>
         /// Check if dataset exists
@@ -61,16 +70,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         Task<bool> DataSetExistsAsync(string agentId, string datasetId);
 
         /// <summary>
-        /// Check if dataset exists by filename and type
-        /// </summary>
-        /// <param name="agentId">Agent ID</param>
-        /// <param name="fileName">Filename</param>
-        /// <param name="datasetType">Dataset type</param>
-        /// <returns>Dataset entity if exists, null otherwise</returns>
-        Task<DataSetTableEntity?> GetDataSetByFileNameAndTypeAsync(string agentId, string fileName, string datasetType);
-
-        /// <summary>
-        /// Delete dataset by Agent ID and Dataset ID
+        /// Delete a specific dataset
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Dataset ID</param>
@@ -85,11 +85,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         Task<int> DeleteAllDataSetsByAgentIdAsync(string agentId);
 
         /// <summary>
-        /// Update dataset metadata (without changing blob data)
+        /// Update dataset metadata without changing blob content
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Dataset ID</param>
-        /// <param name="updateAction">Action to update the entity</param>
+        /// <param name="updateAction">Action to perform updates on the entity</param>
         /// <returns>Updated entity or null if not found</returns>
         Task<DataSetTableEntity?> UpdateDataSetMetadataAsync(string agentId, string datasetId, Action<DataSetTableEntity> updateAction);
     }

@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
-using SXG.EvalPlatform.Common;
+using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
 
 namespace SxgEvalPlatformApi
@@ -20,18 +20,13 @@ namespace SxgEvalPlatformApi
         {
             // CreateMetricsConfigurationDto to MetricsConfigurationTableEntity
             CreateMap<CreateMetricsConfigurationDto, MetricsConfigurationTableEntity>()
-                //.ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.AgentId, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.ConfigurationId, opt => opt.MapFrom(src => src.ConfigurationId ?? Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
+                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => src.ConfigurationId ?? Guid.NewGuid().ToString()))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
-                .ForMember(dest => dest.ConainerName, opt => opt.MapFrom(src => CommonUtils.TrimAndRemoveSpaces(src.AgentId)))
+                .ForMember(dest => dest.ConainerName, opt => opt.MapFrom(src => src.AgentId))
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
-
-            // MetricsConfigurationTableEntity to CreateMetricsConfigurationDto
-            CreateMap<MetricsConfigurationTableEntity, CreateMetricsConfigurationDto>()
-                .ForMember(dest => dest.MetricsConfiguration, opt => opt.Ignore()); // This is handled separately via blob storage
 
             // SelectedMetricsConfigurationDto to SelectedMetricsConfiguration
             CreateMap<SelectedMetricsConfigurationDto, SelectedMetricsConfiguration>()
@@ -40,6 +35,24 @@ namespace SxgEvalPlatformApi
             // MetricsConfigurationTableEntity to MetricsConfigurationMetadataDto
             CreateMap<MetricsConfigurationTableEntity, MetricsConfigurationMetadataDto>()
                 .ForMember(dest => dest.MetricsConfiguration, opt => opt.Ignore()); // This is loaded from blob storage separately
+
+            // SaveDatasetDto to DataSetTableEntity
+            CreateMap<SaveDatasetDto, DataSetTableEntity>()
+                .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
+                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.DatasetId, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
+                .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.Ignore()) // Will be set from auth context
+                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Set in request handler
+                .ForMember(dest => dest.ContainerName, opt => opt.Ignore()) // Set in request handler
+                .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
+                .ForMember(dest => dest.ETag, opt => opt.Ignore());
+
+            // DataSetTableEntity to DatasetMetadataDto
+            CreateMap<DataSetTableEntity, DatasetMetadataDto>()
+                .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
+                .ForMember(dest => dest.RecordCount, opt => opt.Ignore()); // Calculated separately if needed
 
             // Additional mappings for collections
             CreateMap<IList<SelectedMetricsConfigurationDto>, IList<SelectedMetricsConfiguration>>()

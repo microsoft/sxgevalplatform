@@ -81,6 +81,12 @@ namespace Sxg.EvalPlatform.API.Storage
             return folderName;
         }
 
+        public string GetDatasetsFolderName()
+        {
+            var folderName = _configuration["AzureStorage:DatasetsFolderName"] ?? "datasets";
+            return folderName;
+        }
+
         public string EvalResultsFolderName()
         {
             var folderName = _configuration["AzureStorage:EvalResultsFolderName"];
