@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Models;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi.RequestHandlers;
+using SxgEvalPlatformApi.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,10 @@ builder.Services.AddScoped<IDataSetTableService, DataSetTableService>();
 builder.Services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigurationRequestHandler>();
 builder.Services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
 builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
+
+// Add evaluation services
+builder.Services.AddScoped<IEvalRunService, EvalRunService>();
+builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
 
 // Register Azure services from Storage project
 //builder.Services.AddScoped<Sxg.EvalPlatform.API.Storage.Services.IAzureBlobStorageService, Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService>();

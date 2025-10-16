@@ -1,33 +1,59 @@
 # SXG Evaluation Platform API Documentation
 
-## Overview
+## 📚 Complete Documentation
 
-This API serves the integration touch point for systems to integrate with SXG EVAL Platform. Using this API systems can do following operations: 
-1. Create/Update/Read Metric Configuration for an Agent. 
-2. Create/Update/Read Evaluation Dataset for an Agent. The dataset can be of two types: Synthetic or Golden.
-3. Trigger EVAL Run for an Agent with a specific configuration and dataset. 
-4. Create/Update/Read EVAL run results.   
-5. Get Health status of the API.
+For comprehensive API documentation, please refer to:
 
-This API is developed using .NET 8 and follows RESTful principles. It uses JSON for data interchange and is designed to be stateless.
+**[SXG Evaluation Platform API - Complete Guide](docs/SXG_Evaluation_Platform_API_Complete_Guide.md)**
 
-## Base Information
+This consolidated guide includes:
+- Complete API endpoint reference
+- Authentication and security
+- Data models and schemas
+- Business rules and validation
+- Error handling
+- Azure storage architecture
+- Development setup instructions
 
+## 🔧 Technical Implementation
+
+For technical implementation details, see:
+
+**[Technical Implementation Guide](docs/Technical_Implementation_Guide.md)**
+
+This guide covers:
+- Service architecture patterns
+- Azure Table Storage design
+- Blob storage integration
+- Performance optimization
+- Deployment considerations
+- Development guidelines
+
+## 🚀 Quick Start
+
+### Base Information
 - **Base URL**: `https://your-domain/api/v1`
-- **API Version**: 1.0.0
 - **Framework**: .NET 8
-- **Content Type**: `application/json`
-- **Authentication**: oAuth using Azure Active Directory
+- **Authentication**: OAuth using Azure Active Directory
 
+### Key Endpoints
+- `POST /api/v1/eval/runs` - Create evaluation run
+- `GET /api/v1/eval/runs/{id}` - Get evaluation run
+- `PUT /api/v1/eval/runs/{id}` - Update evaluation run status
+- `GET /api/v1/health` - Health check
 
-## Authentication 
+### Running Locally
+```bash
+cd src/Sxg-Eval-Platform-Api
+dotnet restore
+dotnet run
+```
 
-This api supports oAuth authentication using Azure Active Directory. All the endpoints except health check endpoint are protected and require a valid bearer token.
-To acquire the token for this API the application needs to onboard this api in Azure AD and get the admin content done. 
-This api doesn't support App to App authentication as it needs user token to trigger the EVAL Run. 
+Access Swagger UI at: `http://localhost:5000/swagger`
 
+---
 
-## API Endpoints
+*This documentation has been consolidated for better maintainability. All detailed information is available in the linked comprehensive guides.*
 
 1. [Health Check](#health-check)
 2. [EVAL Configurations](#evaluation-configurations)
