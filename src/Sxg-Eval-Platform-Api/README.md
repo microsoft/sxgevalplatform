@@ -1,5 +1,20 @@
 # SXG Evaluation Platform API
 
+
+##TODO
+403 - when authentication is not done
+select dataset for each agent 
+
+evalRun table
+-> runID for each evaluation & generate the result file
+-> update result in blob storage - 
+
+Environment specific
+
+evalResult
+-> POST - push the result file to the blob storage
+-> GET
+
 This is the main Web API for the SXG Evaluation Platform, built with ASP.NET Core 8.0.
 
 ## Features
@@ -88,3 +103,7 @@ Properties/        # Project configuration
 - Entity Framework integration can be added for persistent storage
 - Authentication and authorization can be implemented using JWT tokens
 - Additional validation and business rules can be added as needed
+
+
+## TODO
+timestamp duration

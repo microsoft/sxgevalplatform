@@ -1,12 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using SxgEvalPlatformApi.Services;
+using SxgEvalPlatformApi.SwaggerFilters;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Support both PascalCase and camelCase property names
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -23,6 +30,9 @@ builder.Services.AddSwaggerGen(c =>
             Email = "sxg@microsoft.com"
         }
     });
+
+    // Add custom schema filter for JsonElement
+    c.SchemaFilter<JsonElementSchemaFilter>();
 
     // Include XML comments
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -50,15 +60,21 @@ builder.Services.AddAutoMapper(typeof(Program));
 // Add custom services
 builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 
-// Register Azure services
+// Register Azure services - TODO: Replace with refactored versions after interface alignment
 builder.Services.AddScoped<IAzureTableService, AzureTableService>();
 builder.Services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
 
-// Register the new evaluation configuration service
+// Register the evaluation configuration service - TODO: Replace with refactored version after interface updates
 builder.Services.AddScoped<IEvaluationConfigurationService, NewEvaluationConfigurationService>();
 
 // Register the dataset service
 builder.Services.AddScoped<IDatasetService, DatasetService>();
+
+// Register the evaluation run service - TODO: Replace with refactored version after interface alignment
+builder.Services.AddScoped<IEvalRunService, EvalRunService>();
+
+// Register the evaluation result service
+builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
 
 // Add logging
 builder.Services.AddLogging();
