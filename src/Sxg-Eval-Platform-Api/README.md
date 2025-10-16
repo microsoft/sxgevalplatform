@@ -2,32 +2,76 @@
 
 This is the main Web API for the SXG Evaluation Platform, built with ASP.NET Core 8.0.
 
-## Features
+## 📚 Complete Documentation
 
-- RESTful API endpoints for evaluation management
-- Swagger/OpenAPI documentation
-- Health check endpoints
-- CORS support
-- Structured logging
-- Error handling and validation
+For comprehensive documentation, see:
+- **[API Complete Guide](../../docs/SXG_Evaluation_Platform_API_Complete_Guide.md)** - Full API reference
+- **[Technical Implementation Guide](../../docs/Technical_Implementation_Guide.md)** - Architecture and development details
 
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - .NET 8.0 SDK
-- Visual Studio 2022 or VS Code
+- Azure Storage Account
+- Azure Active Directory tenant
 
 ### Running the Application
 
-1. Navigate to the project directory:
-   ```bash
-   cd "D:\Projects\sxg-eval-platform\src\Sxg-Eval-Platform-Api"
-   ```
+```bash
+# Navigate to project directory
+cd src/Sxg-Eval-Platform-Api
 
-2. Restore dependencies:
-   ```bash
-   dotnet restore
+# Restore dependencies
+dotnet restore
+
+# Run the application
+dotnet run
+```
+
+### Access Points
+- **API**: http://localhost:5000
+- **Swagger UI**: http://localhost:5000/swagger
+- **Health Check**: http://localhost:5000/api/v1/health
+
+## 🔧 Features
+
+- RESTful API endpoints for evaluation management
+- Swagger/OpenAPI documentation  
+- Health check endpoints
+- Azure AD authentication
+- Azure Storage integration
+- Structured logging
+- Comprehensive error handling
+
+## 📁 Project Structure
+
+```
+Controllers/        # API controllers
+├── EvalRunController.cs
+├── EvalConfigController.cs
+└── ...
+
+Models/            # Data models and DTOs
+Services/          # Business logic services
+Properties/        # Launch settings
+deploy/           # Deployment scripts and guides
+```
+
+## 🏗️ Architecture
+
+- **Authentication**: Azure Active Directory OAuth
+- **Storage**: Azure Table Storage + Blob Storage
+- **Framework**: ASP.NET Core 8.0
+- **Documentation**: Swagger/OpenAPI
+
+## 📖 Related Documentation
+
+- **[Project Root Documentation](../../API_Documentation.md)** - Overview and quick start
+- **[Setup Guides](../../docs/)** - Configuration and deployment guides
+
+---
+
+*For detailed API usage, authentication setup, and technical implementation details, please refer to the comprehensive documentation linked above.*
    ```
 
 3. Run the application:

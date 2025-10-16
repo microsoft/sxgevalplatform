@@ -69,14 +69,14 @@ public class EvalRunService : IEvalRunService
             
             var entity = new EvalRunEntity
             {
-                PartitionKey = "EvalRun",
+                PartitionKey = createDto.AgentId, // Use AgentId as PartitionKey
                 RowKey = evalRunId.ToString(), // Convert GUID to string for RowKey
                 EvalRunId = evalRunId, // Store as GUID
                 AgentId = createDto.AgentId,
                 DataSetId = createDto.DataSetId,
                 MetricsConfigurationId = createDto.MetricsConfigurationId,
                 Status = EvalRunStatusConstants.Queued,
-                LastUpdatedOn = currentDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                LastUpdatedOn = currentDateTime,
                 StartedDatetime = currentDateTime,
                 ContainerName = containerName,
                 BlobFilePath = blobFilePath
@@ -103,8 +103,8 @@ public class EvalRunService : IEvalRunService
     {
         try
         {
-            // First, get the existing entity
-            var response = await _tableClient.GetEntityAsync<EvalRunEntity>("EvalRun", updateDto.EvalRunId.ToString());
+            // First, get the existing entity using AgentId as PartitionKey
+            var response = await _tableClient.GetEntityAsync<EvalRunEntity>(updateDto.AgentId, updateDto.EvalRunId.ToString());
             var entity = response.Value;
             
             if (entity == null)
@@ -115,7 +115,7 @@ public class EvalRunService : IEvalRunService
 
             // Update the status and timestamp
             entity.Status = updateDto.Status;
-            entity.LastUpdatedOn = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+            entity.LastUpdatedOn = DateTime.UtcNow;
             entity.LastUpdatedBy = "System"; // Automatically set by API
             
             // Set completion datetime if status is Completed or Failed
@@ -147,11 +147,11 @@ public class EvalRunService : IEvalRunService
     /// <summary>
     /// Get evaluation run by ID
     /// </summary>
-    public async Task<EvalRunDto?> GetEvalRunByIdAsync(Guid evalRunId)
+    public async Task<EvalRunDto?> GetEvalRunByIdAsync(string agentId, Guid evalRunId)
     {
         try
         {
-            var response = await _tableClient.GetEntityAsync<EvalRunEntity>("EvalRun", evalRunId.ToString());
+            var response = await _tableClient.GetEntityAsync<EvalRunEntity>(agentId, evalRunId.ToString());
             var entity = response.Value;
             
             if (entity == null)
@@ -175,6 +175,32 @@ public class EvalRunService : IEvalRunService
     }
 
     /// <summary>
+    /// Get evaluation run by ID (searches across all partitions - less efficient)
+    /// </summary>
+    public async Task<EvalRunDto?> GetEvalRunByIdAsync(Guid evalRunId)
+    {
+        try
+        {
+            // Query across all partitions to find the entity by EvalRunId
+            var query = _tableClient.QueryAsync<EvalRunEntity>(
+                filter: $"EvalRunId eq guid'{evalRunId}'");
+            
+            await foreach (var entity in query)
+            {
+                return MapEntityToDto(entity);
+            }
+            
+            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Get all evaluation runs for an agent
     /// </summary>
     public async Task<List<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId)
@@ -182,7 +208,7 @@ public class EvalRunService : IEvalRunService
         try
         {
             var query = _tableClient.QueryAsync<EvalRunEntity>(
-                filter: $"PartitionKey eq 'EvalRun' and AgentId eq '{agentId}'");
+                filter: $"PartitionKey eq '{agentId}'");
             
             var results = new List<EvalRunDto>();
             

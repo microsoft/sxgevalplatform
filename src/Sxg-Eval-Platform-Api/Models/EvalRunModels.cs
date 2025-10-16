@@ -42,7 +42,7 @@ public class EvalRunEntity : ITableEntity
     public string AgentId { get; set; } = string.Empty;
     public string Status { get; set; } = EvalRunStatusConstants.Queued;
     public string? LastUpdatedBy { get; set; }
-    public string? LastUpdatedOn { get; set; }
+    public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
@@ -50,7 +50,7 @@ public class EvalRunEntity : ITableEntity
 }
 
 /// <summary>
-/// Data transfer object for evaluation run information
+/// DTO for evaluation run data
 /// </summary>
 public class EvalRunDto
 {
@@ -60,7 +60,7 @@ public class EvalRunDto
     public string AgentId { get; set; } = string.Empty;
     public string Status { get; set; } = EvalRunStatusConstants.Queued;
     public string? LastUpdatedBy { get; set; }
-    public string? LastUpdatedOn { get; set; }
+    public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
@@ -90,9 +90,23 @@ public class CreateEvalRunDto
 /// </summary>
 public class UpdateEvalRunStatusDto
 {
-    [Required]
+    // EvalRunId will be set from route parameter, not required in request body
     public Guid EvalRunId { get; set; } = Guid.Empty;
     
+    [Required]
+    public string Status { get; set; } = string.Empty;
+    
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string AgentId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Simplified DTO for updating evaluation run status via PUT endpoint
+/// Only requires the new status - evalRunId comes from route parameter
+/// </summary>
+public class UpdateStatusDto
+{
     [Required]
     public string Status { get; set; } = string.Empty;
 }

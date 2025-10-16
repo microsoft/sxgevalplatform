@@ -71,25 +71,57 @@ public class EvalRunController : BaseController
 
     /// <summary>
     /// Update evaluation run status
+    /// Note: Once an evaluation run reaches a terminal state (Completed or Failed), 
+    /// its status cannot be updated anymore.
     /// </summary>
-    /// <param name="updateDto">Status update data containing EvalRunId and new Status</param>
+    /// <param name="evalRunId">Evaluation run ID from route parameter</param>
+    /// <param name="updateDto">Status update data containing only the new Status</param>
     /// <returns>Updated evaluation run</returns>
     /// <response code="200">Status updated successfully</response>
-    /// <response code="400">Invalid input data</response>
+    /// <response code="400">Invalid input data or evaluation run is in terminal state</response>
     /// <response code="404">Evaluation run not found</response>
     /// <response code="500">Internal server error</response>
-    [HttpPut("updatestatus")]
+    [HttpPut("{evalRunId}")]
     [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<UpdateResponseDto>> UpdateStatus([FromBody] UpdateEvalRunStatusDto updateDto)
+    public async Task<ActionResult<UpdateResponseDto>> UpdateEvalRun(Guid evalRunId, [FromBody] UpdateStatusDto updateDto)
     {
         try
         {
+            if (evalRunId == Guid.Empty)
+            {
+                return BadRequest("EvalRunId is required and must be a valid GUID");
+            }
+
             if (!ModelState.IsValid)
             {
                 return CreateValidationErrorResponse<UpdateResponseDto>();
+            }
+
+            // First, get the current evaluation run to check its status
+            // Use the cross-partition search since we don't have AgentId in the request
+            var currentEvalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
+            if (currentEvalRun == null)
+            {
+                return NotFound(new UpdateResponseDto 
+                { 
+                    Success = false, 
+                    Message = $"Evaluation run with ID {evalRunId} not found" 
+                });
+            }
+
+            // Check if the current status is already in a terminal state
+            var terminalStatuses = new[] { EvalRunStatusConstants.Completed, EvalRunStatusConstants.Failed };
+            if (terminalStatuses.Contains(currentEvalRun.Status))
+            {
+                return BadRequest(new UpdateResponseDto
+                {
+                    Success = false,
+                    Message = $"Cannot update status for evaluation run with ID {evalRunId}. " +
+                             $"The evaluation run is already in a terminal state '{currentEvalRun.Status}' and cannot be modified."
+                });
             }
 
             // Validate status value
@@ -107,16 +139,27 @@ public class EvalRunController : BaseController
             }
 
             _logger.LogInformation("Updating evaluation run status to {Status} for ID: {EvalRunId}", 
-                updateDto.Status, updateDto.EvalRunId);
+                updateDto.Status, evalRunId);
 
-            var updatedEvalRun = await _evalRunService.UpdateEvalRunStatusAsync(updateDto);
+            // Create the service DTO with the information we have
+            var serviceUpdateDto = new UpdateEvalRunStatusDto
+            {
+                EvalRunId = evalRunId,
+                Status = updateDto.Status,
+                AgentId = currentEvalRun.AgentId // Get AgentId from the current evaluation run
+            };
+
+            var updatedEvalRun = await _evalRunService.UpdateEvalRunStatusAsync(serviceUpdateDto);
             
+            // Since we already validated the evaluation run exists above, this should not be null
+            // But we'll still check for safety
             if (updatedEvalRun == null)
             {
-                return NotFound(new UpdateResponseDto 
+                _logger.LogError("Unexpected null result from UpdateEvalRunStatusAsync for EvalRunId: {EvalRunId}", evalRunId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new UpdateResponseDto 
                 { 
                     Success = false, 
-                    Message = $"Evaluation run with ID {updateDto.EvalRunId} not found" 
+                    Message = "An unexpected error occurred while updating the evaluation run status" 
                 });
             }
 

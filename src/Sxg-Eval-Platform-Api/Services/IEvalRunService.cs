@@ -24,6 +24,14 @@ public interface IEvalRunService
     /// <summary>
     /// Get evaluation run by ID
     /// </summary>
+    /// <param name="agentId">Agent ID (used as partition key)</param>
+    /// <param name="evalRunId">Evaluation run ID</param>
+    /// <returns>Evaluation run or null if not found</returns>
+    Task<EvalRunDto?> GetEvalRunByIdAsync(string agentId, Guid evalRunId);
+    
+    /// <summary>
+    /// Get evaluation run by ID (searches across all partitions - less efficient)
+    /// </summary>
     /// <param name="evalRunId">Evaluation run ID</param>
     /// <returns>Evaluation run or null if not found</returns>
     Task<EvalRunDto?> GetEvalRunByIdAsync(Guid evalRunId);
