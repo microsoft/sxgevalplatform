@@ -63,8 +63,7 @@ public class EvalRunDto
     public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
-    public string? BlobFilePath { get; set; }
-    public string? ContainerName { get; set; } // Add container name property
+    // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
 }
 
 /// <summary>

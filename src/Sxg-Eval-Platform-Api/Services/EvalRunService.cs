@@ -64,8 +64,8 @@ public class EvalRunService : IEvalRunService
             var currentDateTime = DateTime.UtcNow;
             
             // Store container name and blob path separately for better blob storage handling
-            var containerName = createDto.AgentId;
-            var blobFilePath = $"evaluations/{evalRunId}.json";
+            var containerName = createDto.AgentId.ToLower(); // Ensure lowercase for Azure Blob Storage
+            var blobFilePath = $"evalresults/{evalRunId}/"; // Create folder structure for multiple output files
             
             var entity = new EvalRunEntity
             {
@@ -113,14 +113,25 @@ public class EvalRunService : IEvalRunService
                 return null;
             }
 
+            // Normalize the status to ensure consistent casing in storage
+            string normalizedStatus = updateDto.Status;
+            if (string.Equals(updateDto.Status, EvalRunStatusConstants.Queued, StringComparison.OrdinalIgnoreCase))
+                normalizedStatus = EvalRunStatusConstants.Queued;
+            else if (string.Equals(updateDto.Status, EvalRunStatusConstants.Running, StringComparison.OrdinalIgnoreCase))
+                normalizedStatus = EvalRunStatusConstants.Running;
+            else if (string.Equals(updateDto.Status, EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase))
+                normalizedStatus = EvalRunStatusConstants.Completed;
+            else if (string.Equals(updateDto.Status, EvalRunStatusConstants.Failed, StringComparison.OrdinalIgnoreCase))
+                normalizedStatus = EvalRunStatusConstants.Failed;
+
             // Update the status and timestamp
-            entity.Status = updateDto.Status;
+            entity.Status = normalizedStatus;
             entity.LastUpdatedOn = DateTime.UtcNow;
             entity.LastUpdatedBy = "System"; // Automatically set by API
             
             // Set completion datetime if status is Completed or Failed
-            if (updateDto.Status == EvalRunStatusConstants.Completed || 
-                updateDto.Status == EvalRunStatusConstants.Failed)
+            if (string.Equals(normalizedStatus, EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(normalizedStatus, EvalRunStatusConstants.Failed, StringComparison.OrdinalIgnoreCase))
             {
                 entity.CompletedDatetime = DateTime.UtcNow;
             }
@@ -128,7 +139,7 @@ public class EvalRunService : IEvalRunService
             await _tableClient.UpdateEntityAsync(entity, entity.ETag);
             
             _logger.LogInformation("Updated evaluation run status to {Status} for ID: {EvalRunId}", 
-                updateDto.Status, updateDto.EvalRunId);
+                normalizedStatus, updateDto.EvalRunId);
             
             return MapEntityToDto(entity);
         }
@@ -244,9 +255,34 @@ public class EvalRunService : IEvalRunService
             LastUpdatedBy = entity.LastUpdatedBy,
             LastUpdatedOn = entity.LastUpdatedOn,
             StartedDatetime = entity.StartedDatetime,
-            CompletedDatetime = entity.CompletedDatetime,
-            BlobFilePath = entity.BlobFilePath,
-            ContainerName = entity.ContainerName
+            CompletedDatetime = entity.CompletedDatetime
+            // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
         };
+    }
+
+    /// <summary>
+    /// Get evaluation run entity with internal details (for internal service use only)
+    /// </summary>
+    public async Task<EvalRunEntity?> GetEvalRunEntityByIdAsync(Guid evalRunId)
+    {
+        try
+        {
+            // Query across all partitions to find the entity by EvalRunId
+            var query = _tableClient.QueryAsync<EvalRunEntity>(
+                filter: $"EvalRunId eq guid'{evalRunId}'");
+            
+            await foreach (var entity in query)
+            {
+                return entity;
+            }
+            
+            _logger.LogWarning("Evaluation run entity not found with ID: {EvalRunId}", evalRunId);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving evaluation run entity with ID: {EvalRunId}", evalRunId);
+            throw;
+        }
     }
 }

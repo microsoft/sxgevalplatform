@@ -114,7 +114,7 @@ public class EvalRunController : BaseController
 
             // Check if the current status is already in a terminal state
             var terminalStatuses = new[] { EvalRunStatusConstants.Completed, EvalRunStatusConstants.Failed };
-            if (terminalStatuses.Contains(currentEvalRun.Status))
+            if (terminalStatuses.Any(status => string.Equals(status, currentEvalRun.Status, StringComparison.OrdinalIgnoreCase)))
             {
                 return BadRequest(new UpdateResponseDto
                 {
@@ -133,7 +133,7 @@ public class EvalRunController : BaseController
                 EvalRunStatusConstants.Failed 
             };
 
-            if (!validStatuses.Contains(updateDto.Status))
+            if (!validStatuses.Any(status => string.Equals(status, updateDto.Status, StringComparison.OrdinalIgnoreCase)))
             {
                 return BadRequest($"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
             }

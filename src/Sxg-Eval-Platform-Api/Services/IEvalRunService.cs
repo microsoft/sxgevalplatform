@@ -42,4 +42,11 @@ public interface IEvalRunService
     /// <param name="agentId">Agent ID</param>
     /// <returns>List of evaluation runs</returns>
     Task<List<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId);
+    
+    /// <summary>
+    /// Get evaluation run entity with internal details (for internal service use only)
+    /// </summary>
+    /// <param name="evalRunId">Evaluation run ID</param>
+    /// <returns>Evaluation run entity with blob storage details or null if not found</returns>
+    Task<EvalRunEntity?> GetEvalRunEntityByIdAsync(Guid evalRunId);
 }

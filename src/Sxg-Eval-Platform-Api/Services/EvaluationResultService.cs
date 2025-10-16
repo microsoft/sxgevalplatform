@@ -32,7 +32,7 @@ public class EvaluationResultService : IEvaluationResultService
         {
             _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
 
-            // First, verify that the EvalRunId exists
+            // First, verify that the EvalRunId exists and get internal details
             var evalRun = await _evalRunService.GetEvalRunByIdAsync(saveDto.EvalRunId);
             if (evalRun == null)
             {
@@ -45,9 +45,22 @@ public class EvaluationResultService : IEvaluationResultService
                 };
             }
 
+            // Get internal entity details for blob storage
+            var evalRunEntity = await _evalRunService.GetEvalRunEntityByIdAsync(saveDto.EvalRunId);
+            if (evalRunEntity == null)
+            {
+                _logger.LogError("Could not retrieve internal entity details for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                return new EvaluationResultSaveResponseDto
+                {
+                    Success = false,
+                    Message = "Failed to retrieve evaluation run details",
+                    EvalRunId = saveDto.EvalRunId
+                };
+            }
+
             // Validate that the evaluation run has a terminal status (Completed or Failed)
             var allowedStatuses = new[] { EvalRunStatusConstants.Completed, EvalRunStatusConstants.Failed };
-            if (!allowedStatuses.Contains(evalRun.Status))
+            if (!allowedStatuses.Any(status => string.Equals(status, evalRun.Status, StringComparison.OrdinalIgnoreCase)))
             {
                 _logger.LogWarning("Cannot save evaluation results for EvalRunId: {EvalRunId} with status: {Status}. Results can only be saved for evaluations with status 'Completed' or 'Failed'.", 
                     saveDto.EvalRunId, evalRun.Status);
@@ -63,38 +76,29 @@ public class EvaluationResultService : IEvaluationResultService
             // we can use it as-is without transformation
             var evaluationRecordsJson = saveDto.EvaluationRecords;
 
-            // Handle container name and blob path with backward compatibility
+            // Handle container name and blob path with support for folder structure
             string containerName;
             string blobPath;
             
-            if (!string.IsNullOrEmpty(evalRun.ContainerName))
+            if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
             {
                 // New format: use stored container name and blob path
-                containerName = evalRun.ContainerName;
-                blobPath = evalRun.BlobFilePath ?? $"evaluations/{saveDto.EvalRunId}.json";
+                containerName = evalRunEntity.ContainerName;
+                // If BlobFilePath is a folder (ends with /), append the filename
+                if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
+                {
+                    blobPath = $"{evalRunEntity.BlobFilePath}{saveDto.FileName}";
+                }
+                else
+                {
+                    blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{saveDto.EvalRunId}/{saveDto.FileName}";
+                }
             }
             else
             {
                 // Backward compatibility: parse the old format
-                containerName = evalRun.AgentId;
-                if (!string.IsNullOrEmpty(evalRun.BlobFilePath) && evalRun.BlobFilePath.Contains('/'))
-                {
-                    // Old format: "A001/evaluations/{evalRunId}.json"
-                    var pathParts = evalRun.BlobFilePath.Split('/', 2);
-                    if (pathParts.Length == 2)
-                    {
-                        containerName = pathParts[0];
-                        blobPath = pathParts[1];
-                    }
-                    else
-                    {
-                        blobPath = evalRun.BlobFilePath;
-                    }
-                }
-                else
-                {
-                    blobPath = evalRun.BlobFilePath ?? $"evaluations/{saveDto.EvalRunId}.json";
-                }
+                containerName = evalRunEntity.AgentId.ToLower();
+                blobPath = $"evalresults/{saveDto.EvalRunId}/{saveDto.FileName}";
             }
 
             // Serialize evaluation records to JSON using the storage model
@@ -149,7 +153,7 @@ public class EvaluationResultService : IEvaluationResultService
         {
             _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
 
-            // First, verify that the EvalRunId exists
+            // First, verify that the EvalRunId exists and get internal details
             var evalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
             if (evalRun == null)
             {
@@ -162,38 +166,44 @@ public class EvaluationResultService : IEvaluationResultService
                 };
             }
 
-            // Handle container name and blob path with backward compatibility
+            // Get internal entity details for blob storage
+            var evalRunEntity = await _evalRunService.GetEvalRunEntityByIdAsync(evalRunId);
+            if (evalRunEntity == null)
+            {
+                _logger.LogError("Could not retrieve internal entity details for EvalRunId: {EvalRunId}", evalRunId);
+                return new EvaluationResultResponseDto
+                {
+                    Success = false,
+                    Message = "Failed to retrieve evaluation run details",
+                    EvalRunId = evalRunId
+                };
+            }
+
+            // Handle container name and blob path with support for folder structure
             string containerName;
             string blobPath;
             
-            if (!string.IsNullOrEmpty(evalRun.ContainerName))
+            if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
             {
                 // New format: use stored container name and blob path
-                containerName = evalRun.ContainerName;
-                blobPath = evalRun.BlobFilePath ?? $"evaluations/{evalRunId}.json";
+                containerName = evalRunEntity.ContainerName;
+                // If BlobFilePath is a folder (ends with /), look for main results file
+                if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
+                {
+                    // Try to find the main results file - could be results.json or any json file
+                    // For now, we'll look for results.json as the main file
+                    blobPath = $"{evalRunEntity.BlobFilePath}results.json";
+                }
+                else
+                {
+                    blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{evalRunId}/results.json";
+                }
             }
             else
             {
                 // Backward compatibility: parse the old format
-                containerName = evalRun.AgentId;
-                if (!string.IsNullOrEmpty(evalRun.BlobFilePath) && evalRun.BlobFilePath.Contains('/'))
-                {
-                    // Old format: "A001/evaluations/{evalRunId}.json"
-                    var pathParts = evalRun.BlobFilePath.Split('/', 2);
-                    if (pathParts.Length == 2)
-                    {
-                        containerName = pathParts[0];
-                        blobPath = pathParts[1];
-                    }
-                    else
-                    {
-                        blobPath = evalRun.BlobFilePath;
-                    }
-                }
-                else
-                {
-                    blobPath = evalRun.BlobFilePath ?? $"evaluations/{evalRunId}.json";
-                }
+                containerName = evalRunEntity.AgentId.ToLower();
+                blobPath = $"evalresults/{evalRunId}/results.json";
             }
 
             // Check if blob exists
@@ -298,7 +308,7 @@ public class EvaluationResultService : IEvaluationResultService
                 .Where(run => run.StartedDatetime.HasValue &&
                              run.StartedDatetime.Value >= startDateTime && 
                              run.StartedDatetime.Value <= endDateTime && 
-                             run.Status == EvalRunStatusConstants.Completed)
+                             string.Equals(run.Status, EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             _logger.LogInformation("Found {Count} completed evaluation runs within date range for AgentId: {AgentId}", 
