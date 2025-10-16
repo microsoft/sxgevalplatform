@@ -63,9 +63,39 @@ public class EvaluationResultService : IEvaluationResultService
             // we can use it as-is without transformation
             var evaluationRecordsJson = saveDto.EvaluationRecords;
 
-            // Create the blob path: <agentID>/evaluations/<evalRunId>
-            var blobPath = $"evaluations/{saveDto.EvalRunId}.json";
-            var containerName = evalRun.AgentId;
+            // Handle container name and blob path with backward compatibility
+            string containerName;
+            string blobPath;
+            
+            if (!string.IsNullOrEmpty(evalRun.ContainerName))
+            {
+                // New format: use stored container name and blob path
+                containerName = evalRun.ContainerName;
+                blobPath = evalRun.BlobFilePath ?? $"evaluations/{saveDto.EvalRunId}.json";
+            }
+            else
+            {
+                // Backward compatibility: parse the old format
+                containerName = evalRun.AgentId;
+                if (!string.IsNullOrEmpty(evalRun.BlobFilePath) && evalRun.BlobFilePath.Contains('/'))
+                {
+                    // Old format: "A001/evaluations/{evalRunId}.json"
+                    var pathParts = evalRun.BlobFilePath.Split('/', 2);
+                    if (pathParts.Length == 2)
+                    {
+                        containerName = pathParts[0];
+                        blobPath = pathParts[1];
+                    }
+                    else
+                    {
+                        blobPath = evalRun.BlobFilePath;
+                    }
+                }
+                else
+                {
+                    blobPath = evalRun.BlobFilePath ?? $"evaluations/{saveDto.EvalRunId}.json";
+                }
+            }
 
             // Serialize evaluation records to JSON using the storage model
             var storageModel = new StoredEvaluationResultDto
@@ -132,9 +162,39 @@ public class EvaluationResultService : IEvaluationResultService
                 };
             }
 
-            // Create the blob path: <agentID>/evaluations/<evalRunId>
-            var blobPath = $"evaluations/{evalRunId}.json";
-            var containerName = evalRun.AgentId;
+            // Handle container name and blob path with backward compatibility
+            string containerName;
+            string blobPath;
+            
+            if (!string.IsNullOrEmpty(evalRun.ContainerName))
+            {
+                // New format: use stored container name and blob path
+                containerName = evalRun.ContainerName;
+                blobPath = evalRun.BlobFilePath ?? $"evaluations/{evalRunId}.json";
+            }
+            else
+            {
+                // Backward compatibility: parse the old format
+                containerName = evalRun.AgentId;
+                if (!string.IsNullOrEmpty(evalRun.BlobFilePath) && evalRun.BlobFilePath.Contains('/'))
+                {
+                    // Old format: "A001/evaluations/{evalRunId}.json"
+                    var pathParts = evalRun.BlobFilePath.Split('/', 2);
+                    if (pathParts.Length == 2)
+                    {
+                        containerName = pathParts[0];
+                        blobPath = pathParts[1];
+                    }
+                    else
+                    {
+                        blobPath = evalRun.BlobFilePath;
+                    }
+                }
+                else
+                {
+                    blobPath = evalRun.BlobFilePath ?? $"evaluations/{evalRunId}.json";
+                }
+            }
 
             // Check if blob exists
             var blobExists = await _blobService.BlobExistsAsync(containerName, blobPath);

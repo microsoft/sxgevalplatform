@@ -46,6 +46,7 @@ public class EvalRunEntity : ITableEntity
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
+    public string? ContainerName { get; set; } // Add container name property
 }
 
 /// <summary>
@@ -63,6 +64,7 @@ public class EvalRunDto
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
+    public string? ContainerName { get; set; } // Add container name property
 }
 
 /// <summary>

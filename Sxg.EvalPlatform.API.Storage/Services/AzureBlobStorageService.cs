@@ -47,7 +47,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _logger.LogInformation("Reading blob content from container: {ContainerName}, blob: {BlobName}",
                     containerName, blobName);
 
-                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
 
                 if (!await blobClient.ExistsAsync())
@@ -109,7 +109,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
 
                 var response = await blobClient.ExistsAsync();
@@ -131,7 +131,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _logger.LogInformation("Deleting blob from container: {ContainerName}, blob: {BlobName}",
                     containerName, blobName);
 
-                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
 
                 var response = await blobClient.DeleteIfExistsAsync();

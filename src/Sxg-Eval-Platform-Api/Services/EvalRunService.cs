@@ -63,8 +63,9 @@ public class EvalRunService : IEvalRunService
             var evalRunId = Guid.NewGuid();
             var currentDateTime = DateTime.UtcNow;
             
-            // Construct the blob file path where evaluation results will be stored
-            var blobFilePath = $"{createDto.AgentId}/evaluations/{evalRunId}.json";
+            // Store container name and blob path separately for better blob storage handling
+            var containerName = createDto.AgentId;
+            var blobFilePath = $"evaluations/{evalRunId}.json";
             
             var entity = new EvalRunEntity
             {
@@ -77,6 +78,7 @@ public class EvalRunService : IEvalRunService
                 Status = EvalRunStatusConstants.Queued,
                 LastUpdatedOn = currentDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 StartedDatetime = currentDateTime,
+                ContainerName = containerName,
                 BlobFilePath = blobFilePath
             };
 
@@ -204,7 +206,7 @@ public class EvalRunService : IEvalRunService
     /// <summary>
     /// Map EvalRunEntity to EvalRunDto
     /// </summary>
-    private static EvalRunDto MapEntityToDto(EvalRunEntity entity)
+    private EvalRunDto MapEntityToDto(EvalRunEntity entity)
     {
         return new EvalRunDto
         {
@@ -217,7 +219,8 @@ public class EvalRunService : IEvalRunService
             LastUpdatedOn = entity.LastUpdatedOn,
             StartedDatetime = entity.StartedDatetime,
             CompletedDatetime = entity.CompletedDatetime,
-            BlobFilePath = entity.BlobFilePath
+            BlobFilePath = entity.BlobFilePath,
+            ContainerName = entity.ContainerName
         };
     }
 }
