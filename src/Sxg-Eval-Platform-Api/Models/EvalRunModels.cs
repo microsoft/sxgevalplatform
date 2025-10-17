@@ -47,6 +47,9 @@ public class EvalRunEntity : ITableEntity
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
     public string? ContainerName { get; set; } // Add container name property
+    public string Type { get; set; } = string.Empty;
+    public string EnvironmentId { get; set; } = string.Empty;
+    public string AgentSchemaName { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -80,6 +83,26 @@ public class CreateEvalRunDto
     
     [Required]
     public Guid MetricsConfigurationId { get; set; }
+    
+    /// <summary>
+    /// Type of agent/evaluation system (e.g., MCS, AI Foundary, SK)
+    /// </summary>
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string Type { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Environment identifier where the agent is deployed
+    /// </summary>
+    [Required]
+    public Guid EnvironmentId { get; set; }
+    
+    /// <summary>
+    /// Schema name of the agent in the target environment
+    /// </summary>
+    [Required]
+    [StringLength(200, MinimumLength = 1)]
+    public string AgentSchemaName { get; set; } = string.Empty;
 }
 
 /// <summary>
