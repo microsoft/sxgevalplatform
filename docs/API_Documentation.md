@@ -4,7 +4,7 @@
 
 The SXG Evaluation Platform API provides a comprehensive set of endpoints for managing evaluation runs, datasets, metrics configurations, and evaluation results. This API enables clients to create, monitor, and analyze AI model evaluations.
 
-**Base URL**: `https://your-api-domain.com/api/v1`
+**Base URL**: `https://sxgevalapidev.azurewebsites.net/swagger/index.html`
 
 **API Version**: v1
 
@@ -50,7 +50,7 @@ The API currently uses Azure-based authentication. Ensure your requests include 
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/health
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/health
 ```
 
 ---
@@ -95,7 +95,7 @@ Evaluation runs represent the execution of an AI model evaluation using specific
 
 **Sample Usage**:
 ```bash
-curl -X POST https://your-api-domain.com/api/v1/eval/runs \
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "my-ai-agent",
@@ -144,7 +144,7 @@ curl -X POST https://your-api-domain.com/api/v1/eval/runs \
 
 **Sample Usage**:
 ```bash
-curl -X PUT https://your-api-domain.com/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000 \
+curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000 \
   -H "Content-Type: application/json" \
   -d '{"status": "completed"}'
 ```
@@ -179,7 +179,7 @@ curl -X PUT https://your-api-domain.com/api/v1/eval/runs/550e8400-e29b-41d4-a716
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---
@@ -242,7 +242,7 @@ Evaluation results contain the detailed output and metrics from completed evalua
 
 **Sample Usage**:
 ```bash
-curl -X POST https://your-api-domain.com/api/v1/eval/results \
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
   -H "Content-Type: application/json" \
   -d '{
     "evalRunId": "550e8400-e29b-41d4-a716-446655440000",
@@ -287,7 +287,7 @@ curl -X POST https://your-api-domain.com/api/v1/eval/results \
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/eval/results/550e8400-e29b-41d4-a716-446655440000
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ### 3. Get Evaluation Runs by Agent
@@ -329,7 +329,7 @@ curl -X GET https://your-api-domain.com/api/v1/eval/results/550e8400-e29b-41d4-a
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/eval/results/agent/my-ai-agent
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/agent/my-ai-agent
 ```
 
 ### 4. Get Evaluation Results by Date Range
@@ -364,7 +364,7 @@ curl -X GET https://your-api-domain.com/api/v1/eval/results/agent/my-ai-agent
 
 **Sample Usage**:
 ```bash
-curl -X GET "https://your-api-domain.com/api/v1/eval/results/agent/my-ai-agent/daterange?startDateTime=2025-10-01T00:00:00Z&endDateTime=2025-10-17T23:59:59Z"
+curl -X GET "https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/agent/my-ai-agent/daterange?startDateTime=2025-10-01T00:00:00Z&endDateTime=2025-10-17T23:59:59Z"
 ```
 
 ---
@@ -410,7 +410,7 @@ Datasets contain the test data used for evaluations, including prompts, expected
 
 **Sample Usage**:
 ```bash
-curl -X GET "https://your-api-domain.com/api/v1/datasets?agentId=my-ai-agent"
+curl -X GET "https://sxgevalapidev.azurewebsites.net/api/v1/datasets?agentId=my-ai-agent"
 ```
 
 ### 2. Get Dataset Content
@@ -446,7 +446,7 @@ curl -X GET "https://your-api-domain.com/api/v1/datasets?agentId=my-ai-agent"
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/datasets/golden-dataset-001
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/datasets/golden-dataset-001
 ```
 
 ### 3. Save Dataset
@@ -506,7 +506,7 @@ curl -X GET https://your-api-domain.com/api/v1/datasets/golden-dataset-001
 
 **Sample Usage**:
 ```bash
-curl -X POST https://your-api-domain.com/api/v1/datasets \
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/datasets \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "my-ai-agent",
@@ -562,7 +562,7 @@ Metrics configurations define how evaluations are measured and what metrics are 
 
 **Sample Usage**:
 ```bash
-curl -X GET https://your-api-domain.com/api/v1/eval/defaultconfiguration
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/defaultconfiguration
 ```
 
 ---
@@ -658,28 +658,28 @@ The API uses standard HTTP status codes and returns consistent error response fo
 ### Complete Evaluation Workflow
 ```bash
 # 1. Create evaluation run
-EVAL_RUN_ID=$(curl -X POST https://your-api-domain.com/api/v1/eval/runs \
+EVAL_RUN_ID=$(curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
   -H "Content-Type: application/json" \
   -d '{"agentId":"my-agent","dataSetId":"dataset-001","metricsConfigurationId":"metrics-001"}' \
   | jq -r '.evalRunId')
 
 # 2. Update status to running
-curl -X PUT https://your-api-domain.com/api/v1/eval/runs/$EVAL_RUN_ID \
+curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/$EVAL_RUN_ID \
   -H "Content-Type: application/json" \
   -d '{"status":"Running"}'
 
 # 3. After evaluation completion, update status
-curl -X PUT https://your-api-domain.com/api/v1/eval/runs/$EVAL_RUN_ID \
+curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/$EVAL_RUN_ID \
   -H "Content-Type: application/json" \
   -d '{"status":"Completed"}'
 
 # 4. Save evaluation results
-curl -X POST https://your-api-domain.com/api/v1/eval/results \
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
   -H "Content-Type: application/json" \
   -d "{\"evalRunId\":\"$EVAL_RUN_ID\",\"fileName\":\"results.json\",\"evaluationRecords\":[{\"id\":1,\"score\":0.95}]}"
 
 # 5. Retrieve results
-curl -X GET https://your-api-domain.com/api/v1/eval/results/$EVAL_RUN_ID
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/$EVAL_RUN_ID
 ```
 
 This comprehensive API documentation provides all the information needed to integrate with the SXG Evaluation Platform API effectively.
