@@ -57,14 +57,16 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => src.LastUpdatedOn));
 
-            // SaveDatasetDto to DataSetTableEntity
+            // SaveDatasetDto to DataSetTableEntity (for create operations)
             CreateMap<SaveDatasetDto, DataSetTableEntity>()
                 .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
-                .ForMember(dest => dest.DatasetId, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.RowKey, opt => opt.Ignore()) // Set manually with GUID
+                .ForMember(dest => dest.DatasetId, opt => opt.Ignore()) // Set manually with GUID
                 .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.UserMetadata.Email))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
-                .ForMember(dest => dest.LastUpdatedBy, opt => opt.Ignore()) // Will be set from auth context
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.UserMetadata.Email))
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.ContainerName, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
@@ -73,6 +75,10 @@ namespace SxgEvalPlatformApi
             // DataSetTableEntity to DatasetMetadataDto
             CreateMap<DataSetTableEntity, DatasetMetadataDto>()
                 .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))
+                .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => src.LastUpdatedOn))
                 .ForMember(dest => dest.RecordCount, opt => opt.Ignore()); // Calculated separately if needed
 
             // Additional mappings for collections

@@ -224,6 +224,59 @@ namespace SxgEvalPlatformApi.Controllers
             }
         }
 
+        /// <summary>
+        /// Update an existing dataset
+        /// </summary>
+        /// <param name="datasetId">The ID of the dataset to update</param>
+        /// <param name="updateDatasetDto">The updated dataset data</param>
+        /// <returns>Updated dataset information</returns>
+        /// <response code="200">Dataset updated successfully</response>
+        /// <response code="400">Invalid input or validation failed</response>
+        /// <response code="404">Dataset not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPut("{datasetId}")]
+        [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<DatasetSaveResponseDto>> UpdateDataset(
+            [FromRoute] Guid datasetId,
+            [FromBody] UpdateDatasetDto updateDatasetDto)
+        {
+            try
+            {
+                _logger.LogInformation("Request to update dataset: {DatasetId}",
+                    datasetId);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid model state for dataset update");
+                    return CreateValidationErrorResponse<DatasetSaveResponseDto>();
+                }
+
+                var result = await _dataSetRequestHandler.UpdateDatasetAsync(datasetId.ToString(), updateDatasetDto);
+
+                if (result.Status == "error")
+                {
+                    _logger.LogError("Dataset update failed: {Message}", result.Message);
+                    return CreateErrorResponse<DatasetSaveResponseDto>(
+                        result.Message, StatusCodes.Status500InternalServerError);
+                }
+
+                _logger.LogInformation("Dataset updated successfully: {DatasetId}", 
+                    result.DatasetId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating dataset: {DatasetId}",
+                    datasetId);
+                return CreateErrorResponse<DatasetSaveResponseDto>(
+                    "Failed to update dataset", StatusCodes.Status500InternalServerError);
+            }
+        }
+
         #endregion
     }
 }

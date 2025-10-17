@@ -48,15 +48,30 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 throw new Exception($"Default metrics configuration blob not found: {containerName}/{blobFilePath}");
             }
 
-            var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(blobContent);
-
-            if (metrics == null)
+            // Parse the JSON to handle the wrapper structure
+            using var document = JsonDocument.Parse(blobContent);
+            var root = document.RootElement;
+            
+            // Check if the JSON has a "metricConfiguration" wrapper
+            if (root.TryGetProperty("metricConfiguration", out var metricsElement))
             {
-                throw new Exception("Failed to deserialize default metrics configuration from blob content default metrics configuration.");
+                var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(metricsElement.GetRawText());
+                if (metrics == null)
+                {
+                    throw new Exception("Failed to deserialize default metrics configuration from wrapped JSON structure.");
+                }
+                return metrics;
             }
-
-
-            return metrics; 
+            else
+            {
+                // Try direct deserialization for backward compatibility
+                var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(blobContent);
+                if (metrics == null)
+                {
+                    throw new Exception("Failed to deserialize default metrics configuration from blob content.");
+                }
+                return metrics;
+            }
         }
 
         public async Task<IList<MetricsConfigurationMetadataDto>> GetAllMetricsConfigurationsByAgentIdAndEnvironmentAsync(string agentId, string enviornmentName)
@@ -104,14 +119,40 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     throw new Exception($"Metrics configuration blob not found: {blobContainer}/{blobPath}");
                 }
 
-                IList<SelectedMetricsConfiguration>? metrics = System.Text.Json.JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(blobContent);
+                IList<SelectedMetricsConfiguration>? metrics = null;
+
+                // Handle both old array format and new object format
+                try
+                {
+                    var jsonDocument = JsonDocument.Parse(blobContent);
+                    var rootElement = jsonDocument.RootElement;
+
+                    if (rootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        // Old format: direct array
+                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(blobContent);
+                    }
+                    else if (rootElement.ValueKind == JsonValueKind.Object && rootElement.TryGetProperty("metricsConfiguration", out var metricsConfigElement))
+                    {
+                        // New format: object with metricsConfiguration property
+                        var metricsConfigJson = metricsConfigElement.GetRawText();
+                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(metricsConfigJson);
+                    }
+                    else
+                    {
+                        throw new Exception("Blob content does not contain metrics configuration in expected format");
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", configurationId);
+                    throw new Exception("Invalid JSON format in metrics configuration blob", ex);
+                }
 
                 if (metrics == null)
                 {
                     throw new Exception("Failed to deserialize metrics configuration from blob content.");
                 }
-
-                var result = ToSelectedMetricsConfigurationDto(metrics);
 
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}",
                     configurationId);

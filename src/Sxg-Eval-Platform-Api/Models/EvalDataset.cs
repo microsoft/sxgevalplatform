@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Azure;
 using Azure.Data.Tables;
+using SxgEvalPlatformApi.Models.Dtos;
 
 namespace SxgEvalPlatformApi.Models
 {
@@ -34,6 +35,22 @@ namespace SxgEvalPlatformApi.Models
         [Required]
         [MinLength(1)]
         public List<EvalDataset> DatasetRecords { get; set; } = new();
+
+        [Required]
+        public UserMetadataDto UserMetadata { get; set; } = new();
+    }
+
+    /// <summary>
+    /// DTO for updating datasets
+    /// </summary>
+    public class UpdateDatasetDto
+    {
+        [Required]
+        [MinLength(1)]
+        public List<EvalDataset> DatasetRecords { get; set; } = new();
+
+        [Required]
+        public UserMetadataDto UserMetadata { get; set; } = new();
     }
 
     /// <summary>
@@ -53,6 +70,10 @@ namespace SxgEvalPlatformApi.Models
         public string DatasetId { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
+        public string LastUpdatedBy { get; set; } = string.Empty;
+        public DateTime LastUpdatedOn { get; set; }
     }
 
     /// <summary>
@@ -113,11 +134,14 @@ namespace SxgEvalPlatformApi.Models
     public class DatasetMetadataDto
     {
         public string DatasetId { get; set; } = string.Empty;
-        public DateTime LastUpdatedOn { get; set; }
         public string AgentId { get; set; } = string.Empty;
         public string DatasetType { get; set; } = string.Empty;
         public string DatasetName { get; set; } = string.Empty;
         public int RecordCount { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
+        public string LastUpdatedBy { get; set; } = string.Empty;
+        public DateTime LastUpdatedOn { get; set; }
     }
 
     /// <summary>
