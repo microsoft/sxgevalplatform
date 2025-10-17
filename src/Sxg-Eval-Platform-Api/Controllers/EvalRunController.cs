@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Services;
 using Azure;
@@ -30,7 +29,6 @@ public class EvalRunController : BaseController
     /// <response code="400">Invalid input data</response>
     /// <response code="500">Internal server error</response>
     [HttpPost]
-    [EnableRateLimiting("StrictApiPolicy")]
     [ProducesResponseType(typeof(EvalRunDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -84,7 +82,6 @@ public class EvalRunController : BaseController
     /// <response code="404">Evaluation run not found</response>
     /// <response code="500">Internal server error</response>
     [HttpPut("{evalRunId}")]
-    [EnableRateLimiting("StrictApiPolicy")]
     [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

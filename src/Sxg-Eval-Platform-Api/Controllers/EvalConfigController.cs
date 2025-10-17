@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using SxgEvalPlatformApi.Models.Dtos;
@@ -152,7 +151,6 @@ namespace SxgEvalPlatformApi.Controllers
         #region POST Methods
                 
         [HttpPost("configurations")]
-        [EnableRateLimiting("StrictApiPolicy")]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

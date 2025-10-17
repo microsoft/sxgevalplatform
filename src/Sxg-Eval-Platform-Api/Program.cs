@@ -5,7 +5,6 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
 using System.Reflection;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,53 +84,6 @@ builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
 // Add logging
 builder.Services.AddLogging();
 
-// Add Rate Limiting for security
-builder.Services.AddRateLimiter(rateLimiterOptions =>
-{
-    // General API rate limiting policy
-    rateLimiterOptions.AddPolicy("ApiPolicy", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: partition => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 100, // 100 requests per minute per IP
-                Window = TimeSpan.FromMinutes(1),
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 10
-            }));
-
-    // Strict rate limiting for resource-intensive operations (POST, PUT)
-    rateLimiterOptions.AddPolicy("StrictApiPolicy", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: partition => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 20, // 20 requests per minute per IP
-                Window = TimeSpan.FromMinutes(1),
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 5
-            }));
-
-    // Global fallback policy
-    rateLimiterOptions.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: partition => new FixedWindowRateLimiterOptions
-            {
-                AutoReplenishment = true,
-                PermitLimit = 200, // Global limit: 200 requests per minute per IP
-                Window = TimeSpan.FromMinutes(1)
-            }));
-
-    rateLimiterOptions.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.StatusCode = 429; // Too Many Requests
-        await context.HttpContext.Response.WriteAsync(
-            "Rate limit exceeded. Please try again later.", 
-            cancellationToken: token);
-    };
-});
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -146,9 +98,6 @@ app.UseSwaggerUI(c =>
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
-
-// Enable rate limiting middleware
-app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
