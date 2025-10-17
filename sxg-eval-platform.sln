@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{02EA681E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sxg.EvalPlatform.API.Storage.UnitTests", "Sxg.EvalPlatform.API.Storage.UnitTests\Sxg.EvalPlatform.API.Storage.UnitTests.csproj", "{A7784D6C-94AB-40EF-824D-56128FB9C5DA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{30B3C219-822E-45DF-A8DD-22181ED4CCB5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SxG.EvalPlatform.Plugins", "Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj", "{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +40,10 @@ Global
 		{A7784D6C-94AB-40EF-824D-56128FB9C5DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7784D6C-94AB-40EF-824D-56128FB9C5DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7784D6C-94AB-40EF-824D-56128FB9C5DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -46,8 +54,12 @@ Global
 		{5F4514F0-680B-4EC4-96F5-3229AF37E719} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A7784D6C-94AB-40EF-824D-56128FB9C5DA} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C} = {30B3C219-822E-45DF-A8DD-22181ED4CCB5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D246B941-A2E7-41C1-8126-1CC828F85B63}
+	EndGlobalSection
+	GlobalSection(CRMSolutionProperties) = preSolution
+		SolutionIsBoundToCRM = True
 	EndGlobalSection
 EndGlobal
