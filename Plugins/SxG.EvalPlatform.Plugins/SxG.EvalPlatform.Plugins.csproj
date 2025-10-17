@@ -69,6 +69,7 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomApis\CustomApiConfig.cs" />
     <Compile Include="Implementation\EnvironmentVariableService.cs" />
     <Compile Include="Implementation\ServiceCache.cs" />
     <Compile Include="Interfaces\IEnvironmentVariableService.cs" />
@@ -77,6 +78,9 @@
     <Compile Include="Framework\LocalPluginContext.cs" />
     <Compile Include="Framework\LocalPluginContextManager.cs" />
     <Compile Include="Models\CacheItem.cs" />
+    <Compile Include="Models\EvalJobEntity.cs" />
+    <Compile Include="Models\Requests\EvalRunRequests.cs" />
+    <Compile Include="Models\Responses\EvalRunResponses.cs" />
     <Compile Include="Plugins\GetEvalRun.cs" />
     <Compile Include="Plugins\PostEvalRun.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -84,6 +88,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Target Name="GetTfmPublishedFiles">
     <Message Text="GetTfmPublishedFiles from: $(OutputPath)" />
