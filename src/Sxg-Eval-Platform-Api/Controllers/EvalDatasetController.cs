@@ -43,11 +43,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve all datasets for agent: {AgentId}", agentId);
 
-                var agentIdValidation = ValidateAgentId(agentId);
-                if (agentIdValidation != null)
+                ValidateAndAddToModelState(agentId, "agentId", "agentid");
+                if (!ModelState.IsValid)
                 {
                     _logger.LogWarning("Invalid or missing agent ID");
-                    return agentIdValidation;
+                    return CreateValidationErrorResponse<IList<DatasetMetadataDto>>();
                 }
 
                 var datasets = await _dataSetRequestHandler.GetDatasetsByAgentIdAsync(agentId);
@@ -83,20 +83,13 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(List<EvalDataset>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetDatasetById(string datasetId)
+        public async Task<IActionResult> GetDatasetById(Guid datasetId)
         {
             try
             {
                 _logger.LogInformation("Request to retrieve dataset content for dataset: {DatasetId}", datasetId);
 
-                var datasetIdValidation = ValidateDatasetId(datasetId);
-                if (datasetIdValidation != null)
-                {
-                    _logger.LogWarning("Invalid or missing dataset ID");
-                    return datasetIdValidation;
-                }
-
-                var datasetJson = await _dataSetRequestHandler.GetDatasetByIdAsync(datasetId);
+                var datasetJson = await _dataSetRequestHandler.GetDatasetByIdAsync(datasetId.ToString());
 
                 if (string.IsNullOrEmpty(datasetJson))
                 {
@@ -138,20 +131,13 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(DatasetMetadataDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<DatasetMetadataDto>> GetDatasetMetadataById(string datasetId)
+        public async Task<ActionResult<DatasetMetadataDto>> GetDatasetMetadataById(Guid datasetId)
         {
             try
             {
                 _logger.LogInformation("Request to retrieve dataset metadata for dataset: {DatasetId}", datasetId);
 
-                var datasetIdValidation = ValidateDatasetId(datasetId);
-                if (datasetIdValidation != null)
-                {
-                    _logger.LogWarning("Invalid or missing dataset ID");
-                    return datasetIdValidation;
-                }
-
-                var metadata = await _dataSetRequestHandler.GetDatasetMetadataByIdAsync(datasetId);
+                var metadata = await _dataSetRequestHandler.GetDatasetMetadataByIdAsync(datasetId.ToString());
 
                 if (metadata == null)
                 {

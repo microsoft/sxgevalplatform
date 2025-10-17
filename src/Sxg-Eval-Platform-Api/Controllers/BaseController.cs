@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Azure;
-using SxgEvalPlatformApi.Utils;
+using System.Text.RegularExpressions;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -57,11 +57,95 @@ public abstract class BaseController : ControllerBase
     /// <returns>Validation error response</returns>
     protected ActionResult<T> CreateValidationErrorResponse<T>()
     {
-        return BadRequest(new { 
-            title = "Validation failed",
-            detail = "One or more validation errors occurred.",
-            errors = ModelState
+        return BadRequest(new
+        {
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors = ModelState.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? new string[0]
+            )
         });
+    }
+
+    /// <summary>
+    /// Creates a simple validation error response for IActionResult
+    /// </summary>
+    /// <returns>Validation error response</returns>
+    protected IActionResult CreateSimpleValidationErrorResponse()
+    {
+        return BadRequest(new
+        {
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors = ModelState.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? new string[0]
+            )
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized bad request error response with consistent format
+    /// </summary>
+    /// <param name="fieldName">The field name that has the error</param>
+    /// <param name="errorMessage">The error message</param>
+    /// <returns>Standardized error response</returns>
+    protected IActionResult CreateBadRequestResponse(string fieldName, string errorMessage)
+    {
+        return BadRequest(new
+        {
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors = new Dictionary<string, string[]>
+            {
+                { fieldName, new[] { errorMessage } }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized bad request error response with consistent format for ActionResult&lt;T&gt;
+    /// </summary>
+    /// <typeparam name="T">The type of the ActionResult</typeparam>
+    /// <param name="fieldName">The field name that has the error</param>
+    /// <param name="errorMessage">The error message</param>
+    /// <returns>Standardized error response</returns>
+    protected ActionResult<T> CreateBadRequestResponse<T>(string fieldName, string errorMessage)
+    {
+        return BadRequest(new
+        {
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors = new Dictionary<string, string[]>
+            {
+                { fieldName, new[] { errorMessage } }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Validates agent ID input and adds to ModelState if invalid
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="fieldName">Field name for ModelState</param>
+    /// <param name="validationType">Type of validation to perform (currently only supports "agentid")</param>
+    protected void ValidateAndAddToModelState(string? value, string fieldName, string validationType)
+    {
+        var alphanumericPattern = new Regex(@"^[a-zA-Z0-9\-_\.]+$", RegexOptions.Compiled);
+        
+        switch (validationType.ToLower())
+        {
+            case "agentid":
+                if (string.IsNullOrWhiteSpace(value))
+                    ModelState.AddModelError(fieldName, "Agent ID is required");
+                else if (value.Length > 100 || !alphanumericPattern.IsMatch(value))
+                    ModelState.AddModelError(fieldName, "Invalid agent ID format");
+                break;
+                
+            default:
+                throw new ArgumentException($"Unsupported validation type: {validationType}", nameof(validationType));
+        }
     }
 
     /// <summary>
@@ -96,66 +180,6 @@ public abstract class BaseController : ControllerBase
     }
 
     /// <summary>
-    /// Validates agent ID input
-    /// </summary>
-    /// <param name="agentId">Agent ID to validate</param>
-    /// <returns>BadRequest if invalid, null if valid</returns>
-    protected ActionResult? ValidateAgentId(string? agentId)
-    {
-        if (string.IsNullOrWhiteSpace(agentId))
-        {
-            return BadRequest("Agent ID is required");
-        }
-
-        if (!InputSanitizer.IsValidAgentId(agentId))
-        {
-            return BadRequest("Invalid agent ID format");
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Validates dataset ID input
-    /// </summary>
-    /// <param name="datasetId">Dataset ID to validate</param>
-    /// <returns>BadRequest if invalid, null if valid</returns>
-    protected ActionResult? ValidateDatasetId(string? datasetId)
-    {
-        if (string.IsNullOrWhiteSpace(datasetId))
-        {
-            return BadRequest("Dataset ID is required");
-        }
-
-        if (!InputSanitizer.IsValidDatasetId(datasetId))
-        {
-            return BadRequest("Invalid dataset ID format");
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Validates configuration ID input
-    /// </summary>
-    /// <param name="configurationId">Configuration ID to validate</param>
-    /// <returns>BadRequest if invalid, null if valid</returns>
-    protected ActionResult? ValidateConfigurationId(string? configurationId)
-    {
-        if (string.IsNullOrWhiteSpace(configurationId))
-        {
-            return BadRequest("Configuration ID is required");
-        }
-
-        if (!InputSanitizer.IsValidConfigurationId(configurationId))
-        {
-            return BadRequest("Invalid configuration ID format");
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// Validates evaluation run ID input
     /// </summary>
     /// <param name="evalRunId">Evaluation run ID to validate</param>
@@ -164,7 +188,15 @@ public abstract class BaseController : ControllerBase
     {
         if (evalRunId == Guid.Empty)
         {
-            return BadRequest("Evaluation run ID is required and must be a valid GUID");
+            return BadRequest(new
+            {
+                title = "One or more validation errors occurred.",
+                status = 400,
+                errors = new Dictionary<string, string[]>
+                {
+                    { "evalRunId", new[] { "Evaluation run ID is required and must be a valid GUID" } }
+                }
+            });
         }
 
         return null;

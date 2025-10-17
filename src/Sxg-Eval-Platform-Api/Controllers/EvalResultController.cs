@@ -55,11 +55,11 @@ public class EvalResultController : BaseController
                 // Use generic error messages to prevent information disclosure
                 if (result.Message.Contains("not found"))
                 {
-                    return BadRequest("Invalid evaluation run identifier or evaluation run not found");
+                    return CreateBadRequestResponse<EvaluationResultSaveResponseDto>("EvalRunId", "Invalid evaluation run identifier or evaluation run not found");
                 }
                 if (result.Message.Contains("Cannot save evaluation results") && result.Message.Contains("status"))
                 {
-                    return BadRequest("Unable to save results - evaluation run status does not allow saving");
+                    return CreateBadRequestResponse<EvaluationResultSaveResponseDto>("EvalRunId", "Unable to save results - evaluation run status does not allow saving");
                 }
                 return CreateErrorResponse<EvaluationResultSaveResponseDto>(
                     "Failed to save evaluation results", StatusCodes.Status500InternalServerError);
@@ -122,7 +122,7 @@ public class EvalResultController : BaseController
                 // Use generic error messages to prevent information disclosure
                 if (result.Message.Contains("not found") && result.Message.Contains("EvalRunId"))
                 {
-                    return BadRequest("Invalid evaluation run identifier");
+                    return CreateBadRequestResponse<EvaluationResultResponseDto>("evalRunId", "Invalid evaluation run identifier");
                 }
                 else if (result.Message.Contains("not found") || result.Message.Contains("hasn't completed"))
                 {
@@ -174,7 +174,7 @@ public class EvalResultController : BaseController
         {
             if (string.IsNullOrWhiteSpace(agentId))
             {
-                return BadRequest("AgentId is required and cannot be empty");
+                return CreateBadRequestResponse<List<EvalRunDto>>("agentId", "AgentId is required and cannot be empty");
             }
 
             _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
@@ -224,17 +224,17 @@ public class EvalResultController : BaseController
         {
             if (string.IsNullOrWhiteSpace(agentId))
             {
-                return BadRequest("AgentId is required and cannot be empty");
+                return CreateBadRequestResponse<List<EvaluationResultResponseDto>>("agentId", "AgentId is required and cannot be empty");
             }
 
             if (startDateTime >= endDateTime)
             {
-                return BadRequest("StartDateTime must be earlier than EndDateTime");
+                return CreateBadRequestResponse<List<EvaluationResultResponseDto>>("startDateTime", "StartDateTime must be earlier than EndDateTime");
             }
 
             if (endDateTime > DateTime.UtcNow)
             {
-                return BadRequest("EndDateTime cannot be in the future");
+                return CreateBadRequestResponse<List<EvaluationResultResponseDto>>("endDateTime", "EndDateTime cannot be in the future");
             }
 
             _logger.LogInformation("Retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 

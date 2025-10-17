@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
+using System.ComponentModel.DataAnnotations;
 
 namespace SxgEvalPlatformApi.Controllers
 {
@@ -61,23 +62,15 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(MetricsConfigurationMetadataDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IList<SelectedMetricsConfiguration>>> GetConfigurationsByMetricsConfigurationId(string configurationId)
+        public async Task<ActionResult<IList<SelectedMetricsConfiguration>>> GetConfigurationsByMetricsConfigurationId(Guid configurationId)
         {
             try
             {
                 _logger.LogInformation("Request to retrieve all configurations for agent: {metricsConfigurationId}", configurationId);
 
-                var configIdValidation = ValidateConfigurationId(configurationId);
-                if (configIdValidation != null)
-                {
-                    _logger.LogWarning("Invalid or missing configuration ID");
-                    return configIdValidation;
-                }
+                var configurations = await _metricsConfigurationRequestHandler.GetMetricsConfigurationByConfigurationIdAsync(configurationId.ToString());
 
-                var configurations = await _metricsConfigurationRequestHandler.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
-
-
-                if (!configurations.Any())
+                if (configurations == null || !configurations.Any())
                 {
                     _logger.LogInformation($"No configurations found for ConfigurationId: {configurationId}");
                     return NotFound($"No configurations found for ConfigurationId: {configurationId}");
@@ -110,23 +103,22 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(List<MetricsConfigurationMetadataDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<List<MetricsConfigurationMetadataDto>>> GetConfigurationsByAgentId([FromQuery] string agentId, [FromQuery] string environmentName = "")
+        public async Task<ActionResult<List<MetricsConfigurationMetadataDto>>> GetConfigurationsByAgentId([FromQuery, Required] string agentId, [FromQuery] string environmentName = "")
         {
             try
             {
                 _logger.LogInformation("Request to retrieve all configurations for agent: {AgentId}", agentId);
 
-                var agentIdValidation = ValidateAgentId(agentId);
-                if (agentIdValidation != null)
+                ValidateAndAddToModelState(agentId, "agentId", "agentid");
+                if (!ModelState.IsValid)
                 {
                     _logger.LogWarning("Invalid or missing agent ID");
-                    return agentIdValidation;
+                    return CreateValidationErrorResponse<List<MetricsConfigurationMetadataDto>>();
                 }
 
                 var configurations = await _metricsConfigurationRequestHandler.GetAllMetricsConfigurationsByAgentIdAndEnvironmentAsync(agentId ,environmentName);
 
-
-                if (!configurations.Any())
+                if (configurations == null || !configurations.Any())
                 {
                     _logger.LogInformation("No configurations found for agent: {AgentId}", agentId);
                     return NotFound($"No configurations found for agent: {agentId}");

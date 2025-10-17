@@ -76,12 +76,10 @@ public class CreateEvalRunDto
     public string AgentId { get; set; } = string.Empty;
     
     [Required]
-    [StringLength(100, MinimumLength = 1)]
-    public string DataSetId { get; set; } = string.Empty;
+    public Guid DataSetId { get; set; }
     
     [Required]
-    [StringLength(100, MinimumLength = 1)]
-    public string MetricsConfigurationId { get; set; } = string.Empty;
+    public Guid MetricsConfigurationId { get; set; }
 }
 
 /// <summary>

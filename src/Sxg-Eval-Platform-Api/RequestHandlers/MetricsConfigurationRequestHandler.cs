@@ -79,7 +79,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
         }
 
-        public async Task<IList<SelectedMetricsConfiguration>> GetMetricsConfigurationByConfigurationIdAsync(string configurationId)
+        public async Task<IList<SelectedMetricsConfiguration>?> GetMetricsConfigurationByConfigurationIdAsync(string configurationId)
         {
             try
             {

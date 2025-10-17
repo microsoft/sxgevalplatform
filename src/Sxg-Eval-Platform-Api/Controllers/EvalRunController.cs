@@ -36,6 +36,9 @@ public class EvalRunController : BaseController
     {
         try
         {
+            // Add custom validation for AgentId only (DataSetId and MetricsConfigurationId are now Guid types)
+            ValidateAndAddToModelState(createDto.AgentId, "AgentId", "agentid");
+            
             if (!ModelState.IsValid)
             {
                 return CreateValidationErrorResponse<EvalRunDto>();
@@ -136,7 +139,7 @@ public class EvalRunController : BaseController
 
             if (!validStatuses.Any(status => string.Equals(status, updateDto.Status, StringComparison.OrdinalIgnoreCase)))
             {
-                return BadRequest($"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
+                return CreateBadRequestResponse<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
             }
 
             _logger.LogInformation("Updating evaluation run status to {Status} for ID: {EvalRunId}", 

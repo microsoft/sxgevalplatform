@@ -4,9 +4,8 @@ using System.Text.Json;
 
 namespace SxgEvalPlatformApi.Models.Entities
 {
-    /// <summary>
-    /// Entity class for storing metrics configuration in Azure Table Storage
-    /// </summary>
+    // Entity class for storing metrics configuration in Azure Table Storage
+    // (Currently commented out - see MetricsConfigurationTableEntity in Storage project)
     //public class MetricsConfigurationEntity : ITableEntity
     //{
     //    public string AgentId { get; set; } = string.Empty;

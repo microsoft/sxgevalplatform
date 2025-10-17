@@ -73,8 +73,8 @@ public class EvalRunService : IEvalRunService
                 RowKey = evalRunId.ToString(), // Convert GUID to string for RowKey
                 EvalRunId = evalRunId, // Store as GUID
                 AgentId = createDto.AgentId,
-                DataSetId = createDto.DataSetId,
-                MetricsConfigurationId = createDto.MetricsConfigurationId,
+                DataSetId = createDto.DataSetId.ToString(),
+                MetricsConfigurationId = createDto.MetricsConfigurationId.ToString(),
                 Status = EvalRunStatusConstants.Queued,
                 LastUpdatedOn = currentDateTime,
                 StartedDatetime = currentDateTime,
