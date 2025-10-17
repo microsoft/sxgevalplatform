@@ -4,7 +4,10 @@
 
 The SXG Evaluation Platform API provides a comprehensive set of endpoints for managing evaluation runs, datasets, metrics configurations, and evaluation results. This API enables clients to create, monitor, and analyze AI model evaluations using a RESTful interface built with .NET 8.
 
-**Base URL**: `https://sxgevalapidev.azurewebsites.net`  
+**Environments**:
+- **Development**: `https://sxgevalapidev.azurewebsites.net` (Storage: `sxgagentevaldev`)
+- **PPE (Client Environment)**: `https://sxgevalapippe.azurewebsites.net` (Storage: `sxgagentevalppe`)
+
 **API Version**: v1  
 **Content Type**: `application/json`  
 **Authentication**: OAuth using Azure Active Directory  
@@ -29,11 +32,20 @@ The SXG Evaluation Platform API provides a comprehensive set of endpoints for ma
 ## Quick Start
 
 ### 1. Check API Health
+
+**Development Environment:**
 ```bash
 curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/health
 ```
 
+**PPE Environment (Client):**
+```bash
+curl -X GET https://sxgevalapippe.azurewebsites.net/api/v1/health
+```
+
 ### 2. Create Evaluation Run
+
+**Development Environment:**
 ```bash
 curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
   -H "Content-Type: application/json" \
@@ -45,15 +57,27 @@ curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
   }'
 ```
 
+**PPE Environment (Client):**
+```bash
+curl -X POST https://sxgevalapippe.azurewebsites.net/api/v1/eval/runs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "agentId": "my-ai-agent",
+    "dataSetId": "golden-dataset-001", 
+    "metricsConfigurationId": "standard-metrics"
+  }'
+```
+
 ### 3. Update Status and Save Results
 ```bash
-# Update to completed
-curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/{evalRunId} \
+# Update to completed (replace BASE_URL with your environment)
+curl -X PUT {BASE_URL}/api/v1/eval/runs/{evalRunId} \
   -H "Content-Type: application/json" \
   -d '{"status": "completed"}'
 
-# Save results
-curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
+# Save results (replace BASE_URL with your environment)
+curl -X POST {BASE_URL}/api/v1/eval/results \
   -H "Content-Type: application/json" \
   -d '{
     "evalRunId": "{evalRunId}",
@@ -670,8 +694,12 @@ Datasets contain the test data used for evaluations, including prompts, expected
 ```bash
 #!/bin/bash
 
-# Configuration
+# Configuration - Choose your environment
+# For Development:
 BASE_URL="https://sxgevalapidev.azurewebsites.net/api/v1"
+# For PPE (Client):
+# BASE_URL="https://sxgevalapippe.azurewebsites.net/api/v1"
+
 AUTH_TOKEN="your-bearer-token"
 AGENT_ID="my-agent"
 DATASET_ID="dataset-001"

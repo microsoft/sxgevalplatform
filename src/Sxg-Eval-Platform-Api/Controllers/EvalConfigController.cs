@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using SxgEvalPlatformApi.Models.Dtos;
@@ -67,10 +68,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve all configurations for agent: {metricsConfigurationId}", configurationId);
 
-                if (string.IsNullOrWhiteSpace(configurationId))
+                var configIdValidation = ValidateConfigurationId(configurationId);
+                if (configIdValidation != null)
                 {
-                    _logger.LogWarning("metricsConfigurationId is null or empty");
-                    return BadRequest("metricsConfigurationId is required");
+                    _logger.LogWarning("Invalid or missing configuration ID");
+                    return configIdValidation;
                 }
 
                 var configurations = await _metricsConfigurationRequestHandler.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
@@ -115,10 +117,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve all configurations for agent: {AgentId}", agentId);
 
-                if (string.IsNullOrWhiteSpace(agentId))
+                var agentIdValidation = ValidateAgentId(agentId);
+                if (agentIdValidation != null)
                 {
-                    _logger.LogWarning("Agent ID is null or empty");
-                    return BadRequest("Agent ID is required");
+                    _logger.LogWarning("Invalid or missing agent ID");
+                    return agentIdValidation;
                 }
 
                 var configurations = await _metricsConfigurationRequestHandler.GetAllMetricsConfigurationsByAgentIdAndEnvironmentAsync(agentId ,environmentName);
@@ -149,6 +152,7 @@ namespace SxgEvalPlatformApi.Controllers
         #region POST Methods
                 
         [HttpPost("configurations")]
+        [EnableRateLimiting("StrictApiPolicy")]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -164,7 +168,7 @@ namespace SxgEvalPlatformApi.Controllers
                 if (!ModelState.IsValid)
                 {
                     _logger.LogWarning("Invalid model state for configuration creation");
-                    return BadRequest(ModelState);
+                    return CreateValidationErrorResponse<ConfigurationSaveResponseDto>();
                 }
 
                 // Check if configuration already exists

@@ -43,10 +43,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve all datasets for agent: {AgentId}", agentId);
 
-                if (string.IsNullOrWhiteSpace(agentId))
+                var agentIdValidation = ValidateAgentId(agentId);
+                if (agentIdValidation != null)
                 {
-                    _logger.LogWarning("Agent ID is null or empty");
-                    return BadRequest("Agent ID is required");
+                    _logger.LogWarning("Invalid or missing agent ID");
+                    return agentIdValidation;
                 }
 
                 var datasets = await _dataSetRequestHandler.GetDatasetsByAgentIdAsync(agentId);
@@ -88,10 +89,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve dataset content for dataset: {DatasetId}", datasetId);
 
-                if (string.IsNullOrWhiteSpace(datasetId))
+                var datasetIdValidation = ValidateDatasetId(datasetId);
+                if (datasetIdValidation != null)
                 {
-                    _logger.LogWarning("Dataset ID is null or empty");
-                    return BadRequest("Dataset ID is required");
+                    _logger.LogWarning("Invalid or missing dataset ID");
+                    return datasetIdValidation;
                 }
 
                 var datasetJson = await _dataSetRequestHandler.GetDatasetByIdAsync(datasetId);
@@ -142,10 +144,11 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("Request to retrieve dataset metadata for dataset: {DatasetId}", datasetId);
 
-                if (string.IsNullOrWhiteSpace(datasetId))
+                var datasetIdValidation = ValidateDatasetId(datasetId);
+                if (datasetIdValidation != null)
                 {
-                    _logger.LogWarning("Dataset ID is null or empty");
-                    return BadRequest("Dataset ID is required");
+                    _logger.LogWarning("Invalid or missing dataset ID");
+                    return datasetIdValidation;
                 }
 
                 var metadata = await _dataSetRequestHandler.GetDatasetMetadataByIdAsync(datasetId);
@@ -195,7 +198,7 @@ namespace SxgEvalPlatformApi.Controllers
                 if (!ModelState.IsValid)
                 {
                     _logger.LogWarning("Invalid model state for dataset save request");
-                    return BadRequest(ModelState);
+                    return CreateValidationErrorResponse<DatasetSaveResponseDto>();
                 }
 
                 var result = await _dataSetRequestHandler.SaveDatasetAsync(saveDatasetDto);
@@ -203,7 +206,8 @@ namespace SxgEvalPlatformApi.Controllers
                 if (result.Status == "error")
                 {
                     _logger.LogError("Dataset save failed: {Message}", result.Message);
-                    return StatusCode(500, result);
+                    return CreateErrorResponse<DatasetSaveResponseDto>(
+                        "Failed to save dataset", StatusCodes.Status500InternalServerError);
                 }
 
                 _logger.LogInformation("Dataset processed successfully: {DatasetId}, Status: {Status}",

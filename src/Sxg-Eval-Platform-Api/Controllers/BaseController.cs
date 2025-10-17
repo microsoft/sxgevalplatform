@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Azure;
+using SxgEvalPlatformApi.Utils;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -92,5 +93,80 @@ public abstract class BaseController : ControllerBase
     protected bool IsAuthorizationError(Exception ex)
     {
         return ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403);
+    }
+
+    /// <summary>
+    /// Validates agent ID input
+    /// </summary>
+    /// <param name="agentId">Agent ID to validate</param>
+    /// <returns>BadRequest if invalid, null if valid</returns>
+    protected ActionResult? ValidateAgentId(string? agentId)
+    {
+        if (string.IsNullOrWhiteSpace(agentId))
+        {
+            return BadRequest("Agent ID is required");
+        }
+
+        if (!InputSanitizer.IsValidAgentId(agentId))
+        {
+            return BadRequest("Invalid agent ID format");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates dataset ID input
+    /// </summary>
+    /// <param name="datasetId">Dataset ID to validate</param>
+    /// <returns>BadRequest if invalid, null if valid</returns>
+    protected ActionResult? ValidateDatasetId(string? datasetId)
+    {
+        if (string.IsNullOrWhiteSpace(datasetId))
+        {
+            return BadRequest("Dataset ID is required");
+        }
+
+        if (!InputSanitizer.IsValidDatasetId(datasetId))
+        {
+            return BadRequest("Invalid dataset ID format");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates configuration ID input
+    /// </summary>
+    /// <param name="configurationId">Configuration ID to validate</param>
+    /// <returns>BadRequest if invalid, null if valid</returns>
+    protected ActionResult? ValidateConfigurationId(string? configurationId)
+    {
+        if (string.IsNullOrWhiteSpace(configurationId))
+        {
+            return BadRequest("Configuration ID is required");
+        }
+
+        if (!InputSanitizer.IsValidConfigurationId(configurationId))
+        {
+            return BadRequest("Invalid configuration ID format");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates evaluation run ID input
+    /// </summary>
+    /// <param name="evalRunId">Evaluation run ID to validate</param>
+    /// <returns>BadRequest if invalid, null if valid</returns>
+    protected ActionResult? ValidateEvalRunId(Guid evalRunId)
+    {
+        if (evalRunId == Guid.Empty)
+        {
+            return BadRequest("Evaluation run ID is required and must be a valid GUID");
+        }
+
+        return null;
     }
 }

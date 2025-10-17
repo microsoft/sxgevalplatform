@@ -52,15 +52,17 @@ public class EvalResultController : BaseController
             
             if (!result.Success)
             {
+                // Use generic error messages to prevent information disclosure
                 if (result.Message.Contains("not found"))
                 {
-                    return BadRequest(result);
+                    return BadRequest("Invalid evaluation run identifier or evaluation run not found");
                 }
                 if (result.Message.Contains("Cannot save evaluation results") && result.Message.Contains("status"))
                 {
-                    return BadRequest(result);
+                    return BadRequest("Unable to save results - evaluation run status does not allow saving");
                 }
-                return StatusCode(StatusCodes.Status500InternalServerError, result);
+                return CreateErrorResponse<EvaluationResultSaveResponseDto>(
+                    "Failed to save evaluation results", StatusCodes.Status500InternalServerError);
             }
 
             return Ok(result);
@@ -105,9 +107,10 @@ public class EvalResultController : BaseController
     {
         try
         {
-            if (evalRunId == Guid.Empty)
+            var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+            if (evalRunIdValidation != null)
             {
-                return BadRequest("EvalRunId is required and must be a valid GUID");
+                return evalRunIdValidation;
             }
 
             _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
@@ -116,15 +119,17 @@ public class EvalResultController : BaseController
             
             if (!result.Success)
             {
+                // Use generic error messages to prevent information disclosure
                 if (result.Message.Contains("not found") && result.Message.Contains("EvalRunId"))
                 {
-                    return BadRequest(result);
+                    return BadRequest("Invalid evaluation run identifier");
                 }
                 else if (result.Message.Contains("not found") || result.Message.Contains("hasn't completed"))
                 {
-                    return NotFound(result);
+                    return NotFound("Evaluation results not found");
                 }
-                return StatusCode(StatusCodes.Status500InternalServerError, result);
+                return CreateErrorResponse<EvaluationResultResponseDto>(
+                    "Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
             }
 
             return Ok(result);
