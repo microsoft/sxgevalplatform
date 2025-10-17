@@ -2,41 +2,94 @@
 
 ## Overview
 
-The SXG Evaluation Platform API provides a comprehensive set of endpoints for managing evaluation runs, datasets, metrics configurations, and evaluation results. This API enables clients to create, monitor, and analyze AI model evaluations.
+The SXG Evaluation Platform API provides a comprehensive set of endpoints for managing evaluation runs, datasets, metrics configurations, and evaluation results. This API enables clients to create, monitor, and analyze AI model evaluations using a RESTful interface built with .NET 8.
 
-**Base URL**: `https://sxgevalapidev.azurewebsites.net/swagger/index.html`
-
-**API Version**: v1
+**Base URL**: `https://sxgevalapidev.azurewebsites.net`  
+**API Version**: v1  
+**Content Type**: `application/json`  
+**Authentication**: OAuth using Azure Active Directory  
 
 ## Table of Contents
 
-1. [Authentication](#authentication)
-2. [Health Check](#health-check)
-3. [Evaluation Runs](#evaluation-runs)
-4. [Evaluation Results](#evaluation-results)
-5. [Datasets](#datasets)
-6. [Metrics Configuration](#metrics-configuration)
-7. [Error Handling](#error-handling)
-8. [Status Codes](#status-codes)
+1. [Quick Start](#quick-start)
+2. [Authentication](#authentication)
+3. [API Endpoints](#api-endpoints)
+   - [Health Check](#health-check)
+   - [Evaluation Runs](#evaluation-runs)
+   - [Evaluation Results](#evaluation-results)
+   - [Datasets](#datasets)
+   - [Metrics Configuration](#metrics-configuration)
+4. [Data Models](#data-models)
+5. [Error Handling](#error-handling)
+6. [Best Practices](#best-practices)
+7. [Integration Examples](#integration-examples)
+
+---
+
+## Quick Start
+
+### 1. Check API Health
+```bash
+curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/health
+```
+
+### 2. Create Evaluation Run
+```bash
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "agentId": "my-ai-agent",
+    "dataSetId": "golden-dataset-001", 
+    "metricsConfigurationId": "standard-metrics"
+  }'
+```
+
+### 3. Update Status and Save Results
+```bash
+# Update to completed
+curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/{evalRunId} \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}'
+
+# Save results
+curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evalRunId": "{evalRunId}",
+    "fileName": "results.json",
+    "evaluationRecords": [{"id": 1, "score": 0.95}]
+  }'
+```
 
 ---
 
 ## Authentication
 
-The API currently uses Azure-based authentication. Ensure your requests include appropriate authentication headers as configured in your Azure environment.
+The API uses OAuth authentication with Azure Active Directory.
+
+**Requirements**:
+- Applications must be registered in Azure AD
+- Admin consent required for API access
+- User tokens required (App-to-App authentication not supported for evaluation triggers)
+
+**Authentication Flow**:
+1. Obtain bearer token from Azure AD
+2. Include token in Authorization header: `Authorization: Bearer {token}`
+3. Tokens are validated against Azure AD for each request
 
 ---
 
-## Health Check
+## API Endpoints
 
-### Get API Health Status
-**Endpoint**: `GET /health`
+### Health Check
 
+#### GET /api/v1/health
 **Description**: Check if the API is running and healthy.
 
-**Request**: No parameters required.
+**Authentication**: Not required
 
-**Response**:
+**Response** (200 OK):
 ```json
 {
   "status": "Healthy",
@@ -46,23 +99,23 @@ The API currently uses Azure-based authentication. Ensure your requests include 
 }
 ```
 
-**Use Case**: Monitor API availability and version information.
-
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/health
-```
+**Use Cases**:
+- Monitor API availability
+- Service health checks
+- Version verification
 
 ---
 
-## Evaluation Runs
+### Evaluation Runs
 
 Evaluation runs represent the execution of an AI model evaluation using specific datasets and metrics configurations.
 
-### 1. Create Evaluation Run
-**Endpoint**: `POST /eval/runs`
+#### 1. Create Evaluation Run
+**Endpoint**: `POST /api/v1/eval/runs`
 
 **Description**: Create a new evaluation run with specified dataset and metrics configuration.
+
+**Authentication**: Required
 
 **Request Body**:
 ```json
@@ -89,25 +142,16 @@ Evaluation runs represent the execution of an AI model evaluation using specific
 ```
 
 **Use Cases**: 
-- Start a new model evaluation
+- Start new model evaluations
 - Queue evaluations for batch processing
 - Initiate automated testing workflows
 
-**Sample Usage**:
-```bash
-curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agentId": "my-ai-agent",
-    "dataSetId": "golden-dataset-001", 
-    "metricsConfigurationId": "standard-metrics"
-  }'
-```
-
-### 2. Update Evaluation Run Status
-**Endpoint**: `PUT /eval/runs/{evalRunId}`
+#### 2. Update Evaluation Run Status
+**Endpoint**: `PUT /api/v1/eval/runs/{evalRunId}`
 
 **Description**: Update the status of an existing evaluation run. Status updates are case insensitive.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `evalRunId` (UUID): The unique identifier of the evaluation run
@@ -125,6 +169,12 @@ curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
 - `Completed` / `completed` / `COMPLETED`
 - `Failed` / `failed` / `FAILED`
 
+**Valid State Transitions**:
+- `Queued` → `Running`, `Completed`, `Failed`
+- `Running` → `Completed`, `Failed`
+- `Completed` → ❌ (Terminal state - no further updates)
+- `Failed` → ❌ (Terminal state - no further updates)
+
 **Response** (200 OK):
 ```json
 {
@@ -133,26 +183,25 @@ curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
 }
 ```
 
+**Terminal State Error** (400 Bad Request):
+```json
+{
+  "success": false,
+  "message": "Cannot update status for evaluation run with ID {evalRunId}. The evaluation run is already in a terminal state '{currentStatus}' and cannot be modified."
+}
+```
+
 **Important Notes**:
 - Once an evaluation run reaches a terminal state (`Completed` or `Failed`), its status cannot be updated
 - Status comparisons are case insensitive for flexibility
+- Status values are normalized to Pascal case in storage
 
-**Use Cases**:
-- Update progress during evaluation execution
-- Mark evaluations as completed or failed
-- Track evaluation lifecycle stages
-
-**Sample Usage**:
-```bash
-curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Content-Type: application/json" \
-  -d '{"status": "completed"}'
-```
-
-### 3. Get Evaluation Run
-**Endpoint**: `GET /eval/runs/{evalRunId}`
+#### 3. Get Evaluation Run
+**Endpoint**: `GET /api/v1/eval/runs/{evalRunId}`
 
 **Description**: Retrieve details of a specific evaluation run.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `evalRunId` (UUID): The unique identifier of the evaluation run
@@ -177,21 +226,18 @@ curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/550e8400-e2
 - Retrieve evaluation metadata
 - Check completion status and timestamps
 
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/550e8400-e29b-41d4-a716-446655440000
-```
-
 ---
 
-## Evaluation Results
+### Evaluation Results
 
 Evaluation results contain the detailed output and metrics from completed evaluation runs.
 
-### 1. Save Evaluation Results
-**Endpoint**: `POST /eval/results`
+#### 1. Save Evaluation Results
+**Endpoint**: `POST /api/v1/eval/results`
 
 **Description**: Save evaluation results for a completed evaluation run. Results can only be saved for runs with status "Completed" or "Failed".
+
+**Authentication**: Required
 
 **Request Body**:
 ```json
@@ -235,26 +281,16 @@ Evaluation results contain the detailed output and metrics from completed evalua
 }
 ```
 
-**Use Cases**:
-- Store detailed evaluation results after completion
-- Save metrics and performance data
-- Archive evaluation outputs for analysis
+**Storage Structure**: Results are stored in Azure Blob Storage using the folder structure:
+- Container: `{agentid}` (lowercase)
+- Path: `evalresults/{evalrunid}/{filename}`
 
-**Sample Usage**:
-```bash
-curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
-  -H "Content-Type: application/json" \
-  -d '{
-    "evalRunId": "550e8400-e29b-41d4-a716-446655440000",
-    "fileName": "detailed-results.json",
-    "evaluationRecords": [{"id": 1, "score": 0.95, "details": "..."}]
-  }'
-```
-
-### 2. Get Evaluation Results
-**Endpoint**: `GET /eval/results/{evalRunId}`
+#### 2. Get Evaluation Results
+**Endpoint**: `GET /api/v1/eval/results/{evalRunId}`
 
 **Description**: Retrieve evaluation results for a specific evaluation run.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `evalRunId` (UUID): The unique identifier of the evaluation run
@@ -280,20 +316,12 @@ curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
 }
 ```
 
-**Use Cases**:
-- Retrieve stored evaluation results
-- Analyze evaluation performance
-- Export results for reporting
-
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/550e8400-e29b-41d4-a716-446655440000
-```
-
-### 3. Get Evaluation Runs by Agent
-**Endpoint**: `GET /eval/results/agent/{agentId}`
+#### 3. Get Evaluation Runs by Agent
+**Endpoint**: `GET /api/v1/eval/results/agent/{agentId}`
 
 **Description**: Retrieve all evaluation runs for a specific agent.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `agentId` (string): The unique identifier of the agent
@@ -309,33 +337,16 @@ curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/550e8400
     "status": "Completed",
     "startedDatetime": "2025-10-17T10:30:00.000Z",
     "completedDatetime": "2025-10-17T11:45:00.000Z"
-  },
-  {
-    "evalRunId": "660f9511-f30c-52e5-b827-557766551111",
-    "metricsConfigurationId": "metrics-456",
-    "dataSetId": "dataset-789",
-    "agentId": "agent-123",
-    "status": "Running",
-    "startedDatetime": "2025-10-17T12:00:00.000Z",
-    "completedDatetime": null
   }
 ]
 ```
 
-**Use Cases**:
-- View all evaluations for a specific AI agent
-- Monitor agent performance over time
-- Track evaluation history
-
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/agent/my-ai-agent
-```
-
-### 4. Get Evaluation Results by Date Range
-**Endpoint**: `GET /eval/results/agent/{agentId}/daterange`
+#### 4. Get Evaluation Results by Date Range
+**Endpoint**: `GET /api/v1/eval/results/agent/{agentId}/daterange`
 
 **Description**: Retrieve evaluation results for a specific agent within a date range.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `agentId` (string): The unique identifier of the agent
@@ -357,26 +368,18 @@ curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/agent/my
 ]
 ```
 
-**Use Cases**:
-- Generate reports for specific time periods
-- Analyze performance trends
-- Export data for specific date ranges
-
-**Sample Usage**:
-```bash
-curl -X GET "https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/agent/my-ai-agent/daterange?startDateTime=2025-10-01T00:00:00Z&endDateTime=2025-10-17T23:59:59Z"
-```
-
 ---
 
-## Datasets
+### Datasets
 
 Datasets contain the test data used for evaluations, including prompts, expected responses, and ground truth data.
 
-### 1. Get Datasets by Agent
-**Endpoint**: `GET /datasets`
+#### 1. Get Datasets by Agent
+**Endpoint**: `GET /api/v1/datasets`
 
 **Description**: Retrieve all datasets associated with a specific agent.
+
+**Authentication**: Required
 
 **Query Parameters**:
 - `agentId` (string): The unique identifier of the agent
@@ -403,20 +406,12 @@ Datasets contain the test data used for evaluations, including prompts, expected
 ]
 ```
 
-**Use Cases**:
-- List available datasets for evaluation
-- Browse dataset metadata
-- Select datasets for new evaluation runs
-
-**Sample Usage**:
-```bash
-curl -X GET "https://sxgevalapidev.azurewebsites.net/api/v1/datasets?agentId=my-ai-agent"
-```
-
-### 2. Get Dataset Content
-**Endpoint**: `GET /datasets/{datasetId}`
+#### 2. Get Dataset Content
+**Endpoint**: `GET /api/v1/datasets/{datasetId}`
 
 **Description**: Retrieve the full content of a specific dataset.
+
+**Authentication**: Required
 
 **Path Parameters**:
 - `datasetId` (string): The unique identifier of the dataset
@@ -429,30 +424,16 @@ curl -X GET "https://sxgevalapidev.azurewebsites.net/api/v1/datasets?agentId=my-
     "groundTruth": "Machine learning is a method of data analysis that automates analytical model building.",
     "actualResponse": "",
     "expectedResponse": "Machine learning is a subset of artificial intelligence focused on algorithms that learn from data."
-  },
-  {
-    "prompt": "Define neural networks",
-    "groundTruth": "Neural networks are computing systems vaguely inspired by biological neural networks.",
-    "actualResponse": "",
-    "expectedResponse": "Neural networks are a series of algorithms that mimic the operations of a human brain."
   }
 ]
 ```
 
-**Use Cases**:
-- View dataset content before evaluation
-- Validate dataset quality
-- Export dataset for external analysis
-
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/datasets/golden-dataset-001
-```
-
-### 3. Save Dataset
-**Endpoint**: `POST /datasets`
+#### 3. Save Dataset
+**Endpoint**: `POST /api/v1/datasets`
 
 **Description**: Create or update a dataset for a specific agent.
+
+**Authentication**: Required
 
 **Request Body**:
 ```json
@@ -466,12 +447,6 @@ curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/datasets/golden-datas
       "groundTruth": "Artificial intelligence is intelligence demonstrated by machines.",
       "actualResponse": "",
       "expectedResponse": "AI is the simulation of human intelligence in machines."
-    },
-    {
-      "prompt": "What is deep learning?",
-      "groundTruth": "Deep learning is part of machine learning based on artificial neural networks.",
-      "actualResponse": "",
-      "expectedResponse": "Deep learning uses neural networks with multiple layers to model data."
     }
   ]
 }
@@ -490,42 +465,16 @@ curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/datasets/golden-datas
 }
 ```
 
-**Response** (200 OK - for updates):
-```json
-{
-  "datasetId": "dataset-456",
-  "status": "updated", 
-  "message": "Dataset updated successfully"
-}
-```
-
-**Use Cases**:
-- Upload new test datasets
-- Update existing datasets
-- Create synthetic datasets for testing
-
-**Sample Usage**:
-```bash
-curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/datasets \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agentId": "my-ai-agent",
-    "datasetType": "Golden",
-    "datasetName": "Production Test Set v2.0",
-    "datasetRecords": [{"prompt": "test", "groundTruth": "answer"}]
-  }'
-```
-
 ---
 
-## Metrics Configuration
+### Metrics Configuration
 
-Metrics configurations define how evaluations are measured and what metrics are calculated.
-
-### 1. Get Default Metrics Configuration
-**Endpoint**: `GET /eval/defaultconfiguration`
+#### Get Default Metrics Configuration
+**Endpoint**: `GET /api/v1/eval/defaultconfiguration`
 
 **Description**: Retrieve the default metrics configuration template.
+
+**Authentication**: Required
 
 **Response** (200 OK):
 ```json
@@ -555,21 +504,70 @@ Metrics configurations define how evaluations are measured and what metrics are 
 }
 ```
 
-**Use Cases**:
-- Get standard metrics configuration
-- Use as template for custom configurations
-- Understand available metrics
+---
 
-**Sample Usage**:
-```bash
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/defaultconfiguration
+## Data Models
+
+### Core Entities
+
+#### EvalRunDto
+```json
+{
+  "evalRunId": "uuid",
+  "agentId": "string",
+  "dataSetId": "string",
+  "metricsConfigurationId": "string",
+  "status": "string",
+  "lastUpdatedBy": "string",
+  "lastUpdatedOn": "datetime",
+  "startedDatetime": "datetime",
+  "completedDatetime": "datetime"
+}
 ```
+
+#### CreateEvalRunDto
+```json
+{
+  "agentId": "string (required, 1-100 chars)",
+  "dataSetId": "string (required, 1-100 chars)",
+  "metricsConfigurationId": "string (required, 1-100 chars)"
+}
+```
+
+#### UpdateStatusDto
+```json
+{
+  "status": "string (required)"
+}
+```
+
+#### SaveEvaluationResultDto
+```json
+{
+  "evalRunId": "uuid (required)",
+  "fileName": "string (required, 1-100 chars)",
+  "evaluationRecords": "object (required, flexible JSON structure)"
+}
+```
+
+### Status Constants
+- `Queued` - Waiting to be processed
+- `Running` - Currently being processed
+- `Completed` - Successfully finished (terminal state)
+- `Failed` - Encountered an error (terminal state)
 
 ---
 
 ## Error Handling
 
-The API uses standard HTTP status codes and returns consistent error response formats.
+### HTTP Status Codes
+- `200 OK` - Successful GET, PUT operations
+- `201 Created` - Successful POST operations
+- `400 Bad Request` - Invalid input data, validation errors, terminal state violations
+- `401 Unauthorized` - Authentication failed
+- `403 Forbidden` - Authorization failed
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server-side errors
 
 ### Error Response Format
 ```json
@@ -582,12 +580,20 @@ The API uses standard HTTP status codes and returns consistent error response fo
 
 ### Common Error Scenarios
 
-**400 Bad Request**:
+**400 Bad Request** - Invalid Input:
 ```json
 {
   "success": false,
   "message": "Invalid input data",
   "details": "AgentId is required and cannot be empty"
+}
+```
+
+**400 Bad Request** - Terminal State Violation:
+```json
+{
+  "success": false,
+  "message": "Cannot update status for evaluation run with ID {evalRunId}. The evaluation run is already in a terminal state 'Completed' and cannot be modified."
 }
 ```
 
@@ -599,28 +605,22 @@ The API uses standard HTTP status codes and returns consistent error response fo
 }
 ```
 
-**500 Internal Server Error**:
-```json
-{
-  "success": false,
-  "message": "Failed to create evaluation run",
-  "details": "Internal server error occurred"
-}
-```
-
 ---
 
-## Status Codes
+## Azure Storage Architecture
 
-| Code | Description | When It Occurs |
-|------|-------------|----------------|
-| 200 | OK | Successful GET, PUT operations |
-| 201 | Created | Successful POST operations |
-| 400 | Bad Request | Invalid input data, validation errors |
-| 401 | Unauthorized | Authentication failed |
-| 403 | Forbidden | Authorization failed |
-| 404 | Not Found | Resource not found |
-| 500 | Internal Server Error | Server-side errors |
+### Table Storage Partitioning
+- **Partition Key**: `AgentId` for optimal performance and multi-tenant support
+- **Row Key**: `EvalRunId` for unique identification
+- **Benefits**: Efficient agent-based queries and load distribution
+
+### Blob Storage Organization
+- **Container**: Agent-specific containers using lowercase agent IDs (e.g., `agent123`)
+- **Folder Structure**: `evalresults/{evalRunId}/`
+- **Multiple Files**: Supports multiple output files per evaluation run
+  - `evalresults/{evalRunId}/results.json`
+  - `evalresults/{evalRunId}/detailed-metrics.json`
+  - `evalresults/{evalRunId}/summary-report.csv`
 
 ---
 
@@ -629,27 +629,38 @@ The API uses standard HTTP status codes and returns consistent error response fo
 ### 1. Status Management
 - Always check evaluation run status before saving results
 - Use case-insensitive status values for flexibility
-- Remember that terminal states (`Completed`, `Failed`) cannot be updated
+- Handle terminal state violations gracefully
+- Remember that `Completed` and `Failed` states cannot be updated
 
 ### 2. Data Organization
 - Use meaningful `agentId` values for easy identification
 - Include descriptive dataset names
 - Store comprehensive evaluation records for analysis
+- Use consistent naming conventions for result files
 
 ### 3. Error Handling
 - Always check response status codes
 - Handle authentication and authorization errors appropriately
 - Implement retry logic for transient failures
+- Parse error messages for specific business rule violations
 
 ### 4. Performance
 - Use date range queries to limit result sets
 - Implement pagination for large datasets
 - Cache frequently accessed configuration data
+- Use agent-based filtering for better performance
 
-### 5. Monitoring
+### 5. Security
+- Secure storage of authentication tokens
+- Regular rotation of access keys
+- Monitor for unusual access patterns
+- Validate all input data
+
+### 6. Monitoring
 - Use the health endpoint for service monitoring
 - Track evaluation run completion rates
 - Monitor storage usage for large result sets
+- Implement proper logging for debugging
 
 ---
 
@@ -657,29 +668,130 @@ The API uses standard HTTP status codes and returns consistent error response fo
 
 ### Complete Evaluation Workflow
 ```bash
+#!/bin/bash
+
+# Configuration
+BASE_URL="https://sxgevalapidev.azurewebsites.net/api/v1"
+AUTH_TOKEN="your-bearer-token"
+AGENT_ID="my-agent"
+DATASET_ID="dataset-001"
+METRICS_CONFIG_ID="metrics-001"
+
 # 1. Create evaluation run
-EVAL_RUN_ID=$(curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs \
+echo "Creating evaluation run..."
+EVAL_RUN_RESPONSE=$(curl -s -X POST "$BASE_URL/eval/runs" \
   -H "Content-Type: application/json" \
-  -d '{"agentId":"my-agent","dataSetId":"dataset-001","metricsConfigurationId":"metrics-001"}' \
-  | jq -r '.evalRunId')
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d "{
+    \"agentId\": \"$AGENT_ID\",
+    \"dataSetId\": \"$DATASET_ID\",
+    \"metricsConfigurationId\": \"$METRICS_CONFIG_ID\"
+  }")
+
+EVAL_RUN_ID=$(echo $EVAL_RUN_RESPONSE | jq -r '.evalRunId')
+echo "Created evaluation run: $EVAL_RUN_ID"
 
 # 2. Update status to running
-curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/$EVAL_RUN_ID \
+echo "Updating status to Running..."
+curl -s -X PUT "$BASE_URL/eval/runs/$EVAL_RUN_ID" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
   -d '{"status":"Running"}'
 
-# 3. After evaluation completion, update status
-curl -X PUT https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/$EVAL_RUN_ID \
+# 3. Simulate evaluation processing...
+echo "Processing evaluation..."
+sleep 5
+
+# 4. Update status to completed
+echo "Updating status to Completed..."
+curl -s -X PUT "$BASE_URL/eval/runs/$EVAL_RUN_ID" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
   -d '{"status":"Completed"}'
 
-# 4. Save evaluation results
-curl -X POST https://sxgevalapidev.azurewebsites.net/api/v1/eval/results \
+# 5. Save evaluation results
+echo "Saving evaluation results..."
+curl -s -X POST "$BASE_URL/eval/results" \
   -H "Content-Type: application/json" \
-  -d "{\"evalRunId\":\"$EVAL_RUN_ID\",\"fileName\":\"results.json\",\"evaluationRecords\":[{\"id\":1,\"score\":0.95}]}"
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d "{
+    \"evalRunId\": \"$EVAL_RUN_ID\",
+    \"fileName\": \"results.json\",
+    \"evaluationRecords\": [
+      {
+        \"id\": 1,
+        \"question\": \"Test question\",
+        \"actualAnswer\": \"Test answer\",
+        \"metrics\": {
+          \"accuracy\": 0.95,
+          \"confidence\": 0.87
+        }
+      }
+    ]
+  }"
 
-# 5. Retrieve results
-curl -X GET https://sxgevalapidev.azurewebsites.net/api/v1/eval/results/$EVAL_RUN_ID
+# 6. Retrieve results
+echo "Retrieving evaluation results..."
+curl -s -X GET "$BASE_URL/eval/results/$EVAL_RUN_ID" \
+  -H "Authorization: Bearer $AUTH_TOKEN"
+
+echo "Evaluation workflow completed!"
 ```
 
-This comprehensive API documentation provides all the information needed to integrate with the SXG Evaluation Platform API effectively.
+### Error Handling Example
+```javascript
+async function updateEvaluationStatus(evalRunId, status) {
+  try {
+    const response = await fetch(`/api/v1/eval/runs/${evalRunId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ status })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 400 && result.message.includes('terminal state')) {
+        console.log('Cannot update: evaluation run is in terminal state');
+        return { success: false, reason: 'terminal_state' };
+      }
+      throw new Error(result.message);
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error updating evaluation status:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Usage
+const result = await updateEvaluationStatus('eval-run-id', 'completed');
+if (result.success) {
+  console.log('Status updated successfully');
+} else if (result.reason === 'terminal_state') {
+  console.log('Evaluation already completed - skipping status update');
+} else {
+  console.error('Failed to update status:', result.error);
+}
+```
+
+---
+
+## Support and Resources
+
+### Development Resources
+- **Swagger UI**: `https://sxgevalapidev.azurewebsites.net/swagger/index.html`
+- **Source Code**: Available in the repository under `src/Sxg-Eval-Platform-Api/`
+- **Azure Documentation**: [Azure Active Directory Authentication](https://docs.microsoft.com/en-us/azure/active-directory/)
+
+### Getting Help
+- Review this documentation for API usage patterns
+- Check the Swagger UI for interactive API exploration
+- Implement proper error handling based on the examples provided
+- Monitor API health using the health check endpoint
+
+This comprehensive documentation provides all the information needed to integrate with the SXG Evaluation Platform API effectively, including the latest enhancements for case insensitive status updates and terminal state protection.
