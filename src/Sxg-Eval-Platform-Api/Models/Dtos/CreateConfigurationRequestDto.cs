@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SxgEvalPlatformApi.Models.Dtos
 {
-    public class CreateMetricsConfigurationDto
+    /// <summary>
+    /// Data transfer object for creating new metrics configuration (without ConfigurationId)
+    /// </summary>
+    public class CreateConfigurationRequestDto
     {
-        public string? ConfigurationId { get; set; } = null;
-
         [Required]
         public string AgentId { get; set; } = string.Empty;
 
@@ -21,6 +22,7 @@ namespace SxgEvalPlatformApi.Models.Dtos
         [Required]
         public IList<SelectedMetricsConfigurationDto> MetricsConfiguration { get; set; } = new List<SelectedMetricsConfigurationDto>();
 
-        public UserMetadataDto? UserMetadata { get; set; }
+        [Required]
+        public UserMetadataDto UserMetadata { get; set; } = new UserMetadataDto();
     }
 }
