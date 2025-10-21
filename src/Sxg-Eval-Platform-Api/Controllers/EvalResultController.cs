@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
-using SxgEvalPlatformApi.Services;
+using SxgEvalPlatformApi.RequestHandlers;
 using Azure;
 
 namespace SxgEvalPlatformApi.Controllers;
@@ -12,14 +12,14 @@ namespace SxgEvalPlatformApi.Controllers;
 [Route("api/v1/eval/results")]
 public class EvalResultController : BaseController
 {
-    private readonly IEvaluationResultService _evaluationResultService;
+    private readonly IEvaluationResultRequestHandler _evaluationResultRequestHandler;
 
     public EvalResultController(
-        IEvaluationResultService evaluationResultService, 
+        IEvaluationResultRequestHandler evaluationResultRequestHandler, 
         ILogger<EvalResultController> logger)
         : base(logger)
     {
-        _evaluationResultService = evaluationResultService;
+        _evaluationResultRequestHandler = evaluationResultRequestHandler;
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
 
-            var result = await _evaluationResultService.SaveEvaluationResultAsync(saveDto);
+            var result = await _evaluationResultRequestHandler.SaveEvaluationResultAsync(saveDto);
             
             if (!result.Success)
             {
@@ -114,7 +114,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
 
-            var result = await _evaluationResultService.GetEvaluationResultByIdAsync(evalRunId);
+            var result = await _evaluationResultRequestHandler.GetEvaluationResultByIdAsync(evalRunId);
             
             if (!result.Success)
             {
@@ -178,7 +178,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
 
-            var evalRuns = await _evaluationResultService.GetEvalRunsByAgentIdAsync(agentId);
+            var evalRuns = await _evaluationResultRequestHandler.GetEvalRunsByAgentIdAsync(agentId);
             
             return Ok(evalRuns);
         }
@@ -239,7 +239,7 @@ public class EvalResultController : BaseController
             _logger.LogInformation("Retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
                 agentId, startDateTime, endDateTime);
 
-            var results = await _evaluationResultService.GetEvaluationResultsByDateRangeAsync(agentId, startDateTime, endDateTime);
+            var results = await _evaluationResultRequestHandler.GetEvaluationResultsByDateRangeAsync(agentId, startDateTime, endDateTime);
             
             return Ok(results);
         }

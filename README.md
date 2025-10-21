@@ -82,9 +82,9 @@ sxgevalplatform/
 ├── src/
 │   └── Sxg-Eval-Platform-Api/          # Main API project
 │       ├── Controllers/                 # API controllers
-│       ├── Services/                   # Business logic
+│       ├── RequestHandlers/            # Business logic and request processing
 │       ├── Models/                     # Data models and DTOs
-│       └── RequestHandlers/            # Request processing
+│       └── archive/                    # Legacy code (Services, unused models)
 ├── Sxg.EvalPlatform.API.Storage/       # Storage layer
 │   ├── Services/                       # Azure storage services
 │   ├── Entities/                       # Table entities

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
-using SxgEvalPlatformApi.Services;
+using SxgEvalPlatformApi.RequestHandlers;
 using Azure;
 using Sxg.EvalPlatform.API.Storage.Services;
 
@@ -13,18 +13,18 @@ namespace SxgEvalPlatformApi.Controllers;
 [Route("api/v1/eval/runs")]
 public class EvalRunController : BaseController
 {
-    private readonly IEvalRunService _evalRunService;
+    private readonly IEvalRunRequestHandler _evalRunRequestHandler;
     private readonly IDataSetTableService _dataSetTableService;
     private readonly IMetricsConfigTableService _metricsConfigTableService;
 
     public EvalRunController(
-        IEvalRunService evalRunService, 
+        IEvalRunRequestHandler evalRunRequestHandler, 
         IDataSetTableService dataSetTableService,
         IMetricsConfigTableService metricsConfigTableService,
         ILogger<EvalRunController> logger)
         : base(logger)
     {
-        _evalRunService = evalRunService;
+        _evalRunRequestHandler = evalRunRequestHandler;
         _dataSetTableService = dataSetTableService;
         _metricsConfigTableService = metricsConfigTableService;
     }
@@ -61,7 +61,7 @@ public class EvalRunController : BaseController
             _logger.LogInformation("Creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}, Type: {Type}, EnvironmentId: {EnvironmentId}", 
                 createDto.AgentId, createDto.DataSetId, createDto.Type, createDto.EnvironmentId);
 
-            var evalRun = await _evalRunService.CreateEvalRunAsync(createDto);
+            var evalRun = await _evalRunRequestHandler.CreateEvalRunAsync(createDto);
             
             return CreatedAtAction(
                 nameof(GetEvalRun), 
@@ -120,7 +120,7 @@ public class EvalRunController : BaseController
 
             // First, get the current evaluation run to check its status
             // Use the cross-partition search since we don't have AgentId in the request
-            var currentEvalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
+            var currentEvalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
             if (currentEvalRun == null)
             {
                 return NotFound(new UpdateResponseDto 
@@ -167,7 +167,7 @@ public class EvalRunController : BaseController
                 AgentId = currentEvalRun.AgentId // Get AgentId from the current evaluation run
             };
 
-            var updatedEvalRun = await _evalRunService.UpdateEvalRunStatusAsync(serviceUpdateDto);
+            var updatedEvalRun = await _evalRunRequestHandler.UpdateEvalRunStatusAsync(serviceUpdateDto);
             
             // Since we already validated the evaluation run exists above, this should not be null
             // But we'll still check for safety
@@ -229,7 +229,7 @@ public class EvalRunController : BaseController
 
             _logger.LogInformation("Retrieving evaluation run with ID: {EvalRunId}", evalRunId);
 
-            var evalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
+            var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
             
             if (evalRun == null)
             {

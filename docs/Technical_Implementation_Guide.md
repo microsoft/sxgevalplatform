@@ -1,13 +1,20 @@
 # SXG Evaluation Platform - Technical Implementation Guide
 
-## Service Architecture Overview
+## Architecture Overview
 
-The SXG Evaluation Platform uses a layered architecture with specialized services for different data management concerns:
+The SXG Evaluation Platform uses a layered RequestHandlers architecture with clear separation of concerns:
 
-1. **DataSetTableService** - Dataset metadata management
-2. **MetricsConfigTableService** - Metrics configuration management  
-3. **EvalRunService** - Evaluation run lifecycle management
-4. **AzureBlobStorageService** - File storage operations
+### RequestHandlers Layer (Business Logic)
+1. **DataSetRequestHandler** - Dataset operations and validation
+2. **MetricsConfigurationRequestHandler** - Metrics configuration management
+3. **EvalRunRequestHandler** - Evaluation run lifecycle management
+4. **EvaluationResultRequestHandler** - Evaluation result operations
+
+### Storage Services Layer (Data Access)
+1. **DataSetTableService** - Dataset table operations
+2. **MetricsConfigTableService** - Metrics configuration table operations
+3. **EvalRunTableService** - Evaluation run table operations
+4. **AzureBlobStorageService** - Blob storage operations
 
 ---
 
@@ -54,12 +61,14 @@ public class MetricsConfigurationTableEntity : ITableEntity
 }
 ```
 
-#### EvalRunEntity
+#### EvalRunTableEntity
 ```csharp
-public class EvalRunEntity : ITableEntity
+public class EvalRunTableEntity : ITableEntity
 {
-    public string AgentId { get; set; }                    // Partition Key
-    public string EvalRunId { get; set; }                  // Row Key (UUID)
+    public string AgentId { get; set; }                    // Partition Key (auto-set)
+    public Guid EvalRunId { get; set; }                    // Business GUID
+    public string PartitionKey { get; set; }               // Table partition key
+    public string RowKey { get; set; }                     // Table row key (UUID string)
     public string MetricsConfigurationId { get; set; }     // Config reference
     public string DataSetId { get; set; }                  // Dataset reference
     public string Status { get; set; }                     // Run status
@@ -68,14 +77,25 @@ public class EvalRunEntity : ITableEntity
     public DateTime? CompletedDatetime { get; set; }       // End time
     public string? BlobFilePath { get; set; }              // Results path
     public string? ContainerName { get; set; }             // Results container
+    public string Type { get; set; }                       // Evaluation type
+    public string EnvironmentId { get; set; }              // Environment reference
+    public string AgentSchemaName { get; set; }            // Schema identifier
 }
 ```
 
 ---
 
-## Service Implementation Patterns
+## RequestHandler Architecture Pattern
 
-### Base Service Architecture
+### RequestHandler-Service Pattern
+
+The application follows a **Controllers → RequestHandlers → Storage Services** architecture:
+
+1. **Controllers**: Handle HTTP requests and responses
+2. **RequestHandlers**: Contain business logic and orchestration
+3. **Storage Services**: Abstract Azure storage operations
+
+### Storage Service Base Architecture
 
 All table services inherit from `BaseTableService` which provides:
 
@@ -184,13 +204,19 @@ catch (JsonException ex)
 
 ---
 
-## EvalRunService Implementation
+## EvalRunTableService Implementation
+
+### Key Features
+- **CRUD Operations**: Create, read, update evaluation runs
+- **Status Management**: Handle evaluation run lifecycle
+- **Cross-Partition Queries**: Efficient ID-based lookups
+- **Agent-based Filtering**: Secure multi-tenant access
 
 ### Status Management
 Evaluation runs follow a strict state machine:
 
 ```
-Queued → Running → Completed/Failed
+Pending → Running → Completed/Failed
 ```
 
 ### Terminal State Protection
@@ -208,8 +234,31 @@ if (terminalStatuses.Contains(currentStatus))
 For ID-based lookups without AgentId:
 
 ```csharp
-var query = tableClient.QueryAsync<EvalRunEntity>(
+var query = tableClient.QueryAsync<EvalRunTableEntity>(
     filter: $"EvalRunId eq guid'{evalRunId}'");
+```
+
+### RequestHandler Pattern Example
+```csharp
+public class EvalRunRequestHandler
+{
+    private readonly IEvalRunTableService _evalRunTableService;
+    private readonly IAzureBlobStorageService _blobStorageService;
+    
+    public async Task<EvaluationRun> CreateEvalRunAsync(CreateEvalRunRequest request)
+    {
+        var tableEntity = new EvalRunTableEntity
+        {
+            AgentId = request.AgentId,
+            EvalRunId = Guid.NewGuid(),
+            Status = EvalRunStatus.Pending,
+            StartedDatetime = DateTime.UtcNow
+        };
+        
+        var createdEntity = await _evalRunTableService.CreateEvalRunAsync(tableEntity);
+        return _mapper.Map<EvaluationRun>(createdEntity);
+    }
+}
 ```
 
 ---
@@ -268,6 +317,26 @@ catch (Exception ex)
     _logger.LogError(ex, "Unexpected error in {OperationName}", operationName);
     throw;
 }
+```
+
+---
+
+## Dependency Injection Configuration
+
+### Program.cs Registration
+```csharp
+// Storage Services
+builder.Services.AddSingleton<IConfigHelper, ConfigHelper>();
+builder.Services.AddSingleton<IDataSetTableService, DataSetTableService>();
+builder.Services.AddSingleton<IMetricsConfigTableService, MetricsConfigTableService>();
+builder.Services.AddSingleton<IEvalRunTableService, EvalRunTableService>();
+builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>();
+
+// RequestHandlers
+builder.Services.AddScoped<DatasetRequestHandler>();
+builder.Services.AddScoped<MetricsConfigurationRequestHandler>();
+builder.Services.AddScoped<EvalRunRequestHandler>();
+builder.Services.AddScoped<EvaluationResultRequestHandler>();
 ```
 
 ---
