@@ -48,6 +48,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="updateDatasetDto">Update dataset request</param>
         /// <returns>Dataset save response</returns>
         Task<DatasetSaveResponseDto> UpdateDatasetAsync(string datasetId, UpdateDatasetDto updateDatasetDto);
+
+        /// <summary>
+        /// Delete a dataset by dataset ID
+        /// </summary>
+        /// <param name="datasetId">Dataset ID</param>
+        /// <returns>True if deleted, false if not found</returns>
+        Task<bool> DeleteDatasetAsync(string datasetId);
     }
 
     /// <summary>
@@ -326,6 +333,62 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     Status = "error",
                     Message = "Failed to update dataset: " + ex.Message
                 };
+            }
+        }
+
+        public async Task<bool> DeleteDatasetAsync(string datasetId)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting dataset with ID: {DatasetId}", datasetId);
+
+                // First get the dataset to get the AgentId and blob path for deletion
+                var existingDataset = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+
+                if (existingDataset == null)
+                {
+                    _logger.LogWarning("Dataset with ID: {DatasetId} not found", datasetId);
+                    return false;
+                }
+
+                // Delete from table storage
+                bool deleted = await _dataSetTableService.DeleteDataSetAsync(existingDataset.AgentId, datasetId);
+
+                if (deleted)
+                {
+                    _logger.LogInformation("Dataset with ID: {DatasetId} deleted successfully", datasetId);
+                    
+                    // Also delete the blob file if it exists
+                    try
+                    {
+                        var containerName = $"agent-{existingDataset.AgentId.ToLower()}";
+                        var blobPath = $"datasets/{datasetId}.json";
+                        
+                        // Check if blob exists before attempting to delete
+                        bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
+                        if (blobExists)
+                        {
+                            await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
+                            _logger.LogInformation("Dataset blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                        }
+                    }
+                    catch (Exception blobEx)
+                    {
+                        _logger.LogWarning(blobEx, "Failed to delete blob file for dataset ID: {DatasetId}, but table record was deleted", datasetId);
+                        // Continue - table deletion was successful, blob deletion failure is not critical
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete dataset with ID: {DatasetId}", datasetId);
+                }
+
+                return deleted;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}", datasetId);
+                return false;
             }
         }
 

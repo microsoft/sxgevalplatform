@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
 
 namespace SxgEvalPlatformApi.Controllers
@@ -35,7 +36,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet]
         [ProducesResponseType(typeof(IList<DatasetMetadataDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery] string agentId)
         {
@@ -81,7 +82,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("{datasetId}")]
         [ProducesResponseType(typeof(List<EvalDataset>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDatasetById(Guid datasetId)
         {
@@ -129,7 +130,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("{datasetId}/metadata")]
         [ProducesResponseType(typeof(DatasetMetadataDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<DatasetMetadataDto>> GetDatasetMetadataById(Guid datasetId)
         {
@@ -274,6 +275,46 @@ namespace SxgEvalPlatformApi.Controllers
                     datasetId);
                 return CreateErrorResponse<DatasetSaveResponseDto>(
                     "Failed to update dataset", StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        #endregion
+
+        #region DELETE Methods
+
+        /// <summary>
+        /// Delete a dataset by ID
+        /// </summary>
+        /// <param name="datasetId">The ID of the dataset to delete</param>
+        /// <returns>Deletion result</returns>
+        /// <response code="200">Dataset deleted successfully</response>
+        /// <response code="404">Dataset with the specified ID not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpDelete("{datasetId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteDataset([FromRoute] Guid datasetId)
+        {
+            try
+            {
+                _logger.LogInformation("Request to delete dataset: {DatasetId}", datasetId);
+
+                bool deleted = await _dataSetRequestHandler.DeleteDatasetAsync(datasetId.ToString());
+
+                if (!deleted)
+                {
+                    _logger.LogWarning("Dataset not found for deletion: {DatasetId}", datasetId);
+                    return NotFound($"Dataset with ID '{datasetId}' not found");
+                }
+
+                _logger.LogInformation("Dataset deleted successfully: {DatasetId}", datasetId);
+                return Ok(new { message = $"Dataset '{datasetId}' deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}", datasetId);
+                return StatusCode(500, new { message = "Failed to delete dataset", error = ex.Message });
             }
         }
 

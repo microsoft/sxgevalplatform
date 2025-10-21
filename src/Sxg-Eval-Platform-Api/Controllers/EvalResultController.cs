@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
 using Azure;
 
@@ -100,7 +101,7 @@ public class EvalResultController : BaseController
     [HttpGet("{evalRunId}")]
     [ProducesResponseType(typeof(EvaluationResultResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<EvaluationResultResponseDto>> GetEvaluationResult(Guid evalRunId)
     {

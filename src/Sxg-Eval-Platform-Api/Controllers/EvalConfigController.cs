@@ -60,7 +60,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("configurations/{configurationId}")]
         [ProducesResponseType(typeof(IList<SelectedMetricsConfiguration>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IList<SelectedMetricsConfiguration>>> GetConfigurationsByMetricsConfigurationId(Guid configurationId)
         {
@@ -101,7 +101,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("configurations")]
         [ProducesResponseType(typeof(List<MetricsConfigurationMetadataDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<List<MetricsConfigurationMetadataDto>>> GetConfigurationsByAgentId([FromQuery, Required] string agentId, [FromQuery] string environmentName = "")
         {
@@ -215,7 +215,7 @@ namespace SxgEvalPlatformApi.Controllers
         [HttpPut("configurations/{configurationId}")]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ConfigurationSaveResponseDto>> UpdateConfiguration(
             [FromRoute] Guid configurationId,
@@ -255,6 +255,46 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogError(ex, "Error occurred while updating configuration: {ConfigId}", configurationId);
                 return CreateErrorResponse<ConfigurationSaveResponseDto>(
                     "Failed to update evaluation configuration", 500);
+            }
+        }
+
+        #endregion
+
+        #region DELETE Methods
+
+        /// <summary>
+        /// Delete a configuration by ID
+        /// </summary>
+        /// <param name="configurationId">The ID of the configuration to delete</param>
+        /// <returns>Deletion result</returns>
+        /// <response code="200">Configuration deleted successfully</response>
+        /// <response code="404">Configuration with the specified ID not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpDelete("configurations/{configurationId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteConfiguration([FromRoute] Guid configurationId)
+        {
+            try
+            {
+                _logger.LogInformation("Request to delete configuration: {ConfigId}", configurationId);
+
+                bool deleted = await _metricsConfigurationRequestHandler.DeleteConfigurationAsync(configurationId.ToString());
+
+                if (!deleted)
+                {
+                    _logger.LogWarning("Configuration not found for deletion: {ConfigId}", configurationId);
+                    return NotFound($"Configuration with ID '{configurationId}' not found");
+                }
+
+                _logger.LogInformation("Configuration deleted successfully: {ConfigId}", configurationId);
+                return Ok(new { message = $"Configuration '{configurationId}' deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigId}", configurationId);
+                return StatusCode(500, new { message = "Failed to delete evaluation configuration", error = ex.Message });
             }
         }
 

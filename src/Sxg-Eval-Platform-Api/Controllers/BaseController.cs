@@ -221,4 +221,60 @@ public abstract class BaseController : ControllerBase
 
         return null;
     }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response with proper JSON formatting
+    /// </summary>
+    /// <param name="message">The error message</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected new ActionResult NotFound(string message)
+    {
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = message,
+            type = "https://httpstatuses.com/404"
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response for generic types with proper JSON formatting
+    /// </summary>
+    /// <typeparam name="T">The generic type</typeparam>
+    /// <param name="message">The error message</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected ActionResult<T> NotFound<T>(string message)
+    {
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = message,
+            type = "https://httpstatuses.com/404"
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response when passing an object with proper JSON formatting
+    /// </summary>
+    /// <param name="value">The response object (will be wrapped in standard error format)</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected new ActionResult NotFound(object value)
+    {
+        // If the value is already a structured error response, return it as is
+        if (value != null && value.GetType().GetProperty("status") != null)
+        {
+            return base.NotFound(value);
+        }
+
+        // Otherwise, wrap it in a standard error format
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = value?.ToString() ?? "The requested resource was not found",
+            type = "https://httpstatuses.com/404"
+        });
+    }
 }

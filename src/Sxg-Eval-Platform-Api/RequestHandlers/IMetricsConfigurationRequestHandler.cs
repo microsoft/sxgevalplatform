@@ -11,5 +11,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
         Task<ConfigurationSaveResponseDto> CreateConfigurationAsync(CreateConfigurationRequestDto createConfigDto);
         Task<ConfigurationSaveResponseDto> UpdateConfigurationAsync(string configurationId, UpdateConfigurationRequestDto updateConfigDto);
+        Task<bool> DeleteConfigurationAsync(string configurationId);
     }
 }

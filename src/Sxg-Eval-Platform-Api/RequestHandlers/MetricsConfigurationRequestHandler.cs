@@ -649,6 +649,62 @@ namespace SxgEvalPlatformApi.RequestHandlers
             return _mapper.Map<MetricsConfigurationMetadataDto>(entity);
         }
 
+        public async Task<bool> DeleteConfigurationAsync(string configurationId)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting configuration with ID: {ConfigurationId}", configurationId);
+
+                // First get the configuration to get the AgentId for deletion
+                var existingConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
+
+                if (existingConfig == null)
+                {
+                    _logger.LogWarning("Configuration with ID: {ConfigurationId} not found", configurationId);
+                    return false;
+                }
+
+                // Delete from table storage
+                bool deleted = await _metricsConfigTableService.DeleteMetricsConfigurationByIdAsync(existingConfig.AgentId, configurationId);
+
+                if (deleted)
+                {
+                    _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
+                    
+                    // Also delete the blob file if it exists
+                    try
+                    {
+                        var containerName = $"agent-{existingConfig.AgentId.ToLower()}";
+                        var blobPath = $"configurations/{configurationId}.json";
+                        
+                        // Check if blob exists before attempting to delete
+                        bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
+                        if (blobExists)
+                        {
+                            await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
+                            _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                        }
+                    }
+                    catch (Exception blobEx)
+                    {
+                        _logger.LogWarning(blobEx, "Failed to delete blob file for configuration ID: {ConfigurationId}, but table record was deleted", configurationId);
+                        // Continue - table deletion was successful, blob deletion failure is not critical
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete configuration with ID: {ConfigurationId}", configurationId);
+                }
+
+                return deleted;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigurationId}", configurationId);
+                return false;
+            }
+        }
+
         
 
         ///// <summary>
