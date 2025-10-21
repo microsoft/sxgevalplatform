@@ -26,7 +26,7 @@ public class EvalResultController : BaseController
     /// <summary>
     /// Save evaluation results for a specific evaluation run
     /// </summary>
-    /// <param name="saveDto">Evaluation result data containing EvalRunId, FileName, and EvaluationRecords</param>
+    /// <param name="saveDto">Evaluation result data containing EvalRunId and EvaluationRecords</param>
     /// <returns>Save operation result</returns>
     /// <response code="200">Evaluation results saved successfully</response>
     /// <response code="400">Invalid input data, EvalRunId not found, or evaluation run status is not terminal (must be 'Completed' or 'Failed')</response>

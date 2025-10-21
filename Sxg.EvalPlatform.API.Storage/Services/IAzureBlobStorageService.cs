@@ -40,5 +40,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// <param name="blobName">Blob name</param>
         /// <returns>True if successful</returns>
         Task<bool> DeleteBlobAsync(string containerName, string blobName);
+
+        /// <summary>
+        /// List blobs with a given prefix
+        /// </summary>
+        /// <param name="containerName">Container name</param>
+        /// <param name="prefix">Blob name prefix</param>
+        /// <returns>List of blob names</returns>
+        Task<List<string>> ListBlobsAsync(string containerName, string prefix);
     }
 }

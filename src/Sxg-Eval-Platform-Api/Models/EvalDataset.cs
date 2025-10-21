@@ -11,8 +11,11 @@ namespace SxgEvalPlatformApi.Models
     public class EvalDataset
     {
         public string Prompt { get; set; } = string.Empty;
+        
         public string GroundTruth { get; set; } = string.Empty;
+        
         public string ActualResponse { get; set; } = string.Empty;
+        
         public string ExpectedResponse { get; set; } = string.Empty;
     }
 

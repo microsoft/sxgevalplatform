@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Linq;
 using AutoMapper;
 using SxgEvalPlatformApi.Models;
 using Sxg.EvalPlatform.API.Storage.Services;
@@ -84,6 +85,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Handle container name and blob path with support for folder structure
                 string containerName;
                 string blobPath;
+                string fileName = $"evaluation_results_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
                 
                 if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
                 {
@@ -92,25 +94,25 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     // If BlobFilePath is a folder (ends with /), append the filename
                     if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
                     {
-                        blobPath = $"{evalRunEntity.BlobFilePath}{saveDto.FileName}";
+                        blobPath = $"{evalRunEntity.BlobFilePath}{fileName}";
                     }
                     else
                     {
-                        blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{saveDto.EvalRunId}/{saveDto.FileName}";
+                        blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{saveDto.EvalRunId}/{fileName}";
                     }
                 }
                 else
                 {
                     // Backward compatibility: parse the old format
                     containerName = evalRunEntity.AgentId.ToLower();
-                    blobPath = $"evalresults/{saveDto.EvalRunId}/{saveDto.FileName}";
+                    blobPath = $"evalresults/{saveDto.EvalRunId}/{fileName}";
                 }
 
                 // Serialize evaluation records to JSON using the storage model
                 var storageModel = new StoredEvaluationResultDto
                 {
                     EvalRunId = saveDto.EvalRunId,
-                    FileName = saveDto.FileName,
+                    FileName = fileName,
                     AgentId = evalRun.AgentId,
                     DataSetId = evalRun.DataSetId,
                     MetricsConfigurationId = evalRun.MetricsConfigurationId,
@@ -192,12 +194,23 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     // New format: use stored container name and blob path
                     containerName = evalRunEntity.ContainerName;
-                    // If BlobFilePath is a folder (ends with /), look for main results file
+                    // If BlobFilePath is a folder (ends with /), look for evaluation results file dynamically
                     if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
                     {
-                        // Try to find the main results file - could be results.json or any json file
-                        // For now, we'll look for results.json as the main file
-                        blobPath = $"{evalRunEntity.BlobFilePath}results.json";
+                        // Search for evaluation results files in the folder
+                        var blobs = await _blobService.ListBlobsAsync(containerName, evalRunEntity.BlobFilePath);
+                        var evaluationResultBlob = blobs.FirstOrDefault(b => 
+                            b.Contains("evaluation_results_") && b.EndsWith(".json"));
+                        
+                        if (evaluationResultBlob != null)
+                        {
+                            blobPath = evaluationResultBlob;
+                        }
+                        else
+                        {
+                            // Fallback to looking for results.json for backward compatibility
+                            blobPath = $"{evalRunEntity.BlobFilePath}results.json";
+                        }
                     }
                     else
                     {
@@ -208,7 +221,21 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     // Backward compatibility: parse the old format
                     containerName = evalRunEntity.AgentId.ToLower();
-                    blobPath = $"evalresults/{evalRunId}/results.json";
+                    // Try to find the evaluation results file dynamically first
+                    var folderPath = $"evalresults/{evalRunId}/";
+                    var blobs = await _blobService.ListBlobsAsync(containerName, folderPath);
+                    var evaluationResultBlob = blobs.FirstOrDefault(b => 
+                        b.Contains("evaluation_results_") && b.EndsWith(".json"));
+                    
+                    if (evaluationResultBlob != null)
+                    {
+                        blobPath = evaluationResultBlob;
+                    }
+                    else
+                    {
+                        // Fallback to the old hardcoded name
+                        blobPath = $"evalresults/{evalRunId}/results.json";
+                    }
                 }
 
                 // Check if blob exists
