@@ -279,7 +279,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var currentTime = DateTime.UtcNow;
 
                 // Only update user metadata and timestamp for tracking
-                existingEntity.LastUpdatedBy = updateConfigDto.UserMetadata?.Email ?? "Unknown";
+                existingEntity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 existingEntity.LastUpdatedOn = currentTime;
 
                 // Update blob with new metrics configuration
@@ -339,12 +339,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 
                 // Update only the metricsConfiguration field
                 jsonObject["metricsConfiguration"] = updateConfigDto.MetricsConfiguration;
-                
-                // Update user metadata if provided
-                if (updateConfigDto.UserMetadata != null)
-                {
-                    jsonObject["user_metadata"] = updateConfigDto.UserMetadata;
-                }
 
                 // Serialize and save updated JSON back to blob
                 var updatedJsonContent = JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions 
@@ -368,7 +362,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 };
 
                 _logger.LogInformation("Successfully updated configuration with ID: {ConfigId} by user: {UserEmail}",
-                    savedEntity.ConfigurationId, updateConfigDto.UserMetadata?.Email ?? "Unknown");
+                    savedEntity.ConfigurationId, "System");
 
                 return response;
             }
@@ -404,7 +398,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     entity.ConfigurationName = configDto.ConfigurationName;
                     entity.EnvironmentName = configDto.EnvironmentName;
                     entity.Description = configDto.Description;
-                    entity.LastUpdatedBy = configDto.UserMetadata.Email;
+                    entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.LastUpdatedOn = currentTime;
                     
                     // Use existing ConfigurationId and blob path
@@ -434,9 +428,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     entity.ConfigurationId = configurationId; // Override the AutoMapper generated GUID
                     entity.BlobFilePath = blobFilePath;
                     entity.ConainerName = blobContainer;
-                    entity.CreatedBy = configDto.UserMetadata.Email;
+                    entity.CreatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.CreatedOn = currentTime;
-                    entity.LastUpdatedBy = configDto.UserMetadata.Email;
+                    entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.LastUpdatedOn = currentTime;
                 }
 
@@ -459,7 +453,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 };
 
                 _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId} by user: {UserEmail}",
-                    isUpdate ? "updated" : "created", savedEntity.ConfigurationId, configDto.UserMetadata.Email);
+                    isUpdate ? "updated" : "created", savedEntity.ConfigurationId, "System");
 
                 return response;
             }

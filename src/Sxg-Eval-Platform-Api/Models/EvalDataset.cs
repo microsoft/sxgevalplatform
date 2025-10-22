@@ -38,9 +38,6 @@ namespace SxgEvalPlatformApi.Models
         [Required]
         [MinLength(1)]
         public List<EvalDataset> DatasetRecords { get; set; } = new();
-
-        [Required]
-        public UserMetadataDto UserMetadata { get; set; } = new();
     }
 
     /// <summary>
@@ -51,9 +48,6 @@ namespace SxgEvalPlatformApi.Models
         [Required]
         [MinLength(1)]
         public List<EvalDataset> DatasetRecords { get; set; } = new();
-
-        [Required]
-        public UserMetadataDto UserMetadata { get; set; } = new();
     }
 
     /// <summary>

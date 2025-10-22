@@ -114,9 +114,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var entity = _mapper.Map<DataSetTableEntity>(saveDatasetDto);
                 entity.DatasetId = datasetId;
                 entity.RowKey = datasetId;
-                entity.CreatedBy = saveDatasetDto.UserMetadata.Email;
+                entity.CreatedBy = "System"; // Default since UserMetadata is no longer required
                 entity.CreatedOn = currentTime;
-                entity.LastUpdatedBy = saveDatasetDto.UserMetadata.Email;
+                entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 entity.LastUpdatedOn = currentTime;
 
                 // Create blob path with GUID in filename
@@ -151,7 +151,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 };
 
                 _logger.LogInformation("Successfully created dataset with ID: {DatasetId} by user: {UserEmail}",
-                    savedEntity.DatasetId, saveDatasetDto.UserMetadata.Email);
+                    savedEntity.DatasetId, "System");
 
                 return response;
             }
@@ -289,7 +289,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var currentTime = DateTime.UtcNow;
 
                 // Update audit fields
-                existingEntity.LastUpdatedBy = updateDatasetDto.UserMetadata.Email;
+                existingEntity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 existingEntity.LastUpdatedOn = currentTime;
 
                 // Update blob with new dataset content
@@ -320,7 +320,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 };
 
                 _logger.LogInformation("Successfully updated dataset with ID: {DatasetId} by user: {UserEmail}",
-                    savedEntity.DatasetId, updateDatasetDto.UserMetadata.Email);
+                    savedEntity.DatasetId, "System");
 
                 return response;
             }
