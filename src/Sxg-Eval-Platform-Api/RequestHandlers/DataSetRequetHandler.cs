@@ -120,7 +120,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 entity.LastUpdatedOn = currentTime;
 
                 // Create blob path with GUID in filename
-                var blobContainer = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId).ToLowerInvariant();
+                var blobContainer = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId);
                 var blobFileName = $"{saveDatasetDto.DatasetType}_{saveDatasetDto.DatasetName}_{datasetId}.json";
                 var blobFilePath = $"{_configHelper.GetDatasetsFolderName()}/{blobFileName}";
                 
@@ -361,7 +361,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     // Also delete the blob file if it exists
                     try
                     {
-                        var containerName = $"agent-{existingDataset.AgentId.ToLower()}";
+                        var containerName = $"agent-{CommonUtils.TrimAndRemoveSpaces(existingDataset.AgentId)}";
                         var blobPath = $"datasets/{datasetId}.json";
                         
                         // Check if blob exists before attempting to delete

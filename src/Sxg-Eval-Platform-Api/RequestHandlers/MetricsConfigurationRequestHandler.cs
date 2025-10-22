@@ -674,7 +674,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     // Also delete the blob file if it exists
                     try
                     {
-                        var containerName = $"agent-{existingConfig.AgentId.ToLower()}";
+                        var containerName = $"agent-{CommonUtils.TrimAndRemoveSpaces(existingConfig.AgentId)}";
                         var blobPath = $"configurations/{configurationId}.json";
                         
                         // Check if blob exists before attempting to delete

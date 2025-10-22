@@ -1,4 +1,5 @@
 using Sxg.EvalPlatform.API.Storage.TableEntities;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.Helpers
 {
@@ -167,14 +168,14 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         }
 
         /// <summary>
-        /// Creates a container name for an agent (lowercase)
+        /// Creates a container name for an agent (valid for Azure Blob Storage)
         /// </summary>
         /// <param name="agentId">Agent ID</param>
-        /// <returns>Container name (lowercase)</returns>
+        /// <returns>Container name (valid for Azure Blob Storage)</returns>
         public static string CreateContainerName(string agentId)
         {
-            // Azure container names must be lowercase
-            return agentId.ToLowerInvariant();
+            // Azure container names must comply with Azure Blob Storage naming restrictions
+            return CommonUtils.TrimAndRemoveSpaces(agentId);
         }
 
         /// <summary>

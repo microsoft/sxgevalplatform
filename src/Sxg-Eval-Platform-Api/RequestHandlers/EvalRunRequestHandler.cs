@@ -3,6 +3,7 @@ using SxgEvalPlatformApi.Models;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -42,7 +43,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var currentDateTime = DateTime.UtcNow;
                 
                 // Store container name and blob path separately for better blob storage handling
-                var containerName = createDto.AgentId.ToLower(); // Ensure lowercase for Azure Blob Storage
+                var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
                 var blobFilePath = $"evalresults/{evalRunId}/"; // Create folder structure for multiple output files
                 
                 var entity = new EvalRunTableEntity

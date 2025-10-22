@@ -4,6 +4,7 @@ using AutoMapper;
 using SxgEvalPlatformApi.Models;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -104,7 +105,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 else
                 {
                     // Backward compatibility: parse the old format
-                    containerName = evalRunEntity.AgentId.ToLower();
+                    containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
                     blobPath = $"evalresults/{saveDto.EvalRunId}/{fileName}";
                 }
 
@@ -220,7 +221,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 else
                 {
                     // Backward compatibility: parse the old format
-                    containerName = evalRunEntity.AgentId.ToLower();
+                    containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
                     // Try to find the evaluation results file dynamically first
                     var folderPath = $"evalresults/{evalRunId}/";
                     var blobs = await _blobService.ListBlobsAsync(containerName, folderPath);
