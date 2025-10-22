@@ -100,8 +100,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     return new DatasetSaveResponseDto
                     {
-                        DatasetId = string.Empty,
-                        Status = "error",
+                        DatasetId = existingDataset.DatasetId,
+                        Status = "conflict",
                         Message = $"Dataset with name '{saveDatasetDto.DatasetName}' and type '{saveDatasetDto.DatasetType}' already exists for agent '{saveDatasetDto.AgentId}'"
                     };
                 }

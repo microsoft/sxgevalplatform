@@ -172,15 +172,19 @@ namespace SxgEvalPlatformApi.Controllers
 
                 var result = await _metricsConfigurationRequestHandler.CreateConfigurationAsync(createConfigDto);
 
+                if (result.Status == "conflict")
+                {
+                    _logger.LogWarning("Configuration creation failed due to conflict: {Message}", result.Message);
+                    
+                    // Update the message to include helpful instructions
+                    result.Message = $"Configuration save failed due to conflict: {result.Message}. If you want to update the configuration, use the PUT endpoint with configuration ID: {result.ConfigurationId}";
+                    
+                    return Conflict(result);
+                }
+
                 if (result.Status == "error")
                 {
                     _logger.LogError("Configuration creation failed: {Message}", result.Message);
-                    
-                    if (result.Message.Contains("already exists"))
-                    {
-                        return Conflict(result);
-                    }
-                    
                     return StatusCode(500, result);
                 }
 

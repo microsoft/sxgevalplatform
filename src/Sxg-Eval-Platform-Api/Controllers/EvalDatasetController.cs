@@ -169,11 +169,13 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="201">Dataset created successfully</response>
         /// <response code="200">Dataset updated successfully</response>
         /// <response code="400">Invalid input or validation failed</response>
+        /// <response code="409">Dataset with same name and type already exists</response>
         /// <response code="500">Internal server error</response>
         [HttpPost]
         [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<DatasetSaveResponseDto>> SaveDataset([FromBody] SaveDatasetDto saveDatasetDto)
         {
@@ -189,6 +191,16 @@ namespace SxgEvalPlatformApi.Controllers
                 }
 
                 var result = await _dataSetRequestHandler.SaveDatasetAsync(saveDatasetDto);
+
+                if (result.Status == "conflict")
+                {
+                    _logger.LogWarning("Dataset save failed due to conflict: {Message}", result.Message);
+                    
+                    // Update the message to include helpful instructions
+                    result.Message = $"Dataset save failed due to conflict: {result.Message}. If you want to update the dataset, use the PUT endpoint with dataset ID: {result.DatasetId}";
+                    
+                    return Conflict(result);
+                }
 
                 if (result.Status == "error")
                 {

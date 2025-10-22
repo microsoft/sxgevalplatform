@@ -208,10 +208,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (existingConfig != null && existingConfig.Count > 0)
                 {
+                    var existingConfiguration = existingConfig.First();
                     return new ConfigurationSaveResponseDto
                     {
-                        ConfigurationId = string.Empty,
-                        Status = "error",
+                        ConfigurationId = existingConfiguration.ConfigurationId,
+                        Status = "conflict",
                         Message = $"Configuration with name '{createConfigDto.ConfigurationName}' already exists for agent '{createConfigDto.AgentId}' in environment '{createConfigDto.EnvironmentName}'"
                     };
                 }
