@@ -12,7 +12,7 @@ param(
     [string]$Location = "eastus",
     
     [Parameter(Mandatory=$false)]
-    [string]$StorageAccountName = "sxgagenteval",
+    [string]$StorageAccountName = "sxgagentevaldev",
     
     [Parameter(Mandatory=$false)]
     [string]$ContainerName = "eval-metrics-configuration",
@@ -175,40 +175,61 @@ az webapp config appsettings set `
 
 # Step 7: Build and Publish Application
 Write-Host "🔨 Building and publishing application..." -ForegroundColor Yellow
-$projectPath = (Get-Location).Path
-$publishPath = "$projectPath\publish"
+$projectPath = "../SXG.EvalPlatform.API.csproj"
 
-# Clean previous publish
+if (-not (Test-Path $projectPath)) {
+    Write-Host "❌ Project file not found: $projectPath" -ForegroundColor Red
+    exit 1
+}
+
+# Build the application
+dotnet build $projectPath --configuration Release
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Build failed" -ForegroundColor Red
+    exit 1
+}
+Write-Host "✅ Build successful" -ForegroundColor Green
+
+# Create deployment package
+Write-Host "📦 Creating deployment package..." -ForegroundColor Yellow
+$publishPath = "./publish-dev"
 if (Test-Path $publishPath) {
     Remove-Item $publishPath -Recurse -Force
 }
 
-# Build and publish
-try {
-    dotnet publish -c Release -o $publishPath --no-restore
-    
-    # Create ZIP file for deployment
-    $zipPath = "$projectPath\publish.zip"
-    if (Test-Path $zipPath) {
-        Remove-Item $zipPath -Force
-    }
-    
-    Compress-Archive -Path "$publishPath\*" -DestinationPath $zipPath -Force
-    Write-Host "✅ Application packaged successfully" -ForegroundColor Green
-    
-    # Deploy to Azure
-    Write-Host "🚀 Deploying to Azure..." -ForegroundColor Yellow
-    az webapp deploy `
-        --name $AppName `
-        --resource-group $ResourceGroupName `
-        --src-path $zipPath `
-        --type zip `
-        --output table
-        
-} catch {
-    Write-Host "❌ Build or deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+dotnet publish $projectPath --configuration Release --output $publishPath --no-build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Publish failed" -ForegroundColor Red
     exit 1
 }
+Write-Host "✅ Publish successful" -ForegroundColor Green
+
+# Create a zip file for deployment
+$zipPath = ".\deploy-dev.zip"
+if (Test-Path $zipPath) {
+    Remove-Item $zipPath -Force
+}
+
+# Compress the publish folder to a zip file
+Compress-Archive -Path "$publishPath\*" -DestinationPath $zipPath -Force
+
+# Deploy to Azure
+Write-Host "🚀 Deploying to Azure..." -ForegroundColor Yellow
+az webapp deploy `
+    --name $AppName `
+    --resource-group $ResourceGroupName `
+    --src-path $zipPath `
+    --type zip `
+    --async false
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Deployment failed" -ForegroundColor Red
+    exit 1
+}
+
+# Clean up
+Remove-Item $publishPath -Recurse -Force
+Remove-Item $zipPath -Force
 
 # Step 8: Create and Upload Default Configuration (if not exists)
 Write-Host "📄 Checking/uploading default configuration..." -ForegroundColor Yellow
