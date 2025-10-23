@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
+using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -14,6 +15,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
     {
         private readonly IEvalRunTableService _evalRunTableService;
         private readonly IAzureBlobStorageService _blobStorageService;
+        private readonly IAzureQueueStorageService _queueStorageService;
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<EvalRunRequestHandler> _logger;
         private readonly IMapper _mapper;
@@ -21,12 +23,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
         public EvalRunRequestHandler(
             IEvalRunTableService evalRunTableService,
             IAzureBlobStorageService blobStorageService,
+            IAzureQueueStorageService queueStorageService,
             ILogger<EvalRunRequestHandler> logger,
             IMapper mapper,
             IConfigHelper configHelper)
         {
             _evalRunTableService = evalRunTableService;
             _blobStorageService = blobStorageService;
+            _queueStorageService = queueStorageService;
             _configHelper = configHelper;
             _logger = logger;
             _mapper = mapper;
@@ -68,6 +72,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var createdEntity = await _evalRunTableService.CreateEvalRunAsync(entity);
                 
                 _logger.LogInformation("Created evaluation run with ID: {EvalRunId}", evalRunId);
+
+                // Send message to queue for dataset enrichment
+                await SendDatasetEnrichmentRequestAsync(evalRunId, createDto.DataSetId, createDto.AgentId);
                 
                 return MapEntityToDto(createdEntity);
             }
@@ -76,6 +83,54 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogError(ex, "Error creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}", 
                     createDto.AgentId, createDto.DataSetId);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Send dataset enrichment request to Azure Storage Queue
+        /// </summary>
+        /// <param name="evalRunId">Evaluation run ID</param>
+        /// <param name="datasetId">Dataset ID</param>
+        /// <param name="agentId">Agent ID</param>
+        private async Task SendDatasetEnrichmentRequestAsync(Guid evalRunId, Guid datasetId, string agentId)
+        {
+            try
+            {
+                _logger.LogInformation("Sending dataset enrichment request to queue for EvalRunId: {EvalRunId}, DatasetId: {DatasetId}", 
+                    evalRunId, datasetId);
+
+                var enrichmentRequest = new DatasetEnrichmentRequest
+                {
+                    EvalRunId = evalRunId,
+                    DatasetId = datasetId,
+                    AgentId = agentId,
+                    RequestedAt = DateTime.UtcNow,
+                    Priority = "Normal"
+                };
+
+                var messageContent = JsonSerializer.Serialize(enrichmentRequest, new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                });
+
+                var queueName = _configHelper.GetDatasetEnrichmentRequestsQueueName();
+                var success = await _queueStorageService.SendMessageAsync(queueName, messageContent);
+
+                if (success)
+                {
+                    _logger.LogInformation("Successfully sent dataset enrichment request to queue {QueueName} for EvalRunId: {EvalRunId}", queueName, evalRunId);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to send dataset enrichment request to queue {QueueName} for EvalRunId: {EvalRunId}", queueName, evalRunId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the evaluation run creation
+                // The enrichment can be retried or handled separately
+                _logger.LogError(ex, "Error sending dataset enrichment request to queue for EvalRunId: {EvalRunId}, DatasetId: {DatasetId}", 
+                    evalRunId, datasetId);
             }
         }
 

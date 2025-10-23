@@ -53,6 +53,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 // Add custom services
 //builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
+builder.Services.AddScoped<IAzureQueueStorageService, AzureQueueStorageService>();
 builder.Services.AddScoped<IMetricsConfigTableService, MetricsConfigTableService>();
 builder.Services.AddScoped<IDataSetTableService, DataSetTableService>();
 builder.Services.AddScoped<IEvalRunTableService, EvalRunTableService>();
@@ -67,6 +68,7 @@ builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
 // Add evaluation request handlers
 builder.Services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
 builder.Services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
+builder.Services.AddScoped<IEvalArtifactsRequestHandler, EvalArtifactsRequestHandler>();
 
 // Register Azure services from Storage project
 //builder.Services.AddScoped<Sxg.EvalPlatform.API.Storage.Services.IAzureBlobStorageService, Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService>();

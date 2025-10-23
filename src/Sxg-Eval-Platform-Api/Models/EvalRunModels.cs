@@ -90,6 +90,7 @@ public class CreateEvalRunDto
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string Type { get; set; } = string.Empty;
+
     
     /// <summary>
     /// Environment identifier where the agent is deployed
