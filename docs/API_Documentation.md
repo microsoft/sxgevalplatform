@@ -493,7 +493,7 @@ Datasets contain the test data used for evaluations, including prompts, expected
 
 ### Metrics Configuration
 
-#### Get Default Metrics Configuration
+#### 1. Get Default Metrics Configuration
 **Endpoint**: `GET /api/v1/eval/defaultconfiguration`
 
 **Description**: Retrieve the default metrics configuration template.
@@ -525,6 +525,81 @@ Datasets contain the test data used for evaluations, including prompts, expected
       "enabled": true
     }
   ]
+}
+```
+
+#### 2. Create Metrics Configuration
+**Endpoint**: `POST /api/v1/eval/configurations`
+
+**Description**: Create a new metrics configuration for a specific agent.
+
+**Authentication**: Required
+
+**Request Body**:
+```json
+{
+  "agentId": "agent-123",
+  "environmentName": "production",
+  "configurationName": "Custom Metrics Config",
+  "description": "Custom metrics configuration for agent evaluation",
+  "metricsConfiguration": [
+    {
+      "metricName": "Accuracy",
+      "isSelected": true
+    },
+    {
+      "metricName": "BLEU Score", 
+      "isSelected": true
+    },
+    {
+      "metricName": "Semantic Similarity",
+      "isSelected": false
+    }
+  ]
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "configurationId": "config-456",
+  "status": "created", 
+  "message": "Configuration created successfully"
+}
+```
+
+#### 3. Update Metrics Configuration
+**Endpoint**: `PUT /api/v1/eval/configurations/{configurationId}`
+
+**Description**: Update an existing metrics configuration.
+
+**Authentication**: Required
+
+**Path Parameters**:
+- `configurationId` (string): The unique identifier of the configuration
+
+**Request Body**:
+```json
+{
+  "metricsConfiguration": [
+    {
+      "metricName": "Accuracy",
+      "isSelected": true
+    },
+    {
+      "metricName": "F1 Score",
+      "isSelected": true
+    }
+  ]
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "configurationId": "config-456",
+  "status": "updated",
+  "message": "Configuration updated successfully"
 }
 ```
 
@@ -571,6 +646,43 @@ Datasets contain the test data used for evaluations, including prompts, expected
   "evalRunId": "uuid (required)",
   "fileName": "string (required, 1-100 chars)",
   "evaluationRecords": "object (required, flexible JSON structure)"
+}
+```
+
+#### CreateMetricsConfigurationDto
+```json
+{
+  "agentId": "string (required, 1-100 chars)",
+  "environmentName": "string (required, 1-100 chars)",
+  "configurationName": "string (required, 1-100 chars)",
+  "description": "string (optional)",
+  "metricsConfiguration": [
+    {
+      "metricName": "string (required)",
+      "isSelected": "boolean (required)"
+    }
+  ]
+}
+```
+
+#### UpdateMetricsConfigurationDto
+```json
+{
+  "metricsConfiguration": [
+    {
+      "metricName": "string (required)",
+      "isSelected": "boolean (required)"
+    }
+  ]
+}
+```
+
+#### ConfigurationSaveResponseDto
+```json
+{
+  "configurationId": "string",
+  "status": "string",
+  "message": "string"
 }
 ```
 
@@ -650,37 +762,43 @@ Datasets contain the test data used for evaluations, including prompts, expected
 
 ## Best Practices
 
-### 1. Status Management
+### 1. Simplified API Design
+- **No User Metadata Required**: The API has been simplified - user metadata is no longer required in request payloads
+- **Automatic Audit Trail**: All created and updated records automatically use "System" for audit fields (`createdBy`, `lastUpdatedBy`)
+- **Reduced Complexity**: Request payloads are simpler without required user information fields
+- **Backward Compatibility**: Existing audit data in the database is preserved
+
+### 2. Status Management
 - Always check evaluation run status before saving results
 - Use case-insensitive status values for flexibility
 - Handle terminal state violations gracefully
 - Remember that `Completed` and `Failed` states cannot be updated
 
-### 2. Data Organization
+### 3. Data Organization
 - Use meaningful `agentId` values for easy identification
 - Include descriptive dataset names
 - Store comprehensive evaluation records for analysis
 - Use consistent naming conventions for result files
 
-### 3. Error Handling
+### 4. Error Handling
 - Always check response status codes
 - Handle authentication and authorization errors appropriately
 - Implement retry logic for transient failures
 - Parse error messages for specific business rule violations
 
-### 4. Performance
+### 5. Performance
 - Use date range queries to limit result sets
 - Implement pagination for large datasets
 - Cache frequently accessed configuration data
 - Use agent-based filtering for better performance
 
-### 5. Security
+### 6. Security
 - Secure storage of authentication tokens
 - Regular rotation of access keys
 - Monitor for unusual access patterns
 - Validate all input data
 
-### 6. Monitoring
+### 7. Monitoring
 - Use the health endpoint for service monitoring
 - Track evaluation run completion rates
 - Monitor storage usage for large result sets
@@ -689,6 +807,8 @@ Datasets contain the test data used for evaluations, including prompts, expected
 ---
 
 ## Integration Examples
+
+**Note**: All examples below demonstrate the simplified API design without required user metadata fields. The API automatically handles audit trail information using "System" as the default user.
 
 ### Complete Evaluation Workflow
 ```bash
@@ -766,6 +886,65 @@ curl -s -X GET "$BASE_URL/eval/results/$EVAL_RUN_ID" \
 echo "Evaluation workflow completed!"
 ```
 
+### Creating Metrics Configuration Example
+```bash
+#!/bin/bash
+
+# Configuration
+BASE_URL="https://sxgevalapidev.azurewebsites.net/api/v1"
+AUTH_TOKEN="your-bearer-token"
+AGENT_ID="my-agent"
+
+# Create a custom metrics configuration
+echo "Creating metrics configuration..."
+CONFIG_RESPONSE=$(curl -s -X POST "$BASE_URL/eval/configurations" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d "{
+    \"agentId\": \"$AGENT_ID\",
+    \"environmentName\": \"production\",
+    \"configurationName\": \"Custom Agent Metrics\",
+    \"description\": \"Custom metrics configuration for agent evaluation\",
+    \"metricsConfiguration\": [
+      {
+        \"metricName\": \"Accuracy\",
+        \"isSelected\": true
+      },
+      {
+        \"metricName\": \"BLEU Score\",
+        \"isSelected\": true
+      },
+      {
+        \"metricName\": \"Semantic Similarity\",
+        \"isSelected\": false
+      }
+    ]
+  }")
+
+CONFIG_ID=$(echo $CONFIG_RESPONSE | jq -r '.configurationId')
+echo "Created configuration: $CONFIG_ID"
+
+# Update the configuration
+echo "Updating metrics configuration..."
+curl -s -X PUT "$BASE_URL/eval/configurations/$CONFIG_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -d "{
+    \"metricsConfiguration\": [
+      {
+        \"metricName\": \"Accuracy\",
+        \"isSelected\": true
+      },
+      {
+        \"metricName\": \"F1 Score\",
+        \"isSelected\": true
+      }
+    ]
+  }"
+
+echo "Configuration management completed!"
+```
+
 ### Error Handling Example
 ```javascript
 async function updateEvaluationStatus(evalRunId, status) {
@@ -822,4 +1001,13 @@ if (result.success) {
 - Implement proper error handling based on the examples provided
 - Monitor API health using the health check endpoint
 
-This comprehensive documentation provides all the information needed to integrate with the SXG Evaluation Platform API effectively, including the latest enhancements for case insensitive status updates and terminal state protection.
+## Recent Updates
+
+**Latest Changes (October 2025)**:
+- ✅ **Simplified API Design**: Removed required user metadata fields from all endpoints
+- ✅ **Enhanced Metrics Configuration**: Added comprehensive create and update endpoints for metrics configurations
+- ✅ **Improved Azure Compliance**: Container naming now fully compliant with Azure Blob Storage requirements
+- ✅ **Audit Trail Preservation**: Automatic "System" user assignment maintains audit capabilities
+- ✅ **Reduced Complexity**: Cleaner request payloads without mandatory user information
+
+This comprehensive documentation provides all the information needed to integrate with the SXG Evaluation Platform API effectively, including the latest simplification enhancements and complete metrics configuration management capabilities.

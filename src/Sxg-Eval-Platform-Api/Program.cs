@@ -4,6 +4,8 @@ using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi;
 using SxgEvalPlatformApi.RequestHandlers;
+using SxgEvalPlatformApi.Services.Cache;
+using StackExchange.Redis;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,21 +52,47 @@ builder.Services.AddCors(options =>
 // Add AutoMapper with explicit mapping profiles
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// Add custom services
-//builder.Services.AddScoped<IEvaluationService, EvaluationService>();
-builder.Services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
-builder.Services.AddScoped<IMetricsConfigTableService, MetricsConfigTableService>();
-builder.Services.AddScoped<IDataSetTableService, DataSetTableService>();
-builder.Services.AddScoped<IEvalRunTableService, EvalRunTableService>();
+// Configure Redis Connection
+builder.Services.AddSingleton<ConnectionMultiplexer>(provider =>
+{
+    var configuration = provider.GetService<IConfiguration>();
+    var connectionString = configuration.GetConnectionString("Redis");
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Redis connection string is not configured");
+    }
+    
+    var options = ConfigurationOptions.Parse(connectionString);
+    options.AbortOnConnectFail = false;
+    options.ConnectTimeout = 10000;
+    options.SyncTimeout = 10000;
+    
+    return ConnectionMultiplexer.Connect(options);
+});
+
+// Add Redis Cache Services
+builder.Services.AddSingleton<SxgEvalPlatformApi.Services.Cache.IRedisCache, SxgEvalPlatformApi.Services.Cache.RedisCacheService>();
+builder.Services.AddSingleton<SxgEvalPlatformApi.Services.Cache.IGenericCacheService, SxgEvalPlatformApi.Services.Cache.GenericCacheService>();
+
+// Add base storage services (concrete implementations without caching)
+builder.Services.AddScoped<MetricsConfigTableService>();
+builder.Services.AddScoped<AzureBlobStorageService>();
+builder.Services.AddScoped<EvalRunTableService>();
+builder.Services.AddScoped<DataSetTableService>();
+
+// Add services with automatic caching using the generic decorator
+// This replaces all the manual cache wrapper registrations
+builder.Services.AddCachedService<IMetricsConfigTableService, MetricsConfigTableService>();
+builder.Services.AddCachedService<IEvalRunTableService, EvalRunTableService>();
+builder.Services.AddCachedService<IDataSetTableService, DataSetTableService>();
+builder.Services.AddCachedService<IAzureBlobStorageService, AzureBlobStorageService>();
+
+// Add other services (these will automatically use cached services via DI)
 builder.Services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigurationRequestHandler>();
 builder.Services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
 builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
 
-// Add evaluation services (commented out - using RequestHandlers instead)
-//builder.Services.AddScoped<IEvalRunService, EvalRunService>();
-//builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
-
-// Add evaluation request handlers
+// Add evaluation request handlers (will use cached services)
 builder.Services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
 builder.Services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
 
