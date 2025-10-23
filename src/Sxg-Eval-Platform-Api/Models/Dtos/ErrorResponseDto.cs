@@ -24,7 +24,7 @@ public class ErrorResponseDto
     /// <summary>
     /// Detailed error message
     /// </summary>
-    /// <example>No configurations found for ConfigurationId: 3fa85f64-5717-4562-b3fc-2c963f66afa6</example>
+    /// <example>Resource not found with ID: 3fa85f64-5717-4562-b3fc-2c963f66afa6</example>
     [Required]
     public string Detail { get; set; } = string.Empty;
 

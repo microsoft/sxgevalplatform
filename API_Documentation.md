@@ -240,16 +240,14 @@ The Dataset Management endpoints allow you to manage EVAL Datasets for AI agents
       "lastUpdatedOn": "2024-01-01T12:00:00.000Z",
       "agentId": "agent-001",
       "datasetType": "Synthetic",
-      "fileName": "evaluation-dataset-v1.json",
-      "recordCount": 50
+      "fileName": "evaluation-dataset-v1.json"
     },
     {
       "datasetId": "11111111-2222-3333-4444-555555555555",
       "lastUpdatedOn": "2024-01-02T10:30:00.000Z",
       "agentId": "agent-001",
       "datasetType": "Golden",
-      "fileName": "golden-standard.json",
-      "recordCount": 25
+      "fileName": "golden-standard.json"
     }
   ]
 }
@@ -306,8 +304,7 @@ The Dataset Management endpoints allow you to manage EVAL Datasets for AI agents
   "lastUpdatedOn": "2024-01-01T12:00:00.000Z",
   "agentId": "agent-001",
   "datasetType": "Synthetic",
-  "fileName": "evaluation-dataset-v1.json",
-  "recordCount": 50
+  "fileName": "evaluation-dataset-v1.json"
 }
 ```
 
@@ -365,8 +362,7 @@ The Dataset Management endpoints allow you to manage EVAL Datasets for AI agents
   "lastUpdatedOn": "datetime",
   "agentId": "string",
   "datasetType": "string",
-  "fileName": "string",
-  "recordCount": "number (integer)"
+  "fileName": "string"
 }
 ```
 

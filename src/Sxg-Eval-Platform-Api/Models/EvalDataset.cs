@@ -67,10 +67,16 @@ namespace SxgEvalPlatformApi.Models
         public string DatasetId { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
-        public string CreatedBy { get; set; } = string.Empty;
-        public DateTime CreatedOn { get; set; }
-        public string LastUpdatedBy { get; set; } = string.Empty;
-        public DateTime LastUpdatedOn { get; set; }
+    }
+
+    /// <summary>
+    /// Dataset conflict response for 409 errors
+    /// </summary>
+    public class DatasetConflictResponseDto
+    {
+        public string Status { get; set; } = "conflict";
+        public string Message { get; set; } = string.Empty;
+        public string ExistingDatasetId { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -134,7 +140,6 @@ namespace SxgEvalPlatformApi.Models
         public string AgentId { get; set; } = string.Empty;
         public string DatasetType { get; set; } = string.Empty;
         public string DatasetName { get; set; } = string.Empty;
-        public int RecordCount { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
         public string LastUpdatedBy { get; set; } = string.Empty;

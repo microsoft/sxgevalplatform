@@ -65,8 +65,9 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string MetricsConfigurationId { get; set; } = string.Empty;
         public string DataSetId { get; set; } = string.Empty;
         public string Status { get; set; } = EvalRunStatusConstants.Queued;
-        public string? LastUpdatedBy { get; set; }
+        public string? LastUpdatedBy { get; set; } = "System";
         public DateTime? LastUpdatedOn { get; set; }
+        public string StartedBy { get; set; } = "System";
         public DateTime? StartedDatetime { get; set; }
         public DateTime? CompletedDatetime { get; set; }
         public string? BlobFilePath { get; set; }

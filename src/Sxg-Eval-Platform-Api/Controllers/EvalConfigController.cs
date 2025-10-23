@@ -154,7 +154,7 @@ namespace SxgEvalPlatformApi.Controllers
         [HttpPost("configurations")]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(ConfigurationConflictResponseDto), StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ConfigurationSaveResponseDto>> CreateConfiguration(
             [FromBody] CreateConfigurationRequestDto createConfigDto)
@@ -176,10 +176,14 @@ namespace SxgEvalPlatformApi.Controllers
                 {
                     _logger.LogWarning("Configuration creation failed due to conflict: {Message}", result.Message);
                     
-                    // Update the message to include helpful instructions
-                    result.Message = $"Configuration save failed due to conflict: {result.Message}. If you want to update the configuration, use the PUT endpoint with configuration ID: {result.ConfigurationId}";
+                    var conflictResponse = new ConfigurationConflictResponseDto
+                    {
+                        Status = "conflict",
+                        Message = $"Configuration save failed due to conflict: {result.Message}. If you want to update the configuration, use the PUT endpoint with configuration ID: {result.ConfigurationId}",
+                        ExistingConfigurationId = result.ConfigurationId
+                    };
                     
-                    return Conflict(result);
+                    return Conflict(conflictResponse);
                 }
 
                 if (result.Status == "error")

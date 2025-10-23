@@ -143,11 +143,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     DatasetId = savedEntity.DatasetId,
                     Status = "created",
-                    Message = "Dataset created successfully",
-                    CreatedBy = savedEntity.CreatedBy,
-                    CreatedOn = savedEntity.CreatedOn,
-                    LastUpdatedBy = savedEntity.LastUpdatedBy,
-                    LastUpdatedOn = savedEntity.LastUpdatedOn
+                    Message = "Dataset created successfully"
                 };
 
                 _logger.LogInformation("Successfully created dataset with ID: {DatasetId} by user: {UserEmail}",
@@ -281,7 +277,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return new DatasetSaveResponseDto
                     {
                         DatasetId = datasetId,
-                        Status = "error",
+                        Status = "not found",
                         Message = $"Dataset with ID '{datasetId}' not found"
                     };
                 }
@@ -312,11 +308,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     DatasetId = savedEntity.DatasetId,
                     Status = "updated",
-                    Message = "Dataset updated successfully",
-                    CreatedBy = savedEntity.CreatedBy,
-                    CreatedOn = savedEntity.CreatedOn,
-                    LastUpdatedBy = savedEntity.LastUpdatedBy,
-                    LastUpdatedOn = savedEntity.LastUpdatedOn
+                    Message = "Dataset updated successfully"
                 };
 
                 _logger.LogInformation("Successfully updated dataset with ID: {DatasetId} by user: {UserEmail}",

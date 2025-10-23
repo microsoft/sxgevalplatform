@@ -23,6 +23,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
         Task<EvalRunDto?> UpdateEvalRunStatusAsync(UpdateEvalRunStatusDto updateDto);
         
         /// <summary>
+        /// Update evaluation run metadata (lastUpdatedBy and lastUpdatedOn)
+        /// </summary>
+        /// <param name="evalRunId">Evaluation run ID</param>
+        /// <param name="updatedBy">User who updated the evaluation run</param>
+        /// <returns>Updated evaluation run</returns>
+        Task<EvalRunDto?> UpdateEvalRunMetadataAsync(Guid evalRunId, string updatedBy);
+        
+        /// <summary>
         /// Get evaluation run by ID
         /// </summary>
         /// <param name="agentId">Agent ID (used as partition key)</param>

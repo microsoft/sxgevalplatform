@@ -132,12 +132,23 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Successfully saved evaluation results for EvalRunId: {EvalRunId} to {BlobPath}", 
                     saveDto.EvalRunId, $"{containerName}/{blobPath}");
 
+                // Update evaluation run metadata (lastUpdatedBy and lastUpdatedOn)
+                var updatedBy = "System"; // Default value since UpdatedBy is not in input
+                var updatedEvalRun = await _evalRunRequestHandler.UpdateEvalRunMetadataAsync(saveDto.EvalRunId, updatedBy);
+                
+                if (updatedEvalRun == null)
+                {
+                    _logger.LogWarning("Could not update evaluation run metadata for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                    // Continue anyway since the results were saved successfully
+                }
+
                 return new EvaluationResultSaveResponseDto
                 {
                     Success = true,
                     Message = "Evaluation results saved successfully",
                     EvalRunId = saveDto.EvalRunId,
-                    BlobPath = $"{containerName}/{blobPath}"
+                    LastUpdatedBy = "System", // Use default since we don't expose this from EvalRunDto anymore
+                    LastUpdatedOn = DateTime.UtcNow // Use current time since we don't expose this from EvalRunDto anymore
                 };
             }
             catch (Exception ex)
@@ -147,7 +158,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     Success = false,
                     Message = "Failed to save evaluation results",
-                    EvalRunId = saveDto.EvalRunId
+                    EvalRunId = saveDto.EvalRunId,
+                    LastUpdatedBy = "System",
+                    LastUpdatedOn = null
                 };
             }
         }
@@ -170,7 +183,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     {
                         Success = false,
                         Message = $"EvalRunId '{evalRunId}' not found. Please provide a valid EvalRunId.",
-                        EvalRunId = evalRunId
+                        EvalRunId = evalRunId,
+                        LastUpdatedBy = "System",
+                        LastUpdatedOn = null
                     };
                 }
 
@@ -183,7 +198,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     {
                         Success = false,
                         Message = "Failed to retrieve evaluation run details",
-                        EvalRunId = evalRunId
+                        EvalRunId = evalRunId,
+                        LastUpdatedBy = "System",
+                        LastUpdatedOn = null
                     };
                 }
 
@@ -251,7 +268,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     {
                         Success = false,
                         Message = "Evaluation results not found. This could mean the evaluation run hasn't completed yet or something went wrong during the evaluation process.",
-                        EvalRunId = evalRunId
+                        EvalRunId = evalRunId,
+                        LastUpdatedBy = "System", // Use default since we don't expose this from EvalRunDto anymore
+                        LastUpdatedOn = null // Use null since we don't expose this from EvalRunDto anymore
                     };
                 }
 
@@ -265,7 +284,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     {
                         Success = false,
                         Message = "Evaluation results are empty",
-                        EvalRunId = evalRunId
+                        EvalRunId = evalRunId,
+                        LastUpdatedBy = "System", // Use default since we don't expose this from EvalRunDto anymore
+                        LastUpdatedOn = null // Use null since we don't expose this from EvalRunDto anymore
                     };
                 }
                 
@@ -279,8 +300,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     Success = true,
                     Message = "Evaluation results retrieved successfully",
                     EvalRunId = evalRunId,
-                    FileName = evaluationResult?.FileName ?? "Unknown",
-                    EvaluationRecords = evaluationResult?.EvaluationRecords
+                    EvaluationRecords = evaluationResult?.EvaluationRecords,
+                    LastUpdatedBy = "System", // Use default since we don't expose this from EvalRunDto anymore
+                    LastUpdatedOn = null // Use null since we don't expose this from EvalRunDto anymore
                 };
             }
             catch (JsonException ex)
@@ -290,7 +312,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     Success = false,
                     Message = "Invalid evaluation results format",
-                    EvalRunId = evalRunId
+                    EvalRunId = evalRunId,
+                    LastUpdatedBy = "System",
+                    LastUpdatedOn = null
                 };
             }
             catch (Exception ex)
@@ -300,7 +324,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     Success = false,
                     Message = "Failed to retrieve evaluation results",
-                    EvalRunId = evalRunId
+                    EvalRunId = evalRunId,
+                    LastUpdatedBy = "System",
+                    LastUpdatedOn = null
                 };
             }
         }

@@ -3,7 +3,6 @@ using SxgEvalPlatformApi.Models;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
-using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -43,7 +42,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var currentDateTime = DateTime.UtcNow;
                 
                 // Store container name and blob path separately for better blob storage handling
-                var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
+                var containerName = createDto.AgentId.ToLower(); // Ensure lowercase for Azure Blob Storage
                 var blobFilePath = $"evalresults/{evalRunId}/"; // Create folder structure for multiple output files
                 
                 var entity = new EvalRunTableEntity
@@ -53,8 +52,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     DataSetId = createDto.DataSetId.ToString(),
                     MetricsConfigurationId = createDto.MetricsConfigurationId.ToString(),
                     Status = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Queued,
-                    LastUpdatedOn = currentDateTime,
                     StartedDatetime = currentDateTime,
+                    LastUpdatedBy = "System", // Default to "System" since StartedBy is not in input yet
+                    StartedBy = "System", // Default to "System" since StartedBy is not in input yet
                     ContainerName = containerName,
                     BlobFilePath = blobFilePath,
                     Type = createDto.Type,
@@ -117,6 +117,40 @@ namespace SxgEvalPlatformApi.RequestHandlers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating evaluation run status for ID: {EvalRunId}", updateDto.EvalRunId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update evaluation run metadata (lastUpdatedBy and lastUpdatedOn)
+        /// </summary>
+        public async Task<EvalRunDto?> UpdateEvalRunMetadataAsync(Guid evalRunId, string updatedBy)
+        {
+            try
+            {
+                // Get the current entity
+                var entity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
+                if (entity == null)
+                {
+                    _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+                    return null;
+                }
+
+                // Update metadata fields
+                entity.LastUpdatedBy = updatedBy ?? "System";
+                entity.LastUpdatedOn = DateTime.UtcNow;
+
+                // Save the updated entity
+                var updatedEntity = await _evalRunTableService.UpdateEvalRunAsync(entity);
+                
+                _logger.LogInformation("Updated evaluation run metadata for ID: {EvalRunId} by user: {UpdatedBy}", 
+                    evalRunId, updatedBy);
+                
+                return MapEntityToDto(updatedEntity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating evaluation run metadata for ID: {EvalRunId}", evalRunId);
                 throw;
             }
         }
@@ -228,8 +262,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 DataSetId = entity.DataSetId,
                 AgentId = entity.AgentId,
                 Status = entity.Status,
-                LastUpdatedBy = entity.LastUpdatedBy,
-                LastUpdatedOn = entity.LastUpdatedOn,
+                StartedBy = entity.StartedBy,
                 StartedDatetime = entity.StartedDatetime,
                 CompletedDatetime = entity.CompletedDatetime
                 // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers

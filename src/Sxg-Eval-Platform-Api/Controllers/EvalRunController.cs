@@ -101,7 +101,7 @@ public class EvalRunController : BaseController
     /// <response code="500">Internal server error</response>
     [HttpPut("{evalRunId}")]
     [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<UpdateResponseDto>> UpdateEvalRun(Guid evalRunId, [FromBody] UpdateStatusDto updateDto)
@@ -216,7 +216,7 @@ public class EvalRunController : BaseController
     /// <response code="500">Internal server error</response>
     [HttpGet("{evalRunId}")]
     [ProducesResponseType(typeof(EvalRunDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<EvalRunDto>> GetEvalRun(Guid evalRunId)
     {

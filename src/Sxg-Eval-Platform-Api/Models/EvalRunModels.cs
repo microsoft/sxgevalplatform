@@ -41,8 +41,9 @@ public class EvalRunEntity : ITableEntity
     public string DataSetId { get; set; } = string.Empty;
     public string AgentId { get; set; } = string.Empty;
     public string Status { get; set; } = EvalRunStatusConstants.Queued;
-    public string? LastUpdatedBy { get; set; }
+    public string LastUpdatedBy { get; set; } = "System";
     public DateTime? LastUpdatedOn { get; set; }
+    public string StartedBy { get; set; } = "System";
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     public string? BlobFilePath { get; set; }
@@ -62,8 +63,7 @@ public class EvalRunDto
     public string DataSetId { get; set; } = string.Empty;
     public string AgentId { get; set; } = string.Empty;
     public string Status { get; set; } = EvalRunStatusConstants.Queued;
-    public string? LastUpdatedBy { get; set; }
-    public DateTime? LastUpdatedOn { get; set; }
+    public string StartedBy { get; set; } = "System";
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
@@ -103,6 +103,7 @@ public class CreateEvalRunDto
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string AgentSchemaName { get; set; } = string.Empty;
+    // public string? StartedBy { get; set; }
 }
 
 /// <summary>
@@ -127,7 +128,11 @@ public class UpdateEvalRunStatusDto
 /// </summary>
 public class UpdateStatusDto
 {
-    [Required]
+    /// <summary>
+    /// New status for the evaluation run. Valid values: Queued, Running, Completed, Failed
+    /// </summary>
+    [Required(ErrorMessage = "Status is required")]
+    [StringLength(20, MinimumLength = 1, ErrorMessage = "Status must be between 1 and 20 characters")]
     public string Status { get; set; } = string.Empty;
 }
 

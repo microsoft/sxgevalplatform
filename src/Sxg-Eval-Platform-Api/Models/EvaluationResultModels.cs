@@ -53,7 +53,9 @@ public class EvaluationResultSaveResponseDto
     
     public Guid EvalRunId { get; set; }
     
-    public string BlobPath { get; set; } = string.Empty;
+    public string LastUpdatedBy { get; set; } = "System";
+    
+    public DateTime? LastUpdatedOn { get; set; }
 }
 
 /// <summary>
@@ -67,7 +69,9 @@ public class EvaluationResultResponseDto
     
     public Guid EvalRunId { get; set; }
     
-    public string FileName { get; set; } = string.Empty;
-    
     public JsonElement? EvaluationRecords { get; set; }
+    
+    public string LastUpdatedBy { get; set; } = "System";
+    
+    public DateTime? LastUpdatedOn { get; set; }
 }

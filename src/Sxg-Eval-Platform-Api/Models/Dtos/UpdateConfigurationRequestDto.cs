@@ -8,6 +8,7 @@ namespace SxgEvalPlatformApi.Models.Dtos
     public class UpdateConfigurationRequestDto
     {
         [Required]
+        [MinLength(1)]
         public IList<SelectedMetricsConfigurationDto> MetricsConfiguration { get; set; } = new List<SelectedMetricsConfigurationDto>();
     }
 }

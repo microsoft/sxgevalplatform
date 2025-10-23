@@ -27,8 +27,8 @@ public class EvalResultController : BaseController
     /// Save evaluation results for a specific evaluation run
     /// </summary>
     /// <param name="saveDto">Evaluation result data containing EvalRunId and EvaluationRecords</param>
-    /// <returns>Save operation result</returns>
-    /// <response code="200">Evaluation results saved successfully</response>
+    /// <returns>Save operation result with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results saved successfully with metadata information</response>
     /// <response code="400">Invalid input data, EvalRunId not found, or evaluation run status is not terminal (must be 'Completed' or 'Failed')</response>
     /// <response code="403">Access denied - authorization failed</response>
     /// <response code="500">Internal server error</response>
@@ -93,8 +93,8 @@ public class EvalResultController : BaseController
     /// Get evaluation results by EvalRunId
     /// </summary>
     /// <param name="evalRunId">Evaluation run ID</param>
-    /// <returns>Evaluation results data</returns>
-    /// <response code="200">Evaluation results retrieved successfully</response>
+    /// <returns>Evaluation results data with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results retrieved successfully with metadata information</response>
     /// <response code="400">Invalid EvalRunId</response>
     /// <response code="404">Evaluation results not found</response>
     /// <response code="500">Internal server error</response>
@@ -160,8 +160,8 @@ public class EvalResultController : BaseController
     /// Get all evaluation runs for a specific agent
     /// </summary>
     /// <param name="agentId">Agent ID</param>
-    /// <returns>List of evaluation runs for the agent</returns>
-    /// <response code="200">Evaluation runs retrieved successfully</response>
+    /// <returns>List of evaluation runs for the agent with metadata (lastUpdatedBy, lastUpdatedOn, startedBy, startedDatetime)</returns>
+    /// <response code="200">Evaluation runs retrieved successfully with metadata information</response>
     /// <response code="400">Invalid AgentId</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("agent/{agentId}")]
@@ -207,8 +207,8 @@ public class EvalResultController : BaseController
     /// <param name="agentId">Agent ID</param>
     /// <param name="startDateTime">Start date and time (ISO 8601 format)</param>
     /// <param name="endDateTime">End date and time (ISO 8601 format)</param>
-    /// <returns>List of evaluation results within the specified date range</returns>
-    /// <response code="200">Evaluation results retrieved successfully</response>
+    /// <returns>List of evaluation results within the specified date range with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results retrieved successfully with metadata information</response>
     /// <response code="400">Invalid parameters</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("agent/{agentId}/daterange")]

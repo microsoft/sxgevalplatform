@@ -354,12 +354,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var response = new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = savedEntity.ConfigurationId,
-                    Status = "success",
-                    Message = "Configuration updated successfully",
-                    CreatedBy = savedEntity.CreatedBy,
-                    CreatedOn = savedEntity.CreatedOn,
-                    LastUpdatedBy = savedEntity.LastUpdatedBy,
-                    LastUpdatedOn = savedEntity.LastUpdatedOn
+                    Status = "updated",
+                    Message = "Configuration updated successfully"
                 };
 
                 _logger.LogInformation("Successfully updated configuration with ID: {ConfigId} by user: {UserEmail}",
@@ -446,11 +442,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     ConfigurationId = savedEntity.ConfigurationId,
                     Status = "success",
-                    Message = isUpdate ? "Configuration updated successfully" : "Configuration created successfully",
-                    CreatedBy = savedEntity.CreatedBy,
-                    CreatedOn = savedEntity.CreatedOn,
-                    LastUpdatedBy = savedEntity.LastUpdatedBy,
-                    LastUpdatedOn = savedEntity.LastUpdatedOn
+                    Message = isUpdate ? "Configuration updated successfully" : "Configuration created successfully"
                 };
 
                 _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId} by user: {UserEmail}",

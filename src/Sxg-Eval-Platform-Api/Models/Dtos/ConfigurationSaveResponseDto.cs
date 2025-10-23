@@ -10,12 +10,14 @@ public class ConfigurationSaveResponseDto
     public string Status { get; set; } = string.Empty;
     
     public string Message { get; set; } = string.Empty;
+}
 
-    public DateTime CreatedOn { get; set; }
-
-    public string CreatedBy { get; set; } = string.Empty;
-
-    public DateTime LastUpdatedOn { get; set; }
-
-    public string LastUpdatedBy { get; set; } = string.Empty;
+/// <summary>
+/// Configuration conflict response for 409 errors
+/// </summary>
+public class ConfigurationConflictResponseDto
+{
+    public string Status { get; set; } = "conflict";
+    public string Message { get; set; } = string.Empty;
+    public string ExistingConfigurationId { get; set; } = string.Empty;
 }
