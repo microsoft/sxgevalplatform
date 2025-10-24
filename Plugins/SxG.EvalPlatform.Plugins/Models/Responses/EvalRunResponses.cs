@@ -2,9 +2,36 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
 {
     using System;
     using System.Collections.Generic;
+    using Newtonsoft.Json;
 
     /// <summary>
-    /// Response model for PostEvalRun Custom API
+    /// Model for individual dataset items
+    /// </summary>
+    public class DatasetItem
+    {
+        /// <summary>
+        /// Question or instruction text
+        /// </summary>
+        public string Prompt { get; set; }
+
+        /// <summary>
+        /// Expected ground truth (optional)
+        /// </summary>
+        public string GroundTruth { get; set; }
+
+        /// <summary>
+        /// Actual agent response (optional)
+        /// </summary>
+        public string ActualResponse { get; set; }
+
+        /// <summary>
+        /// Expected response for evaluation
+        /// </summary>
+        public string ExpectedResponse { get; set; }
+    }
+
+    /// <summary>
+    /// Response model for PostEvalRun Custom API (standardized format)
     /// </summary>
     public class PostEvalRunResponse
     {
@@ -14,19 +41,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         public bool Success { get; set; }
 
         /// <summary>
-        /// Unique identifier of the created eval job
-        /// </summary>
-        public string Id { get; set; }
-
-        /// <summary>
         /// Message describing the result
         /// </summary>
         public string Message { get; set; }
-
-        /// <summary>
-        /// HTTP status code
-        /// </summary>
-        public int StatusCode { get; set; }
 
         /// <summary>
         /// Timestamp of the operation
@@ -34,9 +51,55 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         public DateTime Timestamp { get; set; }
 
         /// <summary>
-        /// Eval Job ID (Primary Key)
+        /// Creates a successful response
         /// </summary>
-        public string EvalJobId { get; set; }
+        /// <param name="evalRun">The created eval run entity</param>
+        /// <returns>Success response</returns>
+        public static PostEvalRunResponse CreateSuccess(EvalRunEntity evalRun)
+        {
+            return new PostEvalRunResponse
+            {
+                Success = true,
+                Message = "Eval run created successfully",
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// Creates an error response
+        /// </summary>
+        /// <param name="message">Error message</param>
+        /// <returns>Error response</returns>
+        public static PostEvalRunResponse CreateError(string message)
+        {
+            return new PostEvalRunResponse
+            {
+                Success = false,
+                Message = message,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+    }
+
+    /// <summary>
+    /// Response model for GetEvalRun Custom API (detailed format with parsed dataset)
+    /// </summary>
+    public class GetEvalRunResponse
+    {
+        /// <summary>
+        /// Eval Run identifier (Primary Key as GUID string)
+        /// </summary>
+        public string EvalRunId { get; set; }
+
+        /// <summary>
+        /// Message describing the result
+        /// </summary>
+        public string Message { get; set; }
+
+        /// <summary>
+        /// Timestamp of the operation
+        /// </summary>
+        public DateTime Timestamp { get; set; }
 
         /// <summary>
         /// Agent identifier
@@ -49,65 +112,97 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         public string EnvironmentId { get; set; }
 
         /// <summary>
-        /// Schema name
+        /// Agent schema name
         /// </summary>
-        public string SchemaName { get; set; }
+        public string AgentSchemaName { get; set; }
 
         /// <summary>
-        /// Status of the eval job
+        /// Status of the eval run as string
         /// </summary>
-        public int Status { get; set; }
+        public string Status { get; set; }
+
+        /// <summary>
+        /// Dataset as parsed JSON objects
+        /// </summary>
+        public List<DatasetItem> Dataset { get; set; }
 
         /// <summary>
         /// Creates a successful response
         /// </summary>
-        /// <param name="evalJob">The created eval job entity</param>
+        /// <param name="evalRun">The eval run record</param>
         /// <returns>Success response</returns>
-        public static PostEvalRunResponse CreateSuccess(EvalJobEntity evalJob)
+        public static GetEvalRunResponse CreateSuccess(EvalRunEntity evalRun)
         {
-            return new PostEvalRunResponse
+            if (evalRun != null)
             {
-                Success = true,
-                Id = evalJob.Id,
-                Message = "Eval job created successfully",
-                StatusCode = 202, // Accepted
-                Timestamp = DateTime.UtcNow,
-                EvalJobId = evalJob.EvalJobId.ToString(),
-                AgentId = evalJob.AgentId,
-                EnvironmentId = evalJob.EnvironmentId,
-                SchemaName = evalJob.SchemaName,
-                Status = evalJob.Status
-            };
+                // Parse dataset JSON string into objects
+                List<DatasetItem> parsedDataset = null;
+                if (!string.IsNullOrEmpty(evalRun.Dataset))
+                {
+                    try
+                    {
+                        parsedDataset = JsonConvert.DeserializeObject<List<DatasetItem>>(evalRun.Dataset);
+                    }
+                    catch (JsonException)
+                    {
+                        // If JSON parsing fails, return empty list
+                        parsedDataset = new List<DatasetItem>();
+                    }
+                }
+
+                return new GetEvalRunResponse
+                {
+                    EvalRunId = evalRun.EvalRunId.ToString(),
+                    Message = "Eval run retrieved successfully",
+                    Timestamp = DateTime.UtcNow,
+                    AgentId = evalRun.AgentId,
+                    EnvironmentId = evalRun.EnvironmentId,
+                    AgentSchemaName = evalRun.AgentSchemaName,
+                    Status = evalRun.GetStatusName(),
+                    Dataset = parsedDataset
+                };
+            }
+            else
+            {
+                return new GetEvalRunResponse
+                {
+                    EvalRunId = null,
+                    Message = "Eval run not found",
+                    Timestamp = DateTime.UtcNow,
+                    AgentId = null,
+                    EnvironmentId = null,
+                    AgentSchemaName = null,
+                    Status = null,
+                    Dataset = null
+                };
+            }
         }
 
         /// <summary>
         /// Creates an error response
         /// </summary>
         /// <param name="message">Error message</param>
-        /// <param name="statusCode">HTTP status code</param>
         /// <returns>Error response</returns>
-        public static PostEvalRunResponse CreateError(string message, int statusCode = 400)
+        public static GetEvalRunResponse CreateError(string message)
         {
-            return new PostEvalRunResponse
+            return new GetEvalRunResponse
             {
-                Success = false,
-                Id = null,
+                EvalRunId = null,
                 Message = message,
-                StatusCode = statusCode,
                 Timestamp = DateTime.UtcNow,
-                EvalJobId = null,
                 AgentId = null,
                 EnvironmentId = null,
-                SchemaName = null,
-                Status = 0
+                AgentSchemaName = null,
+                Status = null,
+                Dataset = null
             };
         }
     }
 
     /// <summary>
-    /// Response model for GetEvalRun Custom API
+    /// Response model for UpdateDataset Custom API (standardized format)
     /// </summary>
-    public class GetEvalRunResponse
+    public class UpdateDatasetResponse
     {
         /// <summary>
         /// Indicates if the operation was successful
@@ -115,19 +210,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         public bool Success { get; set; }
 
         /// <summary>
-        /// The eval job record (single record since we're retrieving by Id)
-        /// </summary>
-        public EvalJobEntity EvalJob { get; set; }
-
-        /// <summary>
         /// Message describing the result
         /// </summary>
         public string Message { get; set; }
-
-        /// <summary>
-        /// HTTP status code
-        /// </summary>
-        public int StatusCode { get; set; }
 
         /// <summary>
         /// Timestamp of the operation
@@ -135,107 +220,83 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         public DateTime Timestamp { get; set; }
 
         /// <summary>
-        /// Eval Job ID (Primary Key)
-        /// </summary>
-        public string EvalJobId { get; set; }
-
-        /// <summary>
-        /// Agent identifier
-        /// </summary>
-        public string AgentId { get; set; }
-
-        /// <summary>
-        /// Environment identifier
-        /// </summary>
-        public string EnvironmentId { get; set; }
-
-        /// <summary>
-        /// Schema name
-        /// </summary>
-        public string SchemaName { get; set; }
-
-        /// <summary>
-        /// Status of the eval job
-        /// </summary>
-        public int Status { get; set; }
-
-        /// <summary>
-        /// Input JSON data
-        /// </summary>
-        public string Input { get; set; }
-
-        /// <summary>
-        /// Output JSON data
-        /// </summary>
-        public string Output { get; set; }
-
-        /// <summary>
         /// Creates a successful response
         /// </summary>
-        /// <param name="evalJob">The eval job record</param>
         /// <returns>Success response</returns>
-        public static GetEvalRunResponse CreateSuccess(EvalJobEntity evalJob)
+        public static UpdateDatasetResponse CreateSuccess()
         {
-            if (evalJob != null)
+            return new UpdateDatasetResponse
             {
-                return new GetEvalRunResponse
-                {
-                    Success = true,
-                    EvalJob = evalJob,
-                    Message = "Eval job retrieved successfully",
-                    StatusCode = 200, // OK
-                    Timestamp = DateTime.UtcNow,
-                    EvalJobId = evalJob.EvalJobId.ToString(),
-                    AgentId = evalJob.AgentId,
-                    EnvironmentId = evalJob.EnvironmentId,
-                    SchemaName = evalJob.SchemaName,
-                    Status = evalJob.Status,
-                    Input = evalJob.Input,
-                    Output = evalJob.Output
-                };
-            }
-            else
-            {
-                return new GetEvalRunResponse
-                {
-                    Success = true,
-                    EvalJob = null,
-                    Message = "Eval job not found",
-                    StatusCode = 404, // Not Found
-                    Timestamp = DateTime.UtcNow,
-                    EvalJobId = null,
-                    AgentId = null,
-                    EnvironmentId = null,
-                    SchemaName = null,
-                    Status = 0,
-                    Input = null,
-                    Output = null
-                };
-            }
+                Success = true,
+                Message = "Dataset updated successfully",
+                Timestamp = DateTime.UtcNow
+            };
         }
 
         /// <summary>
         /// Creates an error response
         /// </summary>
         /// <param name="message">Error message</param>
-        /// <param name="statusCode">HTTP status code</param>
+        /// <param name="evalRunId">Eval run ID</param>
         /// <returns>Error response</returns>
-        public static GetEvalRunResponse CreateError(string message, int statusCode = 400)
+        public static UpdateDatasetResponse CreateError(string message, string evalRunId = null)
         {
-            return new GetEvalRunResponse
+            return new UpdateDatasetResponse
             {
                 Success = false,
-                EvalJob = null,
                 Message = message,
-                StatusCode = statusCode,
-                Timestamp = DateTime.UtcNow,
-                EvalJobId = null,
-                AgentId = null,
-                EnvironmentId = null,
-                SchemaName = null,
-                Status = 0,
-                Input = null,
-                Output = null
+                Timestamp = DateTime.UtcNow
+            };
+        }
+    }
+
+    /// <summary>
+    /// Response model for PublishEnrichedDataset Custom API (standardized format)
+    /// </summary>
+    public class PublishEnrichedDatasetResponse
+    {
+        /// <summary>
+        /// Indicates if the operation was successful
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// Message describing the result
+        /// </summary>
+        public string Message { get; set; }
+
+        /// <summary>
+        /// Timestamp of the operation
+        /// </summary>
+        public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// Creates a successful response
+        /// </summary>
+        /// <returns>Success response</returns>
+        public static PublishEnrichedDatasetResponse CreateSuccess()
+        {
+            return new PublishEnrichedDatasetResponse
+            {
+                Success = true,
+                Message = "Enriched dataset published successfully",
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// Creates an error response
+        /// </summary>
+        /// <param name="message">Error message</param>
+        /// <param name="evalRunId">Eval run ID</param>
+        /// <returns>Error response</returns>
+        public static PublishEnrichedDatasetResponse CreateError(string message, string evalRunId = null)
+        {
+            return new PublishEnrichedDatasetResponse
+            {
+                Success = false,
+                Message = message,
+                Timestamp = DateTime.UtcNow
             };
         }
     }

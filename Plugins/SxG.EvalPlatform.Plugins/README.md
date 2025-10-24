@@ -1,495 +1,504 @@
-# SxG EvalPlatform Plugins
+﻿# SxG Evaluation Platform Plugins
 
-This project contains Dataverse plugins that expose Custom APIs for managing evaluation jobs in the SxG EvalPlatform using an Elastic table.
+This project contains Dataverse plugins for the SxG Evaluation Platform that provide Custom APIs for managing evaluation runs and integrating with external evaluation services.
 
 ## Overview
 
-The plugin provides two Custom APIs for evaluation job management:
-1. **PostEvalRun** - Creates new evaluation job records (POST operation)
-2. **GetEvalRun** - Retrieves a specific evaluation job record by Id (GET operation)
+The SxG Evaluation Platform Plugins enable evaluation workflow management through four main Custom APIs:
+
+1. **PostEvalRun** - Creates new evaluation run records
+2. **GetEvalRun** - Retrieves evaluation run records
+3. **UpdateDataset** - Updates dataset from external APIs and populates evaluation runs
+4. **PublishEnrichedDataset** - Publishes enriched dataset to external APIs
 
 ## Architecture
 
-### Project Structure
+### Entity Structure
+
+**EvalRun Entity (`cr890_evalrun`)**
+- Primary Key: `cr890_evalrunid` (GUID)
+- Primary Name: `cr890_id` (String - same value as Primary Key)
+- Fields:
+  - `cr890_agentid` - Agent identifier (string)
+  - `cr890_environmentid` - Environment identifier (GUID as string)
+  - `cr890_agentschemaname` - Agent schema name (string)
+  - `cr890_status` - Status (Choice field with integer values, returned as strings in API responses)
+  - `cr890_dataset` - Dataset JSON data (Multi Line Text)
+
+### Status Field Details
+
+The Status field is implemented as a **Choice** (OptionSet) field in Dataverse with the following integer values:
+
+| Status Name | Dataverse Value | API Response |
+|-------------|----------------|--------------|
+| New | 0 | "New" |
+| Started | 1 | "Started" |
+| Updated | 2 | "Updated" |
+| Completed | 3 | "Completed" |
+| Failed | 4 | "Failed" |
+
+**Note**: While the status is stored as integer values in Dataverse for proper Choice field handling, all API responses return the status as human-readable string values.
+
+### Status Flow
+
 ```
-SxG.EvalPlatform.Plugins/
-??? Plugins/
-?   ??? PostEvalRun.cs          # Plugin for creating eval jobs
-?   ??? GetEvalRun.cs           # Plugin for retrieving eval jobs
-??? Models/
-?   ??? EvalJobEntity.cs        # Entity model for cr890_evaljob Elastic table
-?   ??? Requests/
-?   ?   ??? EvalRunRequests.cs  # Request models with validation
-?   ??? Responses/
-?       ??? EvalRunResponses.cs # Response models with status codes
-??? CustomApis/
-?   ??? CustomApiConfig.cs      # Configuration constants for Custom APIs
-??? Framework/                  # Base plugin framework (inherited)
+New → Updated → Completed
+  ↘            ↗
+    Failed ←----
 ```
-
-### Database Schema (Elastic Table)
-
-#### cr890_evaljob Table
-| Column | Type | Description | Required |
-|--------|------|-------------|----------|
-| cr890_evaljobid | Unique Identifier | Primary key (GUID) | Yes |
-| cr890_id | Single Line of Text | Primary Name Column (GUID as string, same as evaljobid) | Yes |
-| cr890_agentid | Single Line of Text | Agent identifier (GUID as string) | Yes |
-| cr890_environmentid | Single Line of Text | Environment identifier (GUID as string) | Yes |
-| cr890_schemaname | Single Line of Text | Schema name | Yes |
-| cr890_status | Choice | Status: New (0), Active (1), Success (2), Failed (3). Default: New | Yes |
-| cr890_input | Multi Line of Text | Input JSON data | No |
-| cr890_output | Multi Line of Text | Output JSON data | No |
-| createdon | DateTime | Record creation timestamp | Auto |
-| modifiedon | DateTime | Record modification timestamp | Auto |
-
-#### Status Values
-- **New (0)** - Default status for new eval jobs
-- **Active (1)** - Eval job is currently being processed
-- **Success (2)** - Eval job completed successfully
-- **Failed (3)** - Eval job failed during processing
 
 ## Custom APIs
 
-### PostEvalRun API
+### 1. PostEvalRun API
 
-**Purpose**: Creates a new evaluation job record in the `cr890_evaljob` Elastic table.
+**Method**: POST  
+**Action**: `cr890_PostEvalRun`  
+**API Endpoint**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun`
+**Description**: Creates a new evaluation run record
 
-**HTTP Method**: POST  
-**API Name**: `cr890_PostEvalRun`  
-**Endpoint**: `/api/data/v9.2/cr890_PostEvalRun`
-
-#### Request Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| AgentId | String | Yes | Agent identifier (GUID as string) |
-| EnvironmentId | String | Yes | Environment identifier (GUID as string) |
-| SchemaName | String | Yes | Name of the schema |
-| Input | String | Yes | Input JSON data (Multi Line of Text) |
-
-#### Request Example
+**Request Body**:
 ```json
 {
-    "AgentId": "12345678-1234-1234-1234-123456789012",
-    "EnvironmentId": "87654321-4321-4321-4321-210987654321", 
-    "SchemaName": "evaluation-schema",
-    "Input": "{\"data\":\"sample input data\",\"parameters\":{\"param1\":\"value1\"}}"
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd",
+    "agentId": "dri-agent",
+    "environmentId": "948a58e0-a265e26e-bbd0-3d0cf7978511",
+    "agentSchemaName": "crb32_sxGDriCopilot"
 }
 ```
 
-#### Response Properties
-| Property | Type | Description |
-|----------|------|-------------|
-| Success | Boolean | Indicates if the operation was successful |
-| Id | String | Unique identifier of the created evaluation job (GUID as string) |
-| Message | String | Descriptive message about the operation result |
-| StatusCode | Integer | HTTP status code (202 for success) |
-| Timestamp | String | ISO 8601 timestamp of the operation |
-| **EvalJobId** | String | **Eval Job ID (Primary Key as GUID string)** |
-| **AgentId** | String | **Agent identifier** |
-| **EnvironmentId** | String | **Environment identifier** |
-| **SchemaName** | String | **Schema name** |
-| **Status** | Integer | **Status value (0=New, 1=Active, 2=Success, 3=Failed)** |
+**Behavior**:
+- Creates a new evaluation run record in Dataverse using the provided `evalRunId` as the Primary Key
+- Sets the `cr890_id` field (Primary Name) to the same value as the Primary Key (as string)
+- Populates all provided fields (`agentId`, `environmentId`, `agentSchemaName`) if included in request
+- Sets initial status to "New" (integer value: 0)
+- Validates that `evalRunId` is a valid GUID format before processing
+- Uses optimized entity creation with direct Primary Key assignment
+- Returns standardized success/error response format
 
-#### Response Example (Success)
+**Response**:
 ```json
 {
-    "Success": true,
-    "Id": "98765432-8765-4321-8765-432187654321",
-    "Message": "Eval job created successfully",
-    "StatusCode": 202,
-    "Timestamp": "2024-01-15T10:30:00.000Z",
-    "EvalJobId": "98765432-8765-4321-8765-432187654321",
-    "AgentId": "12345678-1234-1234-1234-123456789012",
-    "EnvironmentId": "87654321-4321-4321-4321-210987654321",
-    "SchemaName": "evaluation-schema",
-    "Status": 0
+    "success": true,
+    "message": "Eval run created successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z"
 }
 ```
 
-### GetEvalRun API
+### 2. GetEvalRun API
 
-**Purpose**: Retrieves a specific evaluation job record by Id (Primary Name Column).
+**Method**: GET  
+**Function**: `cr890_GetEvalRun`  
+**API Endpoint**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_GetEvalRun(evalRunId='6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd')`
+**Description**: Retrieves an evaluation run record by ID
 
-**HTTP Method**: GET  
-**API Name**: `cr890_GetEvalRun`  
-**Endpoint**: `/api/data/v9.2/cr890_GetEvalRun(Id='your-eval-job-id')`
+**Query Parameters**:
+- `evalRunId` (required): GUID string of the evaluation run
 
-#### Request Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| Id | String | Yes | Eval job Id (Primary Name Column - GUID as string) |
+**Behavior**:
+- Uses optimized Primary Key lookup via `organizationService.Retrieve()` for fastest performance
+- Retrieves all relevant fields from the evaluation run record
+- Converts internal Choice field integer values to human-readable status strings
+- **Parses dataset JSON string into structured objects** for easier consumption
+- Returns detailed evaluation run information including current state and parsed dataset
+- Handles cases where record is not found gracefully
+- Validates `evalRunId` format before attempting database query
+- Returns comprehensive record data suitable for status checking and workflow decisions
+- **JSON Parsing**: Automatically parses stored dataset JSON string into array of objects
 
-#### Request Example
-```
-GET /api/data/v9.2/cr890_GetEvalRun(Id='98765432-8765-4321-8765-432187654321')
-```
-
-#### Response Properties
-| Property | Type | Description |
-|----------|------|-------------|
-| Success | Boolean | Indicates if the operation was successful |
-| EvalJob | String | JSON string containing the evaluation job record |
-| Message | String | Descriptive message about the operation result |
-| StatusCode | Integer | HTTP status code (200 for success, 404 if not found) |
-| Timestamp | String | ISO 8601 timestamp of the operation |
-| **EvalJobId** | String | **Eval Job ID (Primary Key as GUID string)** |
-| **AgentId** | String | **Agent identifier** |
-| **EnvironmentId** | String | **Environment identifier** |
-| **SchemaName** | String | **Schema name** |
-| **Status** | Integer | **Status value (0=New, 1=Active, 2=Success, 3=Failed)** |
-| **Input** | String | **Input JSON data** |
-| **Output** | String | **Output JSON data** |
-
-#### Response Example (Success)
+**Response**:
 ```json
 {
-    "Success": true,
-    "EvalJob": "{\"EvalJobId\":\"98765432-8765-4321-8765-432187654321\",\"Id\":\"98765432-8765-4321-8765-432187654321\",\"AgentId\":\"12345678-1234-1234-1234-123456789012\",\"EnvironmentId\":\"87654321-4321-4321-4321-210987654321\",\"SchemaName\":\"evaluation-schema\",\"Status\":0,\"Input\":\"{\\\"data\\\":\\\"sample input data\\\"}\",\"Output\":\"\",\"CreatedOn\":\"2024-01-15T10:30:00.000Z\",\"ModifiedOn\":\"2024-01-15T10:30:00.000Z\"}",
-    "Message": "Eval job retrieved successfully",
-    "StatusCode": 200,
-    "Timestamp": "2024-01-15T11:30:00.000Z",
-    "EvalJobId": "98765432-8765-4321-8765-432187654321",
-    "AgentId": "12345678-1234-1234-1234-123456789012",
-    "EnvironmentId": "87654321-4321-4321-4321-210987654321",
-    "SchemaName": "evaluation-schema",
-    "Status": 0,
-    "Input": "{\"data\":\"sample input data\",\"parameters\":{\"param1\":\"value1\"}}",
-    "Output": null
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd",
+    "message": "Eval run retrieved successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "agentId": "dri-agent",
+    "environmentId": "948a58e0-a265e26e-bbd0-3d0cf7978511",
+    "agentSchemaName": "crb32_sxGDriCopilot",
+    "status": "Completed",
+    "dataset": [
+        {
+            "prompt": "What is the severity level of ICM 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "The severity level of ICM 691776070 is 3."
+        },
+        {
+            "prompt": "Are there any past incidents similar to 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "Agent should identify similar past incidents to 691776070."
+        }
+    ]
 }
 ```
 
-#### Response Example (Not Found)
+### 3. UpdateDataset API
+
+**Method**: POST  
+**Action**: `cr890_UpdateDataset`  
+**API Endpoint**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_UpdateDataset`
+**Description**: Updates dataset from external API and populates evaluation run with dataset content
+
+**Request Body**:
 ```json
 {
-    "Success": true,
-    "EvalJob": "null",
-    "Message": "Eval job not found",
-    "StatusCode": 404,
-    "Timestamp": "2024-01-15T11:30:00.000Z",
-    "EvalJobId": null,
-    "AgentId": null,
-    "EnvironmentId": null,
-    "SchemaName": null,
-    "Status": 0,
-    "Input": null,
-    "Output": null
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd"
 }
 ```
 
-## Deployment Guide
+**External API Call**: 
+- URL: `https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/dataset?evalRunId={evalRunId}`
+- Method: GET
+- Expected Response:
+```json
+{
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd",
+    "agentId": "dri-agent",
+    "dataSetId": "35ea4b87-9dd2-4bda-a968-60bf4c5464c9",
+    "datasetContent": [
+        {
+            "prompt": "What is the severity level of ICM 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "The severity level of ICM 691776070 is 3."
+        },
+        {
+            "prompt": "Are there any past incidents similar to 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "Agent should identify similar past incidents to 691776070."
+        }
+    ]
+}
+```
+
+**Behavior**:
+- Calls external dataset API using the provided `evalRunId` as query parameter
+- **Parses JSON response using Newtonsoft.Json** for reliable data extraction
+- Extracts `datasetContent` from the external API response and converts it to JSON string
+- Updates the evaluation run's `dataset` field with the retrieved dataset content (stored as JSON string)
+- Sets status to "Updated" (integer value: 2)
+- Uses optimized Primary Key-based entity updates for performance
+- Handles external API failures and JSON parsing errors gracefully with detailed logging
+- Validates `evalRunId` format before processing
+- **Real JSON Processing**: No mock data - parses actual external API responses
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Dataset updated successfully",
+    "timestamp": "2024-01-15T10:35:00.000Z"
+}
+```
+
+### 4. PublishEnrichedDataset API
+
+**Method**: POST  
+**Action**: `cr890_PublishEnrichedDataset`  
+**API Endpoint**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_PublishEnrichedDataset`
+**Description**: Publishes enriched dataset to external API using stored dataset from evaluation run
+
+**Request Body**:
+```json
+{
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd"
+}
+```
+
+**External API Call**:
+- URL: `https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/enriched-dataset?evalRunId={evalRunId}`
+- Method: POST
+- Request Body:
+```json
+{
+    "enrichedDataset": [
+        {
+            "prompt": "What is the severity level of ICM 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "The severity level of ICM 691776070 is 3."
+        },
+        {
+            "prompt": "Are there any past incidents similar to 691776070?",
+            "groundTruth": "",
+            "actualResponse": "",
+            "expectedResponse": "Agent should identify similar past incidents to 691776070."
+        }
+    ]
+}
+```
+
+**Behavior**:
+- Retrieves the stored dataset from the evaluation run record using `evalRunId`
+- Calls external enriched dataset API to publish the dataset content
+- Sets status to "Completed" (integer value: 3) after successful external API call
+- Uses optimized Primary Key-based entity queries and updates
+- Handles external API failures gracefully - status remains unchanged if external call fails
+- Validates `evalRunId` format and ensures dataset exists in the record
+- Publishes dataset as `enrichedDataset` property in the external API request body
+- Uses two-phase operation: retrieve dataset, then publish to external API and update status
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Enriched dataset published successfully",
+    "timestamp": "2024-01-15T10:40:00.000Z"
+}
+```
+
+## Testing
+
+1. **API Endpoint Verification**:
+   - **POST APIs**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun`
+   - **GET API**: `https://orgbae05e06.api.crm.dynamics.com/api/data/v9.2/cr890_GetEvalRun(evalRunId='guid')`
+   - **POST APIs**: Similar pattern for UpdateDataset and PublishEnrichedDataset
+
+2. **Test Each API**:
+   - Use Insomnia, Power Platform CLI, or custom client
+   - Verify request/response formats match documentation
+   - Check plugin traces for debugging
+
+3. **Authentication Token**
+   - Login with your credentials using Az CLI and provide the Org URL as the scope
+```
+az login --scope "https://orgbae05e06.crm.dynamics.com/.default"
+az account get-access-token --resource "https://orgbae05e06.crm.dynamics.com"
+```
+
+## Typical Workflow
+
+1. **Create Evaluation Run**: Use PostEvalRun to create a new evaluation run with agent information (Status: "New")
+2. **Update Dataset**: Use UpdateDataset with `evalRunId` to fetch dataset content from the external dataset API and populate the evaluation run (Status: "Updated")
+3. **Execute Evaluation**: External system processes the evaluation (outside plugin scope)
+4. **Publish Enriched Dataset**: Use PublishEnrichedDataset with `evalRunId` to publish the stored dataset to the external API and mark as completed (Status: "Completed")
+
+## External Integrations
+
+### Dataset API
+- **URL**: `https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/dataset`
+- **Purpose**: Retrieve dataset content for evaluation runs
+- **Authentication**: None (currently)
+
+### Enriched Dataset API
+- **URL**: `https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/enriched-dataset`
+- **Purpose**: Publish enriched evaluation datasets
+- **Authentication**: None (currently)
+
+## Development
 
 ### Prerequisites
+- .NET Framework 4.6.2
+- Microsoft Dataverse SDK
+- Visual Studio 2019 or later
 
-1. **Plugin Registration Tool** installed and connected to your Dataverse environment
-2. **System Administrator** or **System Customizer** role
-3. **cr890_evaljob** Elastic table created in Dataverse
-
-### Step 1: Create the Elastic Table (cr890_evaljob)
-
-Before deploying the plugins, ensure the `cr890_evaljob` Elastic table exists with the following configuration:
-
-#### Table Details
-- **Logical Name**: `cr890_evaljob`
-- **Display Name**: `Eval Job`
-- **Table Type**: `Elastic`
-- **Primary Column**: `cr890_id` (Single Line of Text)
-
-#### Required Columns Configuration
-| Schema Name | Display Name | Type | Required | Additional Info |
-|-------------|--------------|------|----------|-----------------|
-| cr890_evaljobid | Eval Job ID | Unique Identifier | Yes | Primary key |
-| cr890_id | ID | Single Line of Text | Yes | Primary Name Column |
-| cr890_agentid | Agent ID | Single Line of Text | Yes | GUID stored as text |
-| cr890_environmentid | Environment ID | Single Line of Text | Yes | GUID stored as text |
-| cr890_schemaname | Schema Name | Single Line of Text | Yes | |
-| cr890_status | Status | Choice | Yes | Options: New (0), Active (1), Success (2), Failed (3) |
-| cr890_input | Input | Multi Line of Text | No | JSON data |
-| cr890_output | Output | Multi Line of Text | No | JSON data |
-
-### Step 2: Deploy Plugin Assembly
-
-1. Build the `SxG.EvalPlatform.Plugins` project
-2. Sign the assembly (recommended for production)
-3. Register the assembly in Dataverse using Plugin Registration Tool
-
-#### Using Plugin Registration Tool
-1. Open Plugin Registration Tool
-2. Connect to your Dataverse environment
-3. Click **Register** ? **Register New Assembly**
-4. Select the compiled `SxG.EvalPlatform.Plugins.dll` file
-5. Choose **Sandbox** isolation mode (recommended)
-6. Click **Register Selected Plugins**
-
-### Step 3: Register Custom APIs
-
-#### Create PostEvalRun Custom API
-
-1. In Plugin Registration Tool, navigate to **Custom APIs** section
-2. Right-click and select **Register New Custom API**
-3. Fill in the following details:
-
-| Field | Value |
-|-------|--------|
-| **Unique Name** | `cr890_PostEvalRun` |
-| **Display Name** | `Post Eval Run` |
-| **Description** | `Creates a new eval job record` |
-| **Binding Type** | `Global` |
-| **Is Function** | `No` *(POST operation)* |
-| **Is Private** | `No` |
-| **Execute Privilege Name** | `cr890_PostEvalRun` |
-| **Plugin Type** | Select `SxG.EvalPlatform.Plugins.Plugins.PostEvalRun` |
-
-#### Create Request Parameters for PostEvalRun
-
-Create the following request parameters (right-click on the Custom API and select "Add Request Parameter"):
-
-1. **AgentId** - String, Required, Sequence: 1
-2. **EnvironmentId** - String, Required, Sequence: 2
-3. **SchemaName** - String, Required, Sequence: 3
-4. **Input** - String, Required, Sequence: 4
-
-#### Create Response Properties for PostEvalRun
-
-Create the following response properties (right-click on the Custom API and select "Add Response Property"):
-
-1. **Success** (Boolean, Sequence: 1)
-2. **Id** (String, Sequence: 2)
-3. **Message** (String, Sequence: 3)
-4. **StatusCode** (Integer, Sequence: 4)
-5. **Timestamp** (String, Sequence: 5)
-6. **EvalJobId** (String, Sequence: 6)
-7. **AgentId** (String, Sequence: 7)
-8. **EnvironmentId** (String, Sequence: 8)
-9. **SchemaName** (String, Sequence: 9)
-10. **Status** (Integer, Sequence: 10)
-
-#### Create GetEvalRun Custom API
-
-Follow similar steps for GetEvalRun with these details:
-
-| Field | Value |
-|-------|--------|
-| **Unique Name** | `cr890_GetEvalRun` |
-| **Display Name** | `Get Eval Run` |
-| **Description** | `Retrieves eval job record by Id` |
-| **Is Function** | `Yes` *(GET operation)* |
-| **Plugin Type** | Select `SxG.EvalPlatform.Plugins.Plugins.GetEvalRun` |
-
-**Request Parameters**: 
-- Id (String, Required, Sequence: 1)
-
-**Response Properties**: 
-1. **Success** (Boolean, Sequence: 1)
-2. **EvalJob** (String, Sequence: 2)
-3. **Message** (String, Sequence: 3)
-4. **StatusCode** (Integer, Sequence: 4)
-5. **Timestamp** (String, Sequence: 5)
-6. **EvalJobId** (String, Sequence: 6)
-7. **AgentId** (String, Sequence: 7)
-8. **EnvironmentId** (String, Sequence: 8)
-9. **SchemaName** (String, Sequence: 9)
-10. **Status** (Integer, Sequence: 10)
-11. **Input** (String, Sequence: 11)
-12. **Output** (String, Sequence: 12)
-
-### Step 4: Configure Security
-
-#### Create Security Privileges
-1. Navigate to **Settings** ? **Security** ? **Privileges**
-2. Create privileges: `cr890_PostEvalRun` and `cr890_GetEvalRun`
-3. Assign to appropriate security roles
-4. Ensure users have permissions on the `cr890_evaljob` table
-
-## Usage Examples
-
-### PowerShell (using Dataverse Web API)
-```powershell
-# POST Example - Create Eval Job
-$postBody = @{
-    AgentId = "12345678-1234-1234-1234-123456789012"
-    EnvironmentId = "87654321-4321-4321-4321-210987654321"
-    SchemaName = "evaluation-schema"
-    Input = '{"data":"sample input","params":{"p1":"v1"}}'
-} | ConvertTo-Json
-
-$response = Invoke-RestMethod -Uri "$dataverseUrl/api/data/v9.2/cr890_PostEvalRun" -Method POST -Body $postBody -ContentType "application/json" -Headers $headers
-
-# Access additional response properties
-Write-Host "Created Eval Job ID: $($response.EvalJobId)"
-Write-Host "Agent ID: $($response.AgentId)"
-Write-Host "Status: $($response.Status)"
-
-# GET Example - Retrieve Eval Job
-$getResponse = Invoke-RestMethod -Uri "$dataverseUrl/api/data/v9.2/cr890_GetEvalRun(Id='98765432-8765-4321-8765-432187654321')" -Method GET -Headers $headers
-
-# Access individual response properties
-Write-Host "Retrieved Eval Job ID: $($getResponse.EvalJobId)"
-Write-Host "Agent ID: $($getResponse.AgentId)"
-Write-Host "Status: $($getResponse.Status)"
-Write-Host "Input: $($getResponse.Input)"
-Write-Host "Output: $($getResponse.Output)"
+### Building
+```bash
+dotnet build
 ```
 
-### JavaScript (using Dataverse Web API)
-```javascript
-// POST Example - Create Eval Job
-const postData = {
-    AgentId: "12345678-1234-1234-1234-123456789012",
-    EnvironmentId: "87654321-4321-4321-4321-210987654321", 
-    SchemaName: "evaluation-schema",
-    Input: JSON.stringify({data: "sample input", params: {p1: "v1"}})
-};
+### Deployment
+1. Build the project
+2. Register plugins in Dataverse
+3. Configure Custom APIs
 
-fetch(`${dataverseUrl}/api/data/v9.2/cr890_PostEvalRun`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(postData)
-})
-.then(response => response.json())
-.then(data => {
-    console.log('Created Eval Job ID:', data.EvalJobId);
-    console.log('Agent ID:', data.AgentId);
-    console.log('Status:', data.Status);
-});
-
-// GET Example - Retrieve Eval Job
-fetch(`${dataverseUrl}/api/data/v9.2/cr890_GetEvalRun(Id='98765432-8765-4321-8765-432187654321')`, {
-    method: 'GET',
-    headers: {
-        'Authorization': `Bearer ${token}`
-    }
-})
-.then(response => response.json())
-.then(data => {
-    console.log('Retrieved Eval Job ID:', data.EvalJobId);
-    console.log('Agent ID:', data.AgentId);
-    console.log('Status:', data.Status);
-    console.log('Input:', data.Input);
-    console.log('Output:', data.Output);
-});
-```
-
-### C# (using Dataverse SDK)
-```csharp
-// POST Example - Create Eval Job
-var request = new OrganizationRequest("cr890_PostEvalRun");
-request["AgentId"] = "12345678-1234-1234-1234-123456789012";
-request["EnvironmentId"] = "87654321-4321-4321-4321-210987654321";
-request["SchemaName"] = "evaluation-schema";
-request["Input"] = "{\"data\":\"sample input\"}";
-
-var response = organizationService.Execute(request);
-var success = (bool)response["Success"];
-var evalJobId = response["EvalJobId"].ToString();
-var agentId = response["AgentId"].ToString();
-var status = (int)response["Status"];
-
-// GET Example - Retrieve Eval Job
-var getRequest = new OrganizationRequest("cr890_GetEvalRun");
-getRequest["Id"] = "98765432-8765-4321-8765-432187654321";
-
-var getResponse = organizationService.Execute(getRequest);
-var retrievedEvalJobId = getResponse["EvalJobId"]?.ToString();
-var retrievedAgentId = getResponse["AgentId"]?.ToString();
-var retrievedStatus = (int)getResponse["Status"];
-var input = getResponse["Input"]?.ToString();
-var output = getResponse["Output"]?.ToString();
-```
-
-## Data Flow
-
-1. **Create Eval Job (PostEvalRun)**:
-   - Client provides: AgentId, EnvironmentId, SchemaName, Input
-   - Plugin generates new GUID for both `evaljobid` and `id` (same value)
-   - Status is set to "New" (0) by default
-   - Output is initially empty
-   - Returns: Success, Id, Message, StatusCode, Timestamp, **EvalJobId, AgentId, EnvironmentId, SchemaName, Status**
-
-2. **Retrieve Eval Job (GetEvalRun)**:
-   - Client provides: Id (Primary Name Column)
-   - Plugin queries by `cr890_id` field
-   - Returns: Success, EvalJob (JSON), Message, StatusCode, Timestamp, **EvalJobId, AgentId, EnvironmentId, SchemaName, Status, Input, Output**
-   - Returns 404 if record not found
-
-## Response Property Benefits
-
-### PostEvalRun Additional Properties
-- **EvalJobId**: Direct access to the primary key for database operations
-- **AgentId, EnvironmentId, SchemaName**: Echo back input parameters for confirmation
-- **Status**: Current status value for immediate client-side processing
-
-### GetEvalRun Additional Properties  
-- **Individual Field Access**: Direct access to each field without parsing the EvalJob JSON
-- **Type Safety**: Proper data types (Integer for Status) instead of string parsing
-- **Convenience**: Both structured (individual properties) and serialized (EvalJob JSON) formats available
+### Configuration
+Values are currently hardcoded with future work involving moving to environment variables and usage of constants file.
 
 ## Error Handling
 
-Both APIs implement comprehensive error handling:
+All APIs return standardized error responses:
+```json
+{
+    "success": false,
+    "message": "Error description",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
 
-- **400 Bad Request**: Invalid or missing required parameters
-- **404 Not Found**: Record not found (GetEvalRun only)
-- **500 Internal Server Error**: Unexpected server errors
-- All errors include descriptive messages in the response
+## Logging
 
-## Troubleshooting
+Plugins use Dataverse tracing service for detailed logging. Trace logs are available in plugin execution context and can be viewed in Dataverse logs.
 
-### Common Issues
+## API Reference
 
-1. **"Plugin Type not found"**
-   - Ensure plugin assembly is registered and plugin types are created
-   - Verify plugin type names match exactly
+### Custom API Names and Plugin Classes
 
-2. **"Access Denied"**
-   - Check security privileges are created and assigned to appropriate roles
-   - Verify users have permissions on the `cr890_evaljob` table
+| API Name | Plugin Class | Description |
+|----------|-------------|-------------|
+| `cr890_PostEvalRun` | `PostEvalRun` | Creates evaluation run records |
+| `cr890_GetEvalRun` | `GetEvalRun` | Retrieves evaluation run records with parsed dataset |
+| `cr890_UpdateDataset` | `UpdateDataset` | Updates dataset from external API with real JSON parsing |
+| `cr890_PublishEnrichedDataset` | `PublishEnrichedDataset` | Publishes enriched dataset to external API |
 
-3. **"Parameter validation failed"**
-   - Ensure all required parameters are marked as "Is Optional = No"
-   - Verify parameter names match the code exactly (case-sensitive)
+### Plugin Type Names for Registration
 
-4. **"Invalid JSON in Input"**
-   - Validate JSON format in Input parameter
-   - Ensure proper escaping of special characters
+- `SxG.EvalPlatform.Plugins.Plugins.PostEvalRun`
+- `SxG.EvalPlatform.Plugins.Plugins.GetEvalRun` 
+- `SxG.EvalPlatform.Plugins.Plugins.UpdateDataset`
+- `SxG.EvalPlatform.Plugins.Plugins.PublishEnrichedDataset`
 
-5. **"Missing Response Properties"**
-   - Ensure all response properties are created in the Custom API definition
-   - Verify sequence numbers are correct and unique
+## Custom API Registration with Plugin Registration Tool
 
-### Debugging
+This section provides step-by-step instructions for registering Custom APIs using the Plugin Registration Tool (PRT).
 
-1. **Enable Plugin Trace Logs**: Go to **Settings** ? **System** ? **Administration** ? **System Settings**
-2. **View Execution Logs**: Use Plugin Registration Tool to view plugin execution logs
-3. **Performance Monitoring**: Monitor execution times and optimize queries
+### Prerequisites for Registration
+1. **Plugin Assembly**: Build and have the `SxG.EvalPlatform.Plugins.dll` ready
+2. **Plugin Registration Tool**: Download from [Microsoft PowerApps CLI](https://aka.ms/PowerAppsCLI) or use standalone PRT
+3. **System Administrator**: Ensure you have System Administrator privileges in the target Dataverse environment
+4. **Assembly Registration**: Plugin assembly must be registered first before creating Custom APIs
 
-## Best Practices
+### Binding Recommendation: **Global (None)**
 
-1. **Error Handling**: Always implement comprehensive error handling
-2. **Logging**: Use tracing service for debugging and monitoring
-3. **Security**: Follow principle of least privilege
-4. **Performance**: Optimize queries and minimize API calls
-5. **Testing**: Thoroughly test in development environment before production deployment
-6. **JSON Validation**: Validate JSON format for Input/Output fields
-7. **GUID Format**: Ensure AgentId and EnvironmentId are valid GUIDs
-8. **Response Properties**: Use individual response properties for type safety and convenience
+**Recommended Binding**: **None (Global)**
 
-## Technical Requirements
+**Rationale**:
+- **Environment Variables Access**: Future requirement to query environment variables requires global access to system tables (`environmentvariablevalue`, `environmentvariabledefinition`)
+- **Cross-Entity Operations**: Plugins may need to interact with multiple entities beyond `cr890_evalrun`
+- **Flexibility**: Global binding provides maximum flexibility for future enhancements
+- **Performance**: No performance penalty as operations are already optimized with Primary Key queries
+- **Security**: Security is handled through Custom API privileges rather than entity-level binding
 
-- **.NET Framework**: 4.6.2
-- **C# Version**: 7.3
-- **Dataverse**: Compatible with Power Platform environments (Elastic tables required)
-- **Dependencies**: Microsoft.Xrm.Sdk
+### Step-by-Step Registration Process
 
-## Support
+#### Step 1: Register Plugin Assembly (One Time)
 
-For issues related to:
-- **Plugin functionality**: Check plugin trace logs
-- **Custom API configuration**: Review Dataverse customization logs
-- **Performance**: Monitor execution times and optimize queries
-- **Security**: Review security roles and privileges
-- **Elastic Table**: Ensure proper Elastic table configuration in Dataverse
-- **Response Properties**: Verify all response properties are properly configured in Custom API definition
+1. **Connect to Environment**:
+   - Open Plugin Registration Tool
+   - Click "Create New Connection"
+   - Select authentication method (Office 365, IFD, etc.)
+   - Enter server URL and credentials
+   - Click "Login"
+
+2. **Register Assembly**:
+   - Click "Register" → "Register New Assembly"
+   - Browse and select `SxG.EvalPlatform.Plugins.dll`
+   - **Isolation Mode**: Sandbox (Recommended for Dataverse)
+   - **Assembly Location**: Database (Required for Custom APIs)
+   - Click "Register Selected Plugins"
+   - Verify all 4 plugin classes are registered
+
+#### Step 2: Create Custom APIs
+
+**For each Custom API, follow these steps:**
+
+---
+
+### 2.1 PostEvalRun Custom API
+
+1. **Create Custom API**:
+   - Right-click on the registered assembly
+   - Select "Create Custom API"
+   - **Unique Name**: `cr890_PostEvalRun`
+   - **Display Name**: `Post Eval Run`
+   - **Description**: `Creates a new evaluation run record`
+   - **Binding Type**: `None` (Global)
+   - **Bound Entity Logical Name**: *(Leave empty)*
+   - **Is Function**: `No` (POST operation)
+   - **Is Private**: `No`
+   - **Allowed Custom Processing Step Type**: `AsyncOnly` or `SyncAndAsync`
+   - **Execute Privilege Name**: `cr890_PostEvalRun`
+
+2. **Add Request Parameters**:
+   - Click "Add Request Parameter" for each:
+   
+   | Name | Display Name | Description | Type | Optional |
+   |------|--------------|-------------|------|----------|
+   | `evalRunId` | Eval Run Id | Evaluation run identifier | String | No |
+   | `agentId` | Agent Id | Agent identifier | String | Yes |
+   | `environmentId` | Environment Id | Environment identifier | String | Yes |
+   | `agentSchemaName` | Agent Schema Name | Agent schema name | String | Yes |
+
+3. **Add Response Properties**:
+   - Click "Add Response Property" for each:
+   
+   | Name | Display Name | Description | Type |
+   |------|--------------|-------------|------|
+   | `success` | Success | Operation success indicator | Boolean |
+   | `message` | Message | Response message | String |
+   | `timestamp` | Timestamp | Operation timestamp | String |
+
+---
+
+### 2.2 GetEvalRun Custom API
+
+1. **Create Custom API**:
+   - **Unique Name**: `cr890_GetEvalRun`
+   - **Display Name**: `Get Eval Run`
+   - **Description**: `Retrieves eval run record by EvalRunId`
+   - **Binding Type**: `None` (Global)
+   - **Is Function**: `Yes` (GET operation)
+   - **Is Private**: `No`
+   - **Execute Privilege Name**: `cr890_GetEvalRun`
+
+2. **Add Request Parameters**:
+   
+   | Name | Display Name | Description | Type | Optional |
+   |------|--------------|-------------|------|----------|
+   | `evalRunId` | Eval Run Id | Evaluation run identifier | String | No |
+
+3. **Add Response Properties**:
+   
+   | Name | Display Name | Description | Type |
+   |------|--------------|-------------|------|
+   | `evalRunId` | Eval Run Id | Evaluation run identifier | String |
+   | `message` | Message | Response message | String |
+   | `timestamp` | Timestamp | Operation timestamp | String |
+   | `agentId` | Agent Id | Agent identifier | String |
+   | `environmentId` | Environment Id | Environment identifier | String |
+   | `agentSchemaName` | Agent Schema Name | Agent schema name | String |
+   | `status` | Status | Evaluation run status | String |
+   | `dataset` | Dataset | Dataset JSON array | String |
+
+---
+
+### 2.3 UpdateDataset Custom API
+
+1. **Create Custom API**:
+   - **Unique Name**: `cr890_UpdateDataset`
+   - **Display Name**: `Update Dataset`
+   - **Description**: `Updates dataset from external datasets API and updates eval run`
+   - **Binding Type**: `None` (Global)
+   - **Is Function**: `No` (POST operation)
+   - **Execute Privilege Name**: `cr890_UpdateDataset`
+
+2. **Add Request Parameters**:
+   
+   | Name | Display Name | Description | Type | Optional |
+   |------|--------------|-------------|------|----------|
+   | `evalRunId` | Eval Run Id | Evaluation run identifier | String | No |
+
+3. **Add Response Properties**:
+   
+   | Name | Display Name | Description | Type |
+   |------|--------------|-------------|------|
+   | `success` | Success | Operation success indicator | Boolean |
+   | `message` | Message | Response message | String |
+   | `timestamp` | Timestamp | Operation timestamp | String |
+
+---
+
+### 2.4 PublishEnrichedDataset Custom API
+
+1. **Create Custom API**:
+   - **Unique Name**: `cr890_PublishEnrichedDataset`
+   - **Display Name**: `Publish Enriched Dataset`
+   - **Description**: `Publishes enriched dataset to external API from stored dataset`
+   - **Binding Type**: `None` (Global)
+   - **Is Function**: `No` (POST operation)
+   - **Execute Privilege Name**: `cr890_PublishEnrichedDataset`
+
+2. **Add Request Parameters**:
+   
+   | Name | Display Name | Description | Type | Optional |
+   |------|--------------|-------------|------|----------|
+   | `evalRunId` | Eval Run Id | Evaluation run identifier | String | No |
+
+3. **Add Response Properties**:
+   
+   | Name | Display Name | Description | Type |
+   |------|--------------|-------------|------|
+   | `success` | Success | Operation success indicator | Boolean |
+   | `message` | Message | Response message | String |
+   | `timestamp` | Timestamp | Operation timestamp | String |

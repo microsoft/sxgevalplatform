@@ -1,8 +1,9 @@
-﻿namespace SxG.EvalPlatform.Plugins.Plugins
+﻿namespace SxG.EvalPlatform.Plugins
 {
     using System;
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Sdk.Query;
+    using Newtonsoft.Json;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
@@ -14,7 +15,7 @@
         public GetEvalRun(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
             // TODO: Implement your custom configuration handling
-            // https://docs.microsoft.com/powerapps/developer/common-data-service/register-plug-in#set-configuration-data
+            // https://docs.Microsoft.com/powerapps/developer/common-data-service/register-plug-in#set-configuration-data
         }
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localContext)
@@ -43,51 +44,58 @@
                     string validationError = request.GetValidationError();
                     tracingService.Trace($"{nameof(GetEvalRun)}: Validation failed - {validationError}");
                     
-                    var errorResponse = GetEvalRunResponse.CreateError(validationError, 400);
+                    var errorResponse = GetEvalRunResponse.CreateError(validationError);
                     SetResponseParameters(context, errorResponse, tracingService);
                     return;
                 }
 
-                tracingService.Trace($"{nameof(GetEvalRun)}: Searching for eval job with Id: {request.Id}");
+                tracingService.Trace($"{nameof(GetEvalRun)}: Searching for eval run with EvalRunId: {request.EvalRunId}");
 
-                // Query to get eval job record by Id (Primary Name Column)
-                QueryExpression query = new QueryExpression(EvalJobEntity.EntityLogicalName)
+                // Parse the provided GUID for direct query
+                if (!Guid.TryParse(request.EvalRunId, out Guid evalRunGuid))
                 {
-                    ColumnSet = new ColumnSet(
-                        EvalJobEntity.Fields.EvalJobId,
-                        EvalJobEntity.Fields.Id,
-                        EvalJobEntity.Fields.AgentId,
-                        EvalJobEntity.Fields.EnvironmentId,
-                        EvalJobEntity.Fields.SchemaName,
-                        EvalJobEntity.Fields.Status,
-                        EvalJobEntity.Fields.Input,
-                        EvalJobEntity.Fields.Output,
-                        EvalJobEntity.Fields.CreatedOn,
-                        EvalJobEntity.Fields.ModifiedOn
-                    ),
-                    Criteria = new FilterExpression()
-                };
-
-                // Filter by Id (Primary Name Column)
-                query.Criteria.AddCondition(EvalJobEntity.Fields.Id, ConditionOperator.Equal, request.Id);
-
-                // Execute the query
-                EntityCollection evalJobEntities = organizationService.RetrieveMultiple(query);
-
-                EvalJobEntity evalJob = null;
-                if (evalJobEntities.Entities.Count > 0)
-                {
-                    evalJob = EvalJobEntity.FromEntity(evalJobEntities.Entities[0]);
-                    tracingService.Trace($"{nameof(GetEvalRun)}: Found eval job - EvalJobId: {evalJob.EvalJobId}, AgentId: {evalJob.AgentId}, Status: {evalJob.Status}, SchemaName: {evalJob.SchemaName}");
-                }
-                else
-                {
-                    tracingService.Trace($"{nameof(GetEvalRun)}: No eval job found for Id: {request.Id}");
+                    var errorResponse = GetEvalRunResponse.CreateError("Invalid EvalRunId format");
+                    SetResponseParameters(context, errorResponse, tracingService);
+                    return;
                 }
 
-                // Create response
-                var response = GetEvalRunResponse.CreateSuccess(evalJob);
-                SetResponseParameters(context, response, tracingService);
+                // Query directly using EvalRunId (Primary Key) for faster performance
+                try
+                {
+                    Entity evalRunEntityRecord = organizationService.Retrieve(
+                        EvalRunEntity.EntityLogicalName,
+                        evalRunGuid,
+                        new ColumnSet(
+                            EvalRunEntity.Fields.EvalRunId,
+                            EvalRunEntity.Fields.Id,
+                            EvalRunEntity.Fields.AgentId,
+                            EvalRunEntity.Fields.EnvironmentId,
+                            EvalRunEntity.Fields.AgentSchemaName,
+                            EvalRunEntity.Fields.Status,
+                            EvalRunEntity.Fields.Dataset,
+                            EvalRunEntity.Fields.CreatedOn,
+                            EvalRunEntity.Fields.ModifiedOn
+                        )
+                    );
+
+                    EvalRunEntity evalRun = EvalRunEntity.FromEntity(evalRunEntityRecord);
+                    tracingService.Trace($"{nameof(GetEvalRun)}: Found eval run - EvalRunId: {evalRun.EvalRunId}, AgentId: {evalRun.AgentId}, Status: {evalRun.GetStatusName()}");
+                    tracingService.Trace($"{nameof(GetEvalRun)}: Dataset JSON string length: {(evalRun.Dataset?.Length ?? 0)}");
+
+                    // Create success response (this will parse the dataset JSON automatically)
+                    var response = GetEvalRunResponse.CreateSuccess(evalRun);
+                    tracingService.Trace($"{nameof(GetEvalRun)}: Dataset parsed into {response.Dataset?.Count ?? 0} items");
+                    
+                    SetResponseParameters(context, response, tracingService);
+                }
+                catch (Exception retrieveEx)
+                {
+                    tracingService.Trace($"{nameof(GetEvalRun)}: Record not found or error retrieving: {retrieveEx.Message}");
+                    
+                    // Create not found response
+                    var response = GetEvalRunResponse.CreateSuccess(null);
+                    SetResponseParameters(context, response, tracingService);
+                }
 
                 tracingService.Trace($"{nameof(GetEvalRun)}: Execution completed successfully using Dataverse Managed Identity.");
             }
@@ -97,7 +105,7 @@
                 tracingService.Trace($"{nameof(GetEvalRun)}: Stack trace - " + ex.StackTrace);
 
                 // Create error response
-                var errorResponse = GetEvalRunResponse.CreateError($"Internal server error: {ex.Message}", 500);
+                var errorResponse = GetEvalRunResponse.CreateError($"Internal server error: {ex.Message}");
                 SetResponseParameters(context, errorResponse, tracingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(GetEvalRun)} :: Error :: " + ex.Message, ex);
@@ -115,10 +123,10 @@
             var request = new GetEvalRunRequest();
 
             // Extract from input parameters
-            if (context.InputParameters.Contains(CustomApiConfig.GetEvalRun.RequestParameters.Id))
-                request.Id = context.InputParameters[CustomApiConfig.GetEvalRun.RequestParameters.Id]?.ToString();
+            if (context.InputParameters.Contains(CustomApiConfig.GetEvalRun.RequestParameters.EvalRunId))
+                request.EvalRunId = context.InputParameters[CustomApiConfig.GetEvalRun.RequestParameters.EvalRunId]?.ToString();
 
-            tracingService.Trace($"{nameof(GetEvalRun)}: Extracted Id from context: {request.Id}");
+            tracingService.Trace($"{nameof(GetEvalRun)}: Extracted EvalRunId from context: {request.EvalRunId}");
 
             return request;
         }
@@ -133,81 +141,26 @@
         {
             try
             {
-                // Basic response properties
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Success] = response.Success;
+                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.EvalRunId] = response.EvalRunId;
                 context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Message] = response.Message;
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.StatusCode] = response.StatusCode;
                 context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Timestamp] = response.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-                // Serialize eval job to string (since Custom API output parameters have limitations on complex types)
-                if (response.EvalJob != null)
-                {
-                    string serializedEvalJob = SerializeEvalJob(response.EvalJob);
-                    context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.EvalJob] = serializedEvalJob;
-                }
-                else
-                {
-                    context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.EvalJob] = "null";
-                }
-
-                // Additional individual response properties
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.EvalJobId] = response.EvalJobId;
                 context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.AgentId] = response.AgentId;
                 context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.EnvironmentId] = response.EnvironmentId;
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.SchemaName] = response.SchemaName;
+                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.AgentSchemaName] = response.AgentSchemaName;
                 context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Status] = response.Status;
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Input] = response.Input;
-                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Output] = response.Output;
+                
+                // Serialize the parsed dataset back to JSON string for output parameter
+                string datasetJson = response.Dataset != null ? JsonConvert.SerializeObject(response.Dataset) : null;
+                context.OutputParameters[CustomApiConfig.GetEvalRun.ResponseProperties.Dataset] = datasetJson;
 
                 tracingService.Trace($"{nameof(GetEvalRun)}: Response parameters set successfully");
+                tracingService.Trace($"{nameof(GetEvalRun)}: Dataset serialized back to JSON for output parameter");
             }
             catch (Exception ex)
             {
                 tracingService.Trace($"{nameof(GetEvalRun)}: Error setting response parameters - {ex.Message}");
                 // Continue execution - response setting failure shouldn't break the plugin
             }
-        }
-
-        /// <summary>
-        /// Serializes eval job to JSON string format for Custom API response
-        /// </summary>
-        /// <param name="evalJob">The eval job entity</param>
-        /// <returns>JSON string representation</returns>
-        private string SerializeEvalJob(EvalJobEntity evalJob)
-        {
-            try
-            {
-                // Simple JSON serialization (avoiding dependencies)
-                return "{" +
-                    $"\"EvalJobId\":\"{evalJob.EvalJobId}\"," +
-                    $"\"Id\":\"{evalJob.Id}\"," +
-                    $"\"AgentId\":\"{evalJob.AgentId}\"," +
-                    $"\"EnvironmentId\":\"{evalJob.EnvironmentId}\"," +
-                    $"\"SchemaName\":\"{evalJob.SchemaName}\"," +
-                    $"\"Status\":{evalJob.Status}," +
-                    $"\"Input\":\"{EscapeJsonString(evalJob.Input)}\"," +
-                    $"\"Output\":\"{EscapeJsonString(evalJob.Output)}\"," +
-                    $"\"CreatedOn\":\"{evalJob.CreatedOn?.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")}\"," +
-                    $"\"ModifiedOn\":\"{evalJob.ModifiedOn?.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")}\"" +
-                    "}";
-            }
-            catch
-            {
-                return "null";
-            }
-        }
-
-        /// <summary>
-        /// Escapes special characters for JSON string
-        /// </summary>
-        /// <param name="input">Input string</param>
-        /// <returns>Escaped string</returns>
-        private string EscapeJsonString(string input)
-        {
-            if (string.IsNullOrEmpty(input))
-                return string.Empty;
-
-            return input.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
         }
     }
 }

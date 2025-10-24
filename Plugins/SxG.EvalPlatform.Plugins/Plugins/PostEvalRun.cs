@@ -1,4 +1,4 @@
-﻿namespace SxG.EvalPlatform.Plugins.Plugins
+﻿namespace SxG.EvalPlatform.Plugins
 {
     using System;
     using Microsoft.Xrm.Sdk;
@@ -42,37 +42,42 @@
                     string validationError = request.GetValidationError();
                     tracingService.Trace($"{nameof(PostEvalRun)}: Validation failed - {validationError}");
                     
-                    var errorResponse = PostEvalRunResponse.CreateError(validationError, 400);
+                    var errorResponse = PostEvalRunResponse.CreateError(validationError);
                     SetResponseParameters(context, errorResponse, tracingService);
                     return;
                 }
 
-                tracingService.Trace($"{nameof(PostEvalRun)}: Request validated successfully - AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, SchemaName: {request.SchemaName}, Input length: {request.Input?.Length ?? 0}");
+                tracingService.Trace($"{nameof(PostEvalRun)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
 
-                // Generate a new GUID that will be used for both EvalJobId and Id
-                Guid newGuid = Guid.NewGuid();
-
-                // Create eval job entity
-                var evalJobEntity = new EvalJobEntity
+                // Parse the provided GUID
+                if (!Guid.TryParse(request.EvalRunId, out Guid evalRunGuid))
                 {
-                    EvalJobId = newGuid,
-                    Id = newGuid.ToString(), // Same value as EvalJobId stored as string
-                    AgentId = request.AgentId,
-                    EnvironmentId = request.EnvironmentId,
-                    SchemaName = request.SchemaName,
-                    Status = EvalJobEntity.StatusValues.New, // Default status
-                    Input = request.Input
-                    // Output is optional and not set during creation
+                    var errorResponse = PostEvalRunResponse.CreateError("Invalid EvalRunId format");
+                    SetResponseParameters(context, errorResponse, tracingService);
+                    return;
+                }
+
+                // Create eval run entity with provided data
+                var evalRunEntity = new EvalRunEntity
+                {
+                    EvalRunId = evalRunGuid,
+                    Id = evalRunGuid.ToString(), // Same value as EvalRunId stored as string
+                    AgentId = request.AgentId, // Set from request
+                    EnvironmentId = request.EnvironmentId, // Set from request
+                    AgentSchemaName = request.AgentSchemaName, // Set from request
+                    Status = EvalRunEntity.StatusValues.New // Default status as integer
                 };
 
                 // Convert to Dataverse entity and create record
-                Entity entity = evalJobEntity.ToEntity();
+                Entity entity = evalRunEntity.ToEntity();
                 Guid createdId = organizationService.Create(entity);
                 
-                tracingService.Trace($"{nameof(PostEvalRun)}: Successfully created eval job record with ID: {createdId}");
+                tracingService.Trace($"{nameof(PostEvalRun)}: Successfully created eval run record with ID: {createdId}");
+                tracingService.Trace($"{nameof(PostEvalRun)}: AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
+                tracingService.Trace($"{nameof(PostEvalRun)}: Status set to: {evalRunEntity.GetStatusName()} (value: {evalRunEntity.Status})");
 
-                // Create success response with eval job entity
-                var response = PostEvalRunResponse.CreateSuccess(evalJobEntity);
+                // Create success response
+                var response = PostEvalRunResponse.CreateSuccess(evalRunEntity);
                 SetResponseParameters(context, response, tracingService);
 
                 tracingService.Trace($"{nameof(PostEvalRun)}: Execution completed successfully using Dataverse Managed Identity.");
@@ -83,7 +88,7 @@
                 tracingService.Trace($"{nameof(PostEvalRun)}: Stack trace - " + ex.StackTrace);
 
                 // Create error response
-                var errorResponse = PostEvalRunResponse.CreateError($"Internal server error: {ex.Message}", 500);
+                var errorResponse = PostEvalRunResponse.CreateError($"Internal server error: {ex.Message}");
                 SetResponseParameters(context, errorResponse, tracingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(PostEvalRun)} :: Error :: " + ex.Message, ex);
@@ -101,19 +106,20 @@
             var request = new PostEvalRunRequest();
 
             // Extract from input parameters
+            if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.EvalRunId))
+                request.EvalRunId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.EvalRunId]?.ToString();
+
             if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.AgentId))
                 request.AgentId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.AgentId]?.ToString();
 
             if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.EnvironmentId))
                 request.EnvironmentId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.EnvironmentId]?.ToString();
 
-            if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.SchemaName))
-                request.SchemaName = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.SchemaName]?.ToString();
-
-            if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.Input))
-                request.Input = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.Input]?.ToString();
+            if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.AgentSchemaName))
+                request.AgentSchemaName = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.AgentSchemaName]?.ToString();
 
             tracingService.Trace($"{nameof(PostEvalRun)}: Extracted request parameters from context");
+            tracingService.Trace($"{nameof(PostEvalRun)}: EvalRunId: {request.EvalRunId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
 
             return request;
         }
@@ -128,19 +134,9 @@
         {
             try
             {
-                // Basic response properties
                 context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Success] = response.Success;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Id] = response.Id;
                 context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Message] = response.Message;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.StatusCode] = response.StatusCode;
                 context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Timestamp] = response.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-                // Additional response properties
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.EvalJobId] = response.EvalJobId;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.AgentId] = response.AgentId;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.EnvironmentId] = response.EnvironmentId;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.SchemaName] = response.SchemaName;
-                context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Status] = response.Status;
 
                 tracingService.Trace($"{nameof(PostEvalRun)}: Response parameters set successfully");
             }

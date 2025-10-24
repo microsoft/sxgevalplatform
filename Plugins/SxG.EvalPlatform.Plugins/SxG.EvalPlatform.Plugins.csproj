@@ -78,11 +78,13 @@
     <Compile Include="Framework\LocalPluginContext.cs" />
     <Compile Include="Framework\LocalPluginContextManager.cs" />
     <Compile Include="Models\CacheItem.cs" />
-    <Compile Include="Models\EvalJobEntity.cs" />
+    <Compile Include="Models\EvalRunEntity.cs" />
     <Compile Include="Models\Requests\EvalRunRequests.cs" />
     <Compile Include="Models\Responses\EvalRunResponses.cs" />
     <Compile Include="Plugins\GetEvalRun.cs" />
     <Compile Include="Plugins\PostEvalRun.cs" />
+    <Compile Include="Plugins\PublishEnrichedDataset.cs" />
+    <Compile Include="Plugins\UpdateDataset.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Framework\PluginBase.cs" />
   </ItemGroup>

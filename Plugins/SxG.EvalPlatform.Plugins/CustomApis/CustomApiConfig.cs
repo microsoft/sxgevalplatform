@@ -6,13 +6,13 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
     public static class CustomApiConfig
     {
         /// <summary>
-        /// PostEvalRun Custom API configuration
+        /// PostEvalRun Custom API configuration (updated without datasetId)
         /// </summary>
         public static class PostEvalRun
         {
             public const string ApiName = "cr890_PostEvalRun";
             public const string DisplayName = "Post Eval Run";
-            public const string Description = "Creates a new eval job record";
+            public const string Description = "Creates a new eval run record";
             public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.PostEvalRun";
             public const string ExecutePrivilegeName = "cr890_PostEvalRun";
             public const bool AllowedCustomProcessing = true;
@@ -24,28 +24,20 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
             /// </summary>
             public static class RequestParameters
             {
-                public const string AgentId = "AgentId";
-                public const string EnvironmentId = "EnvironmentId";
-                public const string SchemaName = "SchemaName";
-                public const string Input = "Input";
+                public const string EvalRunId = "evalRunId";
+                public const string AgentId = "agentId";
+                public const string EnvironmentId = "environmentId";
+                public const string AgentSchemaName = "agentSchemaName";
             }
 
             /// <summary>
-            /// Response properties for PostEvalRun API
+            /// Response properties for PostEvalRun API (standardized format)
             /// </summary>
             public static class ResponseProperties
             {
-                public const string Success = "Success";
-                public const string Id = "Id";
-                public const string Message = "Message";
-                public const string StatusCode = "StatusCode";
-                public const string Timestamp = "Timestamp";
-                // Additional response properties
-                public const string EvalJobId = "EvalJobId";
-                public const string AgentId = "AgentId";
-                public const string EnvironmentId = "EnvironmentId";
-                public const string SchemaName = "SchemaName";
-                public const string Status = "Status";
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
             }
         }
 
@@ -56,7 +48,7 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
         {
             public const string ApiName = "cr890_GetEvalRun";
             public const string DisplayName = "Get Eval Run";
-            public const string Description = "Retrieves eval job record by Id";
+            public const string Description = "Retrieves eval run record by EvalRunId";
             public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.GetEvalRun";
             public const string ExecutePrivilegeName = "cr890_GetEvalRun";
             public const bool AllowedCustomProcessing = true;
@@ -68,27 +60,129 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
             /// </summary>
             public static class RequestParameters
             {
-                public const string Id = "Id";
+                public const string EvalRunId = "evalRunId";
             }
 
             /// <summary>
-            /// Response properties for GetEvalRun API
+            /// Response properties for GetEvalRun API (detailed format with dataset)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string EvalRunId = "evalRunId";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+                public const string AgentId = "agentId";
+                public const string EnvironmentId = "environmentId";
+                public const string AgentSchemaName = "agentSchemaName";
+                public const string Status = "status";
+                public const string Dataset = "dataset";
+            }
+        }
+
+        /// <summary>
+        /// UpdateDataset Custom API configuration - Simplified to only require evalRunId
+        /// </summary>
+        public static class UpdateDataset
+        {
+            public const string ApiName = "cr890_UpdateDataset";
+            public const string DisplayName = "Update Dataset";
+            public const string Description = "Updates dataset from external datasets API and updates eval run";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.UpdateDataset";
+            public const string ExecutePrivilegeName = "cr890_UpdateDataset";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for UpdateDataset API (only evalRunId)
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string EvalRunId = "evalRunId";
+            }
+
+            /// <summary>
+            /// Response properties for UpdateDataset API (standardized format)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+            }
+        }
+
+        /// <summary>
+        /// PublishEnrichedDataset Custom API configuration (renamed from EnrichDataset)
+        /// </summary>
+        public static class PublishEnrichedDataset
+        {
+            public const string ApiName = "cr890_PublishEnrichedDataset";
+            public const string DisplayName = "Publish Enriched Dataset";
+            public const string Description = "Publishes enriched dataset to external API from stored dataset";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.PublishEnrichedDataset";
+            public const string ExecutePrivilegeName = "cr890_PublishEnrichedDataset";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for PublishEnrichedDataset API (only evalRunId)
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string EvalRunId = "evalRunId";
+            }
+
+            /// <summary>
+            /// Response properties for PublishEnrichedDataset API (standardized format)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+            }
+        }
+
+        /// <summary>
+        /// HttpCall Custom API configuration
+        /// </summary>
+        public static class HttpCall
+        {
+            public const string ApiName = "cr890_HttpCall";
+            public const string DisplayName = "Http Call";
+            public const string Description = "Makes HTTP call to external Azure Web App API";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.HttpCall";
+            public const string ExecutePrivilegeName = "cr890_HttpCall";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for HttpCall API
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string Url = "Url";
+                public const string Method = "Method";
+                public const string Headers = "Headers";
+                public const string Body = "Body";
+                public const string Timeout = "Timeout";
+            }
+
+            /// <summary>
+            /// Response properties for HttpCall API
             /// </summary>
             public static class ResponseProperties
             {
                 public const string Success = "Success";
-                public const string EvalJob = "EvalJob";
                 public const string Message = "Message";
                 public const string StatusCode = "StatusCode";
                 public const string Timestamp = "Timestamp";
-                // Additional response properties
-                public const string EvalJobId = "EvalJobId";
-                public const string AgentId = "AgentId";
-                public const string EnvironmentId = "EnvironmentId";
-                public const string SchemaName = "SchemaName";
-                public const string Status = "Status";
-                public const string Input = "Input";
-                public const string Output = "Output";
+                public const string ResponseBody = "ResponseBody";
+                public const string ResponseHeaders = "ResponseHeaders";
+                public const string ExecutionTime = "ExecutionTime";
             }
         }
     }
