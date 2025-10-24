@@ -5,6 +5,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.Services.Cache;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
     {
         private readonly IMetricsConfigTableService _metricsConfigTableService;
         private readonly IAzureBlobStorageService _blobStorageService;
+        private readonly IEvalConfigCache _evalConfigCache;
         IConfigHelper _configHelper;
         private readonly ILogger<MetricsConfigurationRequestHandler> _logger;
         private readonly IMapper _mapper;
@@ -26,6 +28,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         public MetricsConfigurationRequestHandler(
             IMetricsConfigTableService metricsConfigTableService,
             IAzureBlobStorageService blobStorageService,
+            IEvalConfigCache evalConfigCache,
             ILogger<MetricsConfigurationRequestHandler> logger,
             IMapper mapper,
             IConfigHelper configHelper)
@@ -34,6 +37,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _logger = logger;
             _mapper = mapper;
             _blobStorageService = blobStorageService;
+            _evalConfigCache = evalConfigCache;
             _configHelper = configHelper;
         }
 
@@ -79,13 +83,23 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation($"Retrieving all configurations for Agent: {agentId} and EnvironmentName: {enviornmentName}");
-                                
+                
+                // Try to get from cache first
+                var cachedConfigurations = await _evalConfigCache.GetConfigurationsByAgentAsync(agentId, enviornmentName);
+                if (cachedConfigurations != null)
+                {
+                    _logger.LogInformation($"Retrieved {cachedConfigurations.Count} configurations from cache for Agent: {agentId} and EnvironmentName: {enviornmentName}");
+                    return cachedConfigurations;
+                }
+                
+                // If not in cache, get from database
                 var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId, enviornmentName);
-
                 var configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
 
-                _logger.LogInformation($"Retrieved {configurations.Count} configurations for Agent: {agentId} and EnvironmentName: {enviornmentName}",
-                    configurations.Count, agentId);
+                // Cache the results for future requests
+                await _evalConfigCache.SetConfigurationsByAgentAsync(agentId, configurations, enviornmentName);
+
+                _logger.LogInformation($"Retrieved {configurations.Count} configurations from database for Agent: {agentId} and EnvironmentName: {enviornmentName}");
 
                 return configurations;
             }
@@ -102,6 +116,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}",
                     configurationId);
+                
+                // Try to get detailed configuration from cache first
+                var cachedDetailedConfig = await _evalConfigCache.GetDetailedConfigurationAsync(configurationId);
+                if (cachedDetailedConfig != null)
+                {
+                    _logger.LogInformation("Retrieved detailed configuration from cache for ConfigId: {ConfigId}", configurationId);
+                    return cachedDetailedConfig;
+                }
+                
                 var entity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
                 if (entity == null)
                 {
@@ -156,6 +179,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}",
                     configurationId);
+                
+                // Cache the detailed configuration for future requests
+                if (metrics != null)
+                {
+                    await _evalConfigCache.SetDetailedConfigurationAsync(configurationId, metrics);
+                    _logger.LogInformation("Cached detailed configuration for ConfigId: {ConfigId}", configurationId);
+                }
+                
                 return metrics;
 
             }
@@ -202,18 +233,48 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Creating new configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
                     createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
 
-                // Check if configuration already exists to prevent duplicates
+                // Fast duplicate check using Redis cache first
+                var cachedConfigurations = await _evalConfigCache.GetConfigurationsByAgentAsync(createConfigDto.AgentId, createConfigDto.EnvironmentName);
+                if (cachedConfigurations != null)
+                {
+                    var existingCachedConfig = cachedConfigurations
+                        .FirstOrDefault(c => c.ConfigurationName.Equals(createConfigDto.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (existingCachedConfig != null)
+                    {
+                        _logger.LogInformation("Duplicate configuration detected in cache for Agent: {AgentId}, Config: {ConfigName}", 
+                            createConfigDto.AgentId, createConfigDto.ConfigurationName);
+                        return new ConfigurationSaveResponseDto
+                        {
+                            ConfigurationId = existingCachedConfig.ConfigurationId,
+                            Status = "conflict",
+                            Message = $"Configuration with name '{createConfigDto.ConfigurationName}' already exists for agent '{createConfigDto.AgentId}' in environment '{createConfigDto.EnvironmentName}'",
+                            CreatedBy = existingCachedConfig.CreatedBy,
+                            CreatedOn = existingCachedConfig.CreatedOn,
+                            LastUpdatedBy = existingCachedConfig.LastUpdatedBy,
+                            LastUpdatedOn = existingCachedConfig.LastUpdatedOn
+                        };
+                    }
+                }
+
+                // Fallback to database check if cache miss (for thorough validation)
                 var existingConfig = await _metricsConfigTableService.GetAllMetricsConfigurations(
                     createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
 
                 if (existingConfig != null && existingConfig.Count > 0)
                 {
                     var existingConfiguration = existingConfig.First();
+                    _logger.LogInformation("Duplicate configuration detected in database for Agent: {AgentId}, Config: {ConfigName}", 
+                        createConfigDto.AgentId, createConfigDto.ConfigurationName);
                     return new ConfigurationSaveResponseDto
                     {
                         ConfigurationId = existingConfiguration.ConfigurationId,
                         Status = "conflict",
-                        Message = $"Configuration with name '{createConfigDto.ConfigurationName}' already exists for agent '{createConfigDto.AgentId}' in environment '{createConfigDto.EnvironmentName}'"
+                        Message = $"Configuration with name '{createConfigDto.ConfigurationName}' already exists for agent '{createConfigDto.AgentId}' in environment '{createConfigDto.EnvironmentName}'",
+                        CreatedBy = existingConfiguration.CreatedBy,
+                        CreatedOn = existingConfiguration.CreatedOn,
+                        LastUpdatedBy = existingConfiguration.LastUpdatedBy,
+                        LastUpdatedOn = existingConfiguration.LastUpdatedOn
                     };
                 }
 
@@ -351,6 +412,32 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Save to storage
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity);
 
+                // Write updated configuration to cache
+                var updatedMetadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
+                await _evalConfigCache.SetConfigurationAsync(updatedMetadataDto);
+                _logger.LogInformation("Updated configuration in cache for ConfigId: {ConfigId}", savedEntity.ConfigurationId);
+
+                // Also cache the detailed configuration (SelectedMetricsConfiguration)
+                if (updateConfigDto.MetricsConfiguration != null)
+                {
+                    // Convert DTO to storage entity for caching
+                    var storageMetrics = updateConfigDto.MetricsConfiguration.Select(dto => new SelectedMetricsConfiguration
+                    {
+                        MetricName = dto.MetricName,
+                        Threshold = dto.Threshold
+                    }).ToList();
+                    
+                    await _evalConfigCache.SetDetailedConfigurationAsync(savedEntity.ConfigurationId, storageMetrics);
+                    _logger.LogInformation("Updated detailed configuration in cache for ConfigId: {ConfigId}", savedEntity.ConfigurationId);
+                }
+
+                // Also refresh the agent's configuration list in cache
+                var allConfigs = await _metricsConfigTableService.GetAllMetricsConfigurations(existingEntity.AgentId, existingEntity.EnvironmentName);
+                var allConfigDtos = allConfigs.Select(ToMetricsConfigurationMetadataDto).ToList();
+                await _evalConfigCache.SetConfigurationsByAgentAsync(existingEntity.AgentId, allConfigDtos, existingEntity.EnvironmentName);
+                _logger.LogInformation("Refreshed cached configuration list for Agent: {AgentId} and Environment: {Environment}", 
+                    existingEntity.AgentId, existingEntity.EnvironmentName);
+
                 var response = new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = savedEntity.ConfigurationId,
@@ -441,6 +528,32 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 // Save to storage
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity);
+
+                // Write new configuration to cache
+                var newMetadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
+                await _evalConfigCache.SetConfigurationAsync(newMetadataDto);
+                _logger.LogInformation("Added new configuration to cache for ConfigId: {ConfigId}", savedEntity.ConfigurationId);
+
+                // Also cache the detailed configuration (SelectedMetricsConfiguration)
+                if (configDto.MetricsConfiguration != null)
+                {
+                    // Convert DTO to storage entity for caching
+                    var storageMetrics = configDto.MetricsConfiguration.Select(dto => new SelectedMetricsConfiguration
+                    {
+                        MetricName = dto.MetricName,
+                        Threshold = dto.Threshold
+                    }).ToList();
+                    
+                    await _evalConfigCache.SetDetailedConfigurationAsync(savedEntity.ConfigurationId, storageMetrics);
+                    _logger.LogInformation("Added new detailed configuration to cache for ConfigId: {ConfigId}", savedEntity.ConfigurationId);
+                }
+
+                // Also refresh the agent's configuration list in cache
+                var allConfigs = await _metricsConfigTableService.GetAllMetricsConfigurations(savedEntity.AgentId, savedEntity.EnvironmentName);
+                var allConfigDtos = allConfigs.Select(ToMetricsConfigurationMetadataDto).ToList();
+                await _evalConfigCache.SetConfigurationsByAgentAsync(savedEntity.AgentId, allConfigDtos, savedEntity.EnvironmentName);
+                _logger.LogInformation("Refreshed cached configuration list for Agent: {AgentId} and Environment: {Environment}", 
+                    savedEntity.AgentId, savedEntity.EnvironmentName);
 
                 var response = new ConfigurationSaveResponseDto
                 {
@@ -665,6 +778,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (deleted)
                 {
                     _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
+                    
+                    // Remove configuration from cache
+                    await _evalConfigCache.RemoveConfigurationAsync(configurationId);
+                    _logger.LogInformation("Removed configuration from cache for ConfigId: {ConfigId}", configurationId);
+                    
+                    // Invalidate all agent configuration list caches (for all environments and default)
+                    // This ensures consistency regardless of which environment the API calls use
+                    await _evalConfigCache.InvalidateAgentConfigurationsAsync(existingConfig.AgentId);
+                    _logger.LogInformation("Invalidated all cached configuration lists for Agent: {AgentId} (all environments)", 
+                        existingConfig.AgentId);
                     
                     // Also delete the blob file if it exists
                     try

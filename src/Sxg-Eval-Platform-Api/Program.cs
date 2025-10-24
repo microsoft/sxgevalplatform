@@ -5,6 +5,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services.Cache;
+using SxgEvalPlatformApi.Cache;
 using StackExchange.Redis;
 using System.Reflection;
 
@@ -71,8 +72,12 @@ builder.Services.AddSingleton<ConnectionMultiplexer>(provider =>
 });
 
 // Add Redis Cache Services
-builder.Services.AddSingleton<SxgEvalPlatformApi.Services.Cache.IRedisCache, SxgEvalPlatformApi.Services.Cache.RedisCacheService>();
-builder.Services.AddSingleton<SxgEvalPlatformApi.Services.Cache.IGenericCacheService, SxgEvalPlatformApi.Services.Cache.GenericCacheService>();
+builder.Services.AddSingleton<IRedisCache, RedisCacheService>();
+builder.Services.AddSingleton<IGenericCacheService, GenericCacheService>();
+
+// Add specialized cache services for specific entities
+builder.Services.AddScoped<IEvalConfigCache, EvalConfigCacheService>();
+builder.Services.AddScoped<IEvalDatasetCache, EvalDatasetCacheService>();
 
 // Add base storage services (concrete implementations without caching)
 builder.Services.AddScoped<MetricsConfigTableService>();

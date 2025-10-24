@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Cache;
 using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
@@ -67,19 +68,22 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<DataSetRequestHandler> _logger;
         private readonly IMapper _mapper;
+        private readonly IEvalDatasetCache _datasetCache;
 
         public DataSetRequestHandler(
             IDataSetTableService dataSetTableService,
             IAzureBlobStorageService blobStorageService,
             ILogger<DataSetRequestHandler> logger,
             IMapper mapper,
-            IConfigHelper configHelper)
+            IConfigHelper configHelper,
+            IEvalDatasetCache datasetCache)
         {
             _dataSetTableService = dataSetTableService;
             _logger = logger;
             _mapper = mapper;
             _blobStorageService = blobStorageService;
             _configHelper = configHelper;
+            _datasetCache = datasetCache;
         }
 
         public async Task<DatasetSaveResponseDto> SaveDatasetAsync(SaveDatasetDto saveDatasetDto)
@@ -89,7 +93,32 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Creating dataset: {DatasetName} for agent: {AgentId}, type: {DatasetType}",
                     saveDatasetDto.DatasetName, saveDatasetDto.AgentId, saveDatasetDto.DatasetType);
 
-                // Check if dataset already exists (for validation only - POST should not update)
+                // Fast duplicate check using Redis cache first
+                var cachedDatasets = await _datasetCache.GetDatasetsByAgentAsync(saveDatasetDto.AgentId);
+                if (cachedDatasets != null)
+                {
+                    var existingCachedDataset = cachedDatasets
+                        .FirstOrDefault(d => d.DatasetName.Equals(saveDatasetDto.DatasetName, StringComparison.OrdinalIgnoreCase) &&
+                                           d.DatasetType.Equals(saveDatasetDto.DatasetType, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (existingCachedDataset != null)
+                    {
+                        _logger.LogInformation("Duplicate dataset detected in cache for Agent: {AgentId}, Dataset: {DatasetName}, Type: {DatasetType}", 
+                            saveDatasetDto.AgentId, saveDatasetDto.DatasetName, saveDatasetDto.DatasetType);
+                        return new DatasetSaveResponseDto
+                        {
+                            DatasetId = existingCachedDataset.DatasetId,
+                            Status = "conflict",
+                            Message = $"Dataset with name '{saveDatasetDto.DatasetName}' and type '{saveDatasetDto.DatasetType}' already exists for agent '{saveDatasetDto.AgentId}'",
+                            CreatedBy = existingCachedDataset.CreatedBy,
+                            CreatedOn = existingCachedDataset.CreatedOn,
+                            LastUpdatedBy = existingCachedDataset.LastUpdatedBy,
+                            LastUpdatedOn = existingCachedDataset.LastUpdatedOn
+                        };
+                    }
+                }
+
+                // Fallback to database check if cache miss (for thorough validation)
                 var existingDatasets = await _dataSetTableService.GetDataSetsByDatasetNameAsync(
                     saveDatasetDto.AgentId, saveDatasetDto.DatasetName);
 
@@ -98,11 +127,17 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (existingDataset != null)
                 {
+                    _logger.LogInformation("Duplicate dataset detected in database for Agent: {AgentId}, Dataset: {DatasetName}, Type: {DatasetType}", 
+                        saveDatasetDto.AgentId, saveDatasetDto.DatasetName, saveDatasetDto.DatasetType);
                     return new DatasetSaveResponseDto
                     {
                         DatasetId = existingDataset.DatasetId,
                         Status = "conflict",
-                        Message = $"Dataset with name '{saveDatasetDto.DatasetName}' and type '{saveDatasetDto.DatasetType}' already exists for agent '{saveDatasetDto.AgentId}'"
+                        Message = $"Dataset with name '{saveDatasetDto.DatasetName}' and type '{saveDatasetDto.DatasetType}' already exists for agent '{saveDatasetDto.AgentId}'",
+                        CreatedBy = existingDataset.CreatedBy,
+                        CreatedOn = existingDataset.CreatedOn,
+                        LastUpdatedBy = existingDataset.LastUpdatedBy,
+                        LastUpdatedOn = existingDataset.LastUpdatedOn
                     };
                 }
 
@@ -138,6 +173,27 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 // Save metadata to table storage
                 var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity);
+
+                // Cache the new dataset metadata and content (write-through pattern)
+                try
+                {
+                    var datasetMetadataDto = ToDatasetMetadataDto(savedEntity);
+                    await _datasetCache.SetDatasetMetadataAsync(datasetMetadataDto);
+                    await _datasetCache.SetDatasetContentAsync(savedEntity.DatasetId, datasetContent);
+
+                    // Refresh agent's dataset list cache
+                    var allDatasets = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(savedEntity.AgentId);
+                    var allDatasetDtos = allDatasets.Select(ToDatasetMetadataDto).ToList();
+                    await _datasetCache.SetDatasetsByAgentAsync(savedEntity.AgentId, allDatasetDtos);
+
+                    _logger.LogDebug("Cached new dataset: {DatasetId} for Agent: {AgentId}", 
+                        savedEntity.DatasetId, savedEntity.AgentId);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, "Failed to cache dataset {DatasetId} after creation", savedEntity.DatasetId);
+                    // Continue - cache failure shouldn't fail the operation
+                }
 
                 var response = new DatasetSaveResponseDto
                 {
@@ -175,9 +231,30 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}", agentId);
 
-                var entities = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(agentId);
+                // Try cache first
+                var cachedDatasets = await _datasetCache.GetDatasetsByAgentAsync(agentId);
+                if (cachedDatasets != null)
+                {
+                    _logger.LogInformation("Retrieved {Count} datasets from cache for Agent: {AgentId}", 
+                        cachedDatasets.Count, agentId);
+                    return cachedDatasets;
+                }
 
+                // Cache miss - fetch from database
+                var entities = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(agentId);
                 var datasets = entities.Select(ToDatasetMetadataDto).ToList();
+
+                // Cache the results
+                try
+                {
+                    await _datasetCache.SetDatasetsByAgentAsync(agentId, datasets);
+                    _logger.LogDebug("Cached {Count} datasets for Agent: {AgentId}", datasets.Count, agentId);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, "Failed to cache datasets for Agent: {AgentId}", agentId);
+                    // Continue - cache failure shouldn't fail the operation
+                }
 
                 _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}",
                     datasets.Count, agentId);
@@ -197,6 +274,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving dataset content for DatasetId: {DatasetId}", datasetId);
 
+                // Try cache first
+                var cachedContent = await _datasetCache.GetDatasetContentAsync(datasetId);
+                if (cachedContent != null)
+                {
+                    _logger.LogInformation("Retrieved dataset content from cache for DatasetId: {DatasetId}", datasetId);
+                    return cachedContent;
+                }
+
+                // Cache miss - fetch from storage
                 var entity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
                 if (entity == null)
                 {
@@ -212,6 +298,18 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (string.IsNullOrEmpty(blobContent))
                 {
                     throw new Exception($"Dataset blob not found: {blobContainer}/{blobPath}");
+                }
+
+                // Cache the content
+                try
+                {
+                    await _datasetCache.SetDatasetContentAsync(datasetId, blobContent);
+                    _logger.LogDebug("Cached dataset content for DatasetId: {DatasetId}", datasetId);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, "Failed to cache dataset content for DatasetId: {DatasetId}", datasetId);
+                    // Continue - cache failure shouldn't fail the operation
                 }
 
                 _logger.LogInformation("Retrieved dataset content for DatasetId: {DatasetId}", datasetId);
@@ -230,6 +328,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving dataset metadata for DatasetId: {DatasetId}", datasetId);
 
+                // Try cache first
+                var cachedMetadata = await _datasetCache.GetDatasetMetadataAsync(datasetId);
+                if (cachedMetadata != null)
+                {
+                    _logger.LogInformation("Retrieved dataset metadata from cache for DatasetId: {DatasetId}", datasetId);
+                    return cachedMetadata;
+                }
+
+                // Cache miss - fetch from database
                 var entity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
                 if (entity == null)
                 {
@@ -238,6 +345,18 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 var metadata = ToDatasetMetadataDto(entity);
+
+                // Cache the metadata
+                try
+                {
+                    await _datasetCache.SetDatasetMetadataAsync(metadata);
+                    _logger.LogDebug("Cached dataset metadata for DatasetId: {DatasetId}", datasetId);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, "Failed to cache dataset metadata for DatasetId: {DatasetId}", datasetId);
+                    // Continue - cache failure shouldn't fail the operation
+                }
 
                 _logger.LogInformation("Retrieved dataset metadata for DatasetId: {DatasetId}", datasetId);
                 return metadata;
@@ -308,6 +427,27 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Save updated metadata to table storage
                 var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity);
 
+                // Update cache with new data (write-through pattern)
+                try
+                {
+                    var updatedMetadataDto = ToDatasetMetadataDto(savedEntity);
+                    await _datasetCache.SetDatasetMetadataAsync(updatedMetadataDto);
+                    await _datasetCache.SetDatasetContentAsync(savedEntity.DatasetId, datasetContent);
+
+                    // Refresh agent's dataset list cache
+                    var allDatasets = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(savedEntity.AgentId);
+                    var allDatasetDtos = allDatasets.Select(ToDatasetMetadataDto).ToList();
+                    await _datasetCache.SetDatasetsByAgentAsync(savedEntity.AgentId, allDatasetDtos);
+
+                    _logger.LogDebug("Updated cache for dataset: {DatasetId} for Agent: {AgentId}", 
+                        savedEntity.DatasetId, savedEntity.AgentId);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, "Failed to update cache for dataset {DatasetId} after update", savedEntity.DatasetId);
+                    // Continue - cache failure shouldn't fail the operation
+                }
+
                 var response = new DatasetSaveResponseDto
                 {
                     DatasetId = savedEntity.DatasetId,
@@ -357,6 +497,25 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (deleted)
                 {
                     _logger.LogInformation("Dataset with ID: {DatasetId} deleted successfully", datasetId);
+                    
+                    // Remove from cache (both metadata and content)
+                    try
+                    {
+                        await _datasetCache.RemoveDatasetAsync(datasetId);
+
+                        // Refresh agent's dataset list cache with remaining datasets
+                        var remainingDatasets = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(existingDataset.AgentId);
+                        var remainingDatasetDtos = remainingDatasets.Select(ToDatasetMetadataDto).ToList();
+                        await _datasetCache.SetDatasetsByAgentAsync(existingDataset.AgentId, remainingDatasetDtos);
+
+                        _logger.LogDebug("Removed dataset from cache: {DatasetId} for Agent: {AgentId}", 
+                            datasetId, existingDataset.AgentId);
+                    }
+                    catch (Exception cacheEx)
+                    {
+                        _logger.LogWarning(cacheEx, "Failed to remove dataset {DatasetId} from cache after deletion", datasetId);
+                        // Continue - cache failure shouldn't fail the operation
+                    }
                     
                     // Also delete the blob file if it exists
                     try
