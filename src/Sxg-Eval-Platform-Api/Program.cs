@@ -5,9 +5,13 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services.Cache;
+using SxgEvalPlatformApi.Services;
 using SxgEvalPlatformApi.Cache;
+using SxgEvalPlatformApi.Configuration;
 using StackExchange.Redis;
 using System.Reflection;
+using Azure.Identity;
+using Azure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,23 +57,20 @@ builder.Services.AddCors(options =>
 // Add AutoMapper with explicit mapping profiles
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// Configure Redis Connection
-builder.Services.AddSingleton<ConnectionMultiplexer>(provider =>
+// Configure Redis settings
+builder.Services.Configure<RedisConfiguration>(builder.Configuration.GetSection("Redis"));
+
+// Configure Redis Connection with Microsoft Entra Authentication using factory
+builder.Services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
 {
-    var configuration = provider.GetService<IConfiguration>();
-    var connectionString = configuration.GetConnectionString("Redis");
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        throw new InvalidOperationException("Redis connection string is not configured");
-    }
-    
-    var options = ConfigurationOptions.Parse(connectionString);
-    options.AbortOnConnectFail = false;
-    options.ConnectTimeout = 10000;
-    options.SyncTimeout = 10000;
-    
-    return ConnectionMultiplexer.Connect(options);
+    var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<RedisConfiguration>>();
+    var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+    return RedisConnectionFactory.CreateConnectionAsync(config, logger).GetAwaiter().GetResult();
 });
+
+// Also register the concrete type for services that need it
+builder.Services.AddSingleton<ConnectionMultiplexer>(serviceProvider =>
+    (ConnectionMultiplexer)serviceProvider.GetRequiredService<IConnectionMultiplexer>());
 
 // Add Redis Cache Services
 builder.Services.AddSingleton<IRedisCache, RedisCacheService>();
@@ -97,9 +98,13 @@ builder.Services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigura
 builder.Services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
 builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
 
-// Add evaluation request handlers (will use cached services)
+// Register evaluation request handlers (will use cached services)
 builder.Services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
 builder.Services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
+
+// Add startup connection validation services
+builder.Services.AddSingleton<IStartupConnectionValidator, StartupConnectionValidator>();
+builder.Services.AddHostedService<StartupValidationHostedService>();
 
 // Register Azure services from Storage project
 //builder.Services.AddScoped<Sxg.EvalPlatform.API.Storage.Services.IAzureBlobStorageService, Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService>();
