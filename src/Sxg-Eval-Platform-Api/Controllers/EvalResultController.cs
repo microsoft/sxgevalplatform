@@ -54,9 +54,11 @@ namespace SxgEvalPlatformApi.Controllers
         {
             try
             {
-                if (evalRunId == Guid.Empty)
+                // Use proper validation method from BaseController
+                var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+                if (evalRunIdValidation != null)
                 {
-                    return CreateBadRequestResponse<EvaluationResultResponseDto>("evalRunId", "EvalRunId is required and cannot be empty");
+                    return evalRunIdValidation;
                 }
 
                 _logger.LogInformation("Optimized request to retrieve evaluation results for EvalRunId: {EvalRunId}", evalRunId);
@@ -313,10 +315,25 @@ namespace SxgEvalPlatformApi.Controllers
                     EvalRunId = saveDto.EvalRunId
                 });
             }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while saving evaluation results for EvalRunId: {EvalRunId}", 
+                    saveDto.EvalRunId);
+                return HandleAzureException<EvaluationResultSaveResponseDto>(ex, "Failed to save evaluation results");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Optimized error occurred while saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
-                return CreateErrorResponse<EvaluationResultSaveResponseDto>("Failed to save evaluation results", StatusCodes.Status500InternalServerError);
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while saving evaluation results for EvalRunId: {EvalRunId}", 
+                        saveDto.EvalRunId);
+                    return CreateErrorResponse<EvaluationResultSaveResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
+                _logger.LogError(ex, "Error occurred while saving evaluation results for EvalRunId: {EvalRunId}", 
+                    saveDto.EvalRunId);
+                return CreateErrorResponse<EvaluationResultSaveResponseDto>(
+                    "Failed to save evaluation results", StatusCodes.Status500InternalServerError);
             }
         }
 
@@ -381,9 +398,20 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogInformation("Optimized successfully retrieved {Count} evaluation runs for AgentId: {AgentId}", evalRuns.Count, agentId);
                 return Ok(evalRuns);
             }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                return HandleAzureException<List<EvalRunDto>>(ex, "Failed to retrieve evaluation runs");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Optimized error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                    return CreateErrorResponse<List<EvalRunDto>>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
+                _logger.LogError(ex, "Error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
                 return CreateErrorResponse<List<EvalRunDto>>("Failed to retrieve evaluation runs", StatusCodes.Status500InternalServerError);
             }
         }
@@ -496,9 +524,22 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogInformation("Optimized successfully retrieved {Count} evaluation results for AgentId: {AgentId} in date range", results.Count, agentId);
                 return Ok(results);
             }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
+                    agentId, startDateTime, endDateTime);
+                return HandleAzureException<List<EvaluationResultResponseDto>>(ex, "Failed to retrieve evaluation results");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Optimized error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
+                        agentId, startDateTime, endDateTime);
+                    return CreateErrorResponse<List<EvaluationResultResponseDto>>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
+                _logger.LogError(ex, "Error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
                     agentId, startDateTime, endDateTime);
                 return CreateErrorResponse<List<EvaluationResultResponseDto>>("Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
             }

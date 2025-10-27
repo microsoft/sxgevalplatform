@@ -2,6 +2,7 @@
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
+using System.ComponentModel.DataAnnotations;
 
 namespace SxgEvalPlatformApi.Controllers
 {
@@ -29,16 +30,18 @@ namespace SxgEvalPlatformApi.Controllers
         /// <summary>
         /// Get all datasets for an agent
         /// </summary>
-        /// <param name="agentId">Unique ID of the agent (from query string)</param>
+        /// <param name="agentId">Unique ID of the agent (from query string) - Required</param>
         /// <returns>All datasets associated with the agent</returns>
         /// <response code="200">Datasets retrieved successfully</response>
+        /// <response code="400">Invalid or missing agent ID</response>
         /// <response code="404">No datasets found for this agent</response>
         /// <response code="500">Internal server error</response>
         [HttpGet]
         [ProducesResponseType(typeof(IList<DatasetMetadataDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery] string agentId)
+        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery, Required] string agentId)
         {
             try
             {

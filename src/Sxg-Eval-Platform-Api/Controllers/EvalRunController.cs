@@ -55,10 +55,10 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("High-performance request to retrieve evaluation run with ID: {EvalRunId}", evalRunId);
 
-                if (evalRunId == Guid.Empty)
+                var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+                if (evalRunIdValidation != null)
                 {
-                    _logger.LogWarning("Invalid evaluation run ID: {EvalRunId}", evalRunId);
-                    return CreateErrorResponse<EvalRunDto>("Invalid evaluation run ID format", StatusCodes.Status400BadRequest);
+                    return evalRunIdValidation;
                 }
 
                 // Generate cache key
@@ -105,8 +105,19 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogInformation("High-performance successfully retrieved evaluation run with ID: {EvalRunId}", evalRunId);
                 return Ok(evalRun);
             }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+                return HandleAzureException<EvalRunDto>(ex, "Failed to retrieve evaluation run");
+            }
             catch (Exception ex)
             {
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+                    return CreateErrorResponse<EvalRunDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
                 _logger.LogError(ex, "High-performance error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
                 return CreateErrorResponse<EvalRunDto>("Failed to retrieve evaluation run", StatusCodes.Status500InternalServerError);
             }
@@ -138,6 +149,9 @@ namespace SxgEvalPlatformApi.Controllers
                 ValidateAndAddToModelState(createDto.AgentId, "AgentId", "agentid");
                 ValidateAndAddToModelState(createDto.Type, "Type", "type");
                 ValidateAndAddToModelState(createDto.AgentSchemaName, "AgentSchemaName", "agentschemaname");
+                
+                // Validate that the referenced entities exist
+                await ValidateReferencedEntitiesAsync(createDto);
                 
                 if (!ModelState.IsValid)
                 {
@@ -200,8 +214,19 @@ namespace SxgEvalPlatformApi.Controllers
                     new { evalRunId = evalRun.EvalRunId }, 
                     evalRun);
             }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while creating evaluation run");
+                return HandleAzureException<EvalRunDto>(ex, "Failed to create evaluation run");
+            }
             catch (Exception ex)
             {
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while creating evaluation run");
+                    return CreateErrorResponse<EvalRunDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
                 _logger.LogError(ex, "High-performance error occurred while creating evaluation run");
                 return CreateErrorResponse<EvalRunDto>("Failed to create evaluation run", StatusCodes.Status500InternalServerError);
             }
@@ -232,10 +257,10 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 _logger.LogInformation("High-performance request to update evaluation run status for ID: {EvalRunId}", evalRunId);
 
-                if (evalRunId == Guid.Empty)
+                var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+                if (evalRunIdValidation != null)
                 {
-                    _logger.LogWarning("Invalid evaluation run ID: {EvalRunId}", evalRunId);
-                    return CreateErrorResponse<UpdateResponseDto>("Invalid evaluation run ID format", StatusCodes.Status400BadRequest);
+                    return evalRunIdValidation;
                 }
 
                 if (!ModelState.IsValid)
@@ -248,12 +273,43 @@ namespace SxgEvalPlatformApi.Controllers
                     _configuration,
                     this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
 
-                // First get the eval run to find the agentId
+                // First get the eval run to find the agentId and check current status
                 var existingEntity = await evalRunTableService.GetEvalRunByIdAsync(evalRunId);
                 if (existingEntity == null)
                 {
                     _logger.LogWarning("Evaluation run with ID {EvalRunId} not found for status update", evalRunId);
-                    return CreateErrorResponse<UpdateResponseDto>($"Evaluation run with ID {evalRunId} not found", StatusCodes.Status404NotFound);
+                    return NotFound(new UpdateResponseDto 
+                    { 
+                        Success = false, 
+                        Message = $"Evaluation run with ID {evalRunId} not found" 
+                    });
+                }
+
+                // Check if the current status is already in a terminal state
+                var terminalStatuses = new[] { Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Completed, 
+                                             Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Failed };
+                if (terminalStatuses.Any(status => string.Equals(status, existingEntity.Status, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest(new UpdateResponseDto
+                    {
+                        Success = false,
+                        Message = $"Cannot update status for evaluation run with ID {evalRunId}. " +
+                                 $"The evaluation run is already in a terminal state '{existingEntity.Status}' and cannot be modified."
+                    });
+                }
+
+                // Validate status value
+                var validStatuses = new[] 
+                { 
+                    Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Queued, 
+                    Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Running, 
+                    Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Completed, 
+                    Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Failed 
+                };
+
+                if (!validStatuses.Any(status => string.Equals(status, updateDto.Status, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return CreateBadRequestResponse<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
                 }
 
                 // Update the status
@@ -280,10 +336,81 @@ namespace SxgEvalPlatformApi.Controllers
                     Message = $"Evaluation run status updated successfully to {updateDto.Status}"
                 });
             }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure error occurred while updating evaluation run status");
+                return HandleAzureException<UpdateResponseDto>(ex, "Failed to update evaluation run status");
+            }
             catch (Exception ex)
             {
+                if (IsAuthorizationError(ex))
+                {
+                    _logger.LogWarning(ex, "Authorization error occurred while updating evaluation run status");
+                    return CreateErrorResponse<UpdateResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+                }
+                
                 _logger.LogError(ex, "High-performance error occurred while updating evaluation run status for ID: {EvalRunId}", evalRunId);
                 return CreateErrorResponse<UpdateResponseDto>("Failed to update evaluation run status", StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        #endregion
+
+        #region Private Helper Methods
+
+        /// <summary>
+        /// Validates that referenced entities (dataset, metrics configuration) exist and belong to the specified agent
+        /// </summary>
+        /// <param name="createDto">The evaluation run creation DTO</param>
+        private async Task ValidateReferencedEntitiesAsync(CreateEvalRunDto createDto)
+        {
+            // Validate DataSet exists and belongs to the agent
+            try
+            {
+                var dataSetTableService = new DataSetTableService(
+                    _configuration,
+                    this.HttpContext.RequestServices.GetRequiredService<ILogger<DataSetTableService>>());
+
+                var dataset = await dataSetTableService.GetDataSetAsync(createDto.AgentId, createDto.DataSetId.ToString());
+                if (dataset == null)
+                {
+                    ModelState.AddModelError(nameof(createDto.DataSetId), 
+                        $"Dataset with ID '{createDto.DataSetId}' not found for agent '{createDto.AgentId}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating dataset ID: {DataSetId} for agent: {AgentId}", 
+                    createDto.DataSetId, createDto.AgentId);
+                ModelState.AddModelError(nameof(createDto.DataSetId), 
+                    "Unable to validate dataset. Please check the dataset ID.");
+            }
+
+            // Validate Metrics Configuration exists
+            try
+            {
+                var metricsConfigTableService = new MetricsConfigTableService(
+                    _configuration,
+                    this.HttpContext.RequestServices.GetRequiredService<ILogger<MetricsConfigTableService>>());
+
+                var metricsConfig = await metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
+                if (metricsConfig == null)
+                {
+                    ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                        $"Metrics configuration with ID '{createDto.MetricsConfigurationId}' not found");
+                }
+                else if (metricsConfig.PartitionKey != createDto.AgentId)
+                {
+                    ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                        $"Metrics configuration '{createDto.MetricsConfigurationId}' does not belong to agent '{createDto.AgentId}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating metrics configuration ID: {MetricsConfigurationId}", 
+                    createDto.MetricsConfigurationId);
+                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                    "Unable to validate metrics configuration. Please check the configuration ID.");
             }
         }
 
