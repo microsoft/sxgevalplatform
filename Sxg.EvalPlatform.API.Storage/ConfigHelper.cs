@@ -125,7 +125,27 @@ namespace Sxg.EvalPlatform.API.Storage
                 throw new InvalidOperationException("Application Insights connection string is not configured.");
             }
             return metricsConfigurationFolderName;
-
         }
+
+        public string GetDatasetEnrichmentRequestsQueueName()
+        {
+            var queueName = _configuration["AzureStorage:DatasetEnrichmentRequestsQueueName"];
+            if (string.IsNullOrEmpty(queueName))
+            {
+                throw new InvalidOperationException("Azure Storage Dataset Enrichment Requests queue name is not configured.");
+            }
+            return queueName;
+        }
+
+        public string GetEvalProcessingRequestsQueueName()
+        {
+            var queueName = _configuration["AzureStorage:EvalProcessingRequestsQueueName"];
+            if (string.IsNullOrEmpty(queueName))
+            {
+                throw new InvalidOperationException("Azure Storage Eval Processing Requests queue name is not configured.");
+            }
+            return queueName;
+        }
+
     }
 }

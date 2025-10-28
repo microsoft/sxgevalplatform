@@ -1,30 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Azure;
 using Azure.Data.Tables;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Models;
 
-/// <summary>
-/// Enumeration for evaluation run status
-/// </summary>
-public enum EvalRunStatus
-{
-    Queued,
-    Running,
-    Completed,
-    Failed
-}
-
-/// <summary>
-/// Constants for evaluation run status values
-/// </summary>
-public static class EvalRunStatusConstants
-{
-    public const string Queued = "Queued";
-    public const string Running = "Running";
-    public const string Completed = "Completed";
-    public const string Failed = "Failed";
-}
 
 /// <summary>
 /// Azure Table entity for evaluation run data
@@ -40,7 +20,7 @@ public class EvalRunEntity : ITableEntity
     public string MetricsConfigurationId { get; set; } = string.Empty;
     public string DataSetId { get; set; } = string.Empty;
     public string AgentId { get; set; } = string.Empty;
-    public string Status { get; set; } = EvalRunStatusConstants.Queued;
+    public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
     public string? LastUpdatedBy { get; set; }
     public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
@@ -61,12 +41,24 @@ public class EvalRunDto
     public string MetricsConfigurationId { get; set; } = string.Empty;
     public string DataSetId { get; set; } = string.Empty;
     public string AgentId { get; set; } = string.Empty;
-    public string Status { get; set; } = EvalRunStatusConstants.Queued;
+    public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
     public string? LastUpdatedBy { get; set; }
     public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
     // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
+}
+
+/// <summary>
+/// DTO for evaluation run status information
+/// </summary>
+public class EvalRunStatusDto
+{
+    public Guid EvalRunId { get; set; } = Guid.Empty;
+    public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
+    public string? LastUpdatedBy { get; set; }
+    public DateTime? StartedDatetime { get; set; }
+    public DateTime? CompletedDatetime { get; set; }
 }
 
 /// <summary>
@@ -85,7 +77,7 @@ public class CreateEvalRunDto
     public Guid MetricsConfigurationId { get; set; }
     
     /// <summary>
-    /// Type of agent/evaluation system (e.g., MCS, AI Foundary, SK)
+    /// Type of agent/evaluation system (e.g., MCS, AI Foundery, SK)
     /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]

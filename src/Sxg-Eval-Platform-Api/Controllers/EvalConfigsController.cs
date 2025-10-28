@@ -8,16 +8,16 @@ using System.ComponentModel.DataAnnotations;
 namespace SxgEvalPlatformApi.Controllers
 {
     [Route("api/v1/eval")]
-    public class EvalConfigController : BaseController
+    public class EvalConfigsController : BaseController
     {
         //private readonly IEvaluationConfigurationService _configurationService;
         private readonly IMetricsConfigurationRequestHandler _metricsConfigurationRequestHandler; 
         private readonly IConfiguration _configuration;
 
-        public EvalConfigController(
+        public EvalConfigsController(
             IMetricsConfigurationRequestHandler metricsConfigurationRequestHandler,
             IConfiguration configuration,
-            ILogger<EvalConfigController> logger)
+            ILogger<EvalConfigsController> logger)
             : base(logger)
         {
             _metricsConfigurationRequestHandler = metricsConfigurationRequestHandler;
@@ -29,7 +29,7 @@ namespace SxgEvalPlatformApi.Controllers
 
         #region GET Methods
 
-        [HttpGet("defaultconfiguration")]
+        [HttpGet("configurations/defaultconfiguration")]
         [ProducesResponseType(typeof(MetricsConfiguration), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

@@ -4,6 +4,7 @@ using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.Services;
 
@@ -29,20 +30,12 @@ public class EvalRunTableService : IEvalRunTableService
 
         var tableUri = $"https://{accountName}.table.core.windows.net";
         var environment = configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
-        
-        if (environment == "Development")
-        {
-            // Use default Azure credentials for development
-            var serviceClient = new TableServiceClient(new Uri(tableUri), new DefaultAzureCredential());
-            _tableClient = serviceClient.GetTableClient(TableName);
-        }
-        else
-        {
-            // Use managed identity in production
-            var serviceClient = new TableServiceClient(new Uri(tableUri), new ManagedIdentityCredential());
-            _tableClient = serviceClient.GetTableClient(TableName);
-        }
-        
+        var tokenCredential = CommonUtils.GetTokenCredential(environment);
+
+        var serviceClient = new TableServiceClient(new Uri(tableUri), tokenCredential);
+        _tableClient = serviceClient.GetTableClient(TableName);
+
+
         // Ensure table exists
         try
         {
@@ -97,8 +90,8 @@ public class EvalRunTableService : IEvalRunTableService
             entity.LastUpdatedBy = lastUpdatedBy ?? "System";
             
             // Set completion datetime if status is Completed or Failed
-            if (string.Equals(status, EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase) || 
-                string.Equals(status, EvalRunStatusConstants.Failed, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(status, CommonConstants.EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(status, CommonConstants.EvalRunStatus.EvalRunFailed, StringComparison.OrdinalIgnoreCase))
             {
                 entity.CompletedDatetime = DateTime.UtcNow;
             }
@@ -198,6 +191,54 @@ public class EvalRunTableService : IEvalRunTableService
             throw;
         }
     }
+
+    public async Task<IList<EvalRunTableEntity>> GetEvalRunsByAgentIdAndDateFilterAsync(string agentId, DateTime? startDate, DateTime? endDate)
+    {
+        try
+        {
+            string filter = $"PartitionKey eq '{agentId}'"; 
+
+            if (startDate.HasValue)
+            {
+                // Treat the input date as UTC to avoid timezone conversion issues
+                var startDateForFilter = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
+                filter += $" and LastUpdatedOn ge datetime'{startDateForFilter:yyyy-MM-ddTHH:mm:ss.fffZ}'";
+            }
+
+            if (endDate.HasValue)
+            {
+                // Treat the input date as UTC to avoid timezone conversion issues
+                var endDateForFilter = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
+                filter += $" and LastUpdatedOn le datetime'{endDateForFilter:yyyy-MM-ddTHH:mm:ss.fffZ}'";
+            }
+
+            _logger.LogInformation("Executing query with filter: {Filter}", filter);
+
+            var query = _tableClient.QueryAsync<EvalRunTableEntity>(
+                filter: filter);
+
+            var results = new List<EvalRunTableEntity>();
+            
+            await foreach (var entity in query)
+            {
+                results.Add(entity);
+            }
+            
+            // Order by LastUpdatedOn descending (most recent first)
+            results = results.OrderByDescending(x => x.LastUpdatedOn).ToList();
+            
+            _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId} with date filter, ordered by LastUpdatedOn desc", 
+                results.Count, agentId);
+            
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId} with date filter", agentId);
+            throw;
+        }
+    }
+
 
     /// <summary>
     /// Update an evaluation run entity

@@ -5,6 +5,7 @@ using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using System.Text.Json;
+using static SXG.EvalPlatform.Common.CommonConstants;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -48,7 +49,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 
                 // Store container name and blob path separately for better blob storage handling
                 var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
-                var blobFilePath = $"evalresults/{evalRunId}/"; // Create folder structure for multiple output files
+                var blobFilePath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/"; // Create folder structure for multiple output files
                 
                 var entity = new EvalRunTableEntity
                 {
@@ -56,7 +57,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     AgentId = createDto.AgentId, // This will also set PartitionKey
                     DataSetId = createDto.DataSetId.ToString(),
                     MetricsConfigurationId = createDto.MetricsConfigurationId.ToString(),
-                    Status = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Queued,
+                    Status = EvalRunStatus.RequestSubmitted,
                     LastUpdatedOn = currentDateTime,
                     StartedDatetime = currentDateTime,
                     ContainerName = containerName,
@@ -143,14 +144,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 // Normalize the status to ensure consistent casing in storage
                 string normalizedStatus = updateDto.Status;
-                if (string.Equals(updateDto.Status, Models.EvalRunStatusConstants.Queued, StringComparison.OrdinalIgnoreCase))
-                    normalizedStatus = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Queued;
-                else if (string.Equals(updateDto.Status, Models.EvalRunStatusConstants.Running, StringComparison.OrdinalIgnoreCase))
-                    normalizedStatus = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Running;
-                else if (string.Equals(updateDto.Status, Models.EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase))
-                    normalizedStatus = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Completed;
-                else if (string.Equals(updateDto.Status, Models.EvalRunStatusConstants.Failed, StringComparison.OrdinalIgnoreCase))
-                    normalizedStatus = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Failed;
+
+                if (string.Equals(updateDto.Status, EvalRunStatus.EvalRunStarted, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.EvalRunStarted;
+                else if (string.Equals(updateDto.Status, EvalRunStatus.EnrichingDataset, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.EnrichingDataset;
+                else if (string.Equals(updateDto.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.EvalRunCompleted;
+                else if (string.Equals(updateDto.Status, EvalRunStatus.DatasetEnrichmentCompleted, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.DatasetEnrichmentCompleted;
+                else if (string.Equals(updateDto.Status, EvalRunStatus.EvalRunFailed, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.EvalRunFailed;
+                else if (string.Equals(updateDto.Status, EvalRunStatus.RequestSubmitted, StringComparison.OrdinalIgnoreCase))
+                    normalizedStatus = EvalRunStatus.RequestSubmitted;
+
 
                 var updatedEntity = await _evalRunTableService.UpdateEvalRunStatusAsync(
                     updateDto.AgentId, 
@@ -227,12 +234,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Get all evaluation runs for an agent
         /// </summary>
-        public async Task<List<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId)
+        public async Task<IList<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId, DateTime? startDateTime, DateTime? endDateTime)
         {
             try
             {
-                var entities = await _evalRunTableService.GetEvalRunsByAgentIdAsync(agentId);
-                
+                var entities = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
+
                 var results = entities.Select(MapEntityToDto).ToList();
                 
                 _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId}", 

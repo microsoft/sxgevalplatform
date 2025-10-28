@@ -1,18 +1,19 @@
 using Azure;
 using Azure.Data.Tables;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.TableEntities
 {
     /// <summary>
     /// Constants for evaluation run status values
     /// </summary>
-    public static class EvalRunStatusConstants
-    {
-        public const string Queued = "Queued";
-        public const string Running = "Running";
-        public const string Completed = "Completed";
-        public const string Failed = "Failed";
-    }
+    //public static class EvalRunStatusConstants
+    //{
+    //    public const string Queued = "Queued";
+    //    public const string Running = "Running";
+    //    public const string Completed = "Completed";
+    //    public const string Failed = "Failed";
+    //}
 
     /// <summary>
     /// Entity class for storing evaluation run data in Azure Table Storage
@@ -34,7 +35,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
             RowKey = _evalRunId;
             LastUpdatedOn = DateTime.UtcNow;
             StartedDatetime = DateTime.UtcNow;
-            Status = EvalRunStatusConstants.Queued;
+            Status = CommonConstants.EvalRunStatus.RequestSubmitted;
         }
 
         /// <summary>
@@ -64,7 +65,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         // Business properties
         public string MetricsConfigurationId { get; set; } = string.Empty;
         public string DataSetId { get; set; } = string.Empty;
-        public string Status { get; set; } = EvalRunStatusConstants.Queued;
+        public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
         public string? LastUpdatedBy { get; set; }
         public DateTime? LastUpdatedOn { get; set; }
         public DateTime? StartedDatetime { get; set; }

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Azure;
 using Azure.Data.Tables;
-using SxgEvalPlatformApi.Models.Dtos;
 
 namespace SxgEvalPlatformApi.Models
 {
@@ -10,13 +10,17 @@ namespace SxgEvalPlatformApi.Models
     /// </summary>
     public class EvalDataset
     {
-        public string Prompt { get; set; } = string.Empty;
-        
+        [JsonPropertyName("query")]
+        public string Query { get; set; } = string.Empty;
+
+        [JsonPropertyName("groundTruth")]
         public string GroundTruth { get; set; } = string.Empty;
-        
+
+        [JsonPropertyName("actualResponse")]
         public string ActualResponse { get; set; } = string.Empty;
         
-        public string ExpectedResponse { get; set; } = string.Empty;
+        [JsonPropertyName("context")]
+        public string Context { get; set; } = string.Empty;
     }
 
     /// <summary>

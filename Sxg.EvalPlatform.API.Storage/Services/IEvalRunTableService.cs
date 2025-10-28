@@ -46,6 +46,8 @@ public interface IEvalRunTableService
     /// <returns>List of EvalRun table entities</returns>
     Task<List<EvalRunTableEntity>> GetEvalRunsByAgentIdAsync(string agentId);
 
+    Task<IList<EvalRunTableEntity>> GetEvalRunsByAgentIdAndDateFilterAsync(string agentId, DateTime? startDate, DateTime? endDate);
+
     /// <summary>
     /// Update an evaluation run entity
     /// </summary>

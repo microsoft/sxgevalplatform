@@ -36,13 +36,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="evalRunId">Evaluation run ID</param>
         /// <returns>Evaluation run or null if not found</returns>
         Task<EvalRunDto?> GetEvalRunByIdAsync(Guid evalRunId);
-        
+
         /// <summary>
         /// Get all evaluation runs for an agent
         /// </summary>
         /// <param name="agentId">Agent ID</param>
+        /// <param name="startDateTime"></param>
+        /// <param name="endDateTime"></param>
         /// <returns>List of evaluation runs</returns>
-        Task<List<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId);
+        Task<IList<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId, DateTime? startDateTime, DateTime? endDateTime);
         
         /// <summary>
         /// Get evaluation run entity with internal details (for internal use only)

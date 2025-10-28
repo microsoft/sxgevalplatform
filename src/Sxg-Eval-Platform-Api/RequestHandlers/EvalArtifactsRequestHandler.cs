@@ -158,6 +158,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
                 var blobPath = $"enriched-datasets/{evalRunId}.json";
 
+                
                 // Serialize the enriched dataset to JSON string
                 var jsonContent = JsonSerializer.Serialize(enrichedDataset, new JsonSerializerOptions 
                 { 
@@ -174,6 +175,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 _logger.LogInformation("Successfully stored enriched dataset for EvalRunId: {EvalRunId} at path: {BlobPath}", 
                     evalRunId, blobPath);
+
+                //Update evaluation run entity to mark enriched dataset as stored
+                await _evalRunRequestHandler.UpdateEvalRunStatusAsync(new UpdateEvalRunStatusDto() { AgentId = evalRunEntity.AgentId, EvalRunId = evalRunEntity.EvalRunId, Status = CommonConstants.EvalRunStatus.DatasetEnrichmentCompleted });
 
                 // Send message to evaluation processing queue (now includes dataset ID)
                 await SendEvalProcessingRequestAsync(evalRunId, evalRunEntity.MetricsConfigurationId, evalRunId.ToString(), evalRunEntity.AgentId, evalRunEntity.DataSetId, blobPath);

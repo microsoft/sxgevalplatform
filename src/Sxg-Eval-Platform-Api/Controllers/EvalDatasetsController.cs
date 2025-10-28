@@ -3,22 +3,26 @@ using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
 
+
 namespace SxgEvalPlatformApi.Controllers
 {
-    [Route("api/v1/datasets")]
-    public class EvalDatasetController : BaseController
+    [Route("api/v1/eval/datasets")]
+    public class EvalDatasetsController : BaseController
     {
         private readonly IDataSetRequestHandler _dataSetRequestHandler;
         private readonly IConfiguration _configuration;
+        private readonly IEvalArtifactsRequestHandler _evalArtifactsRequestHandler;
 
-        public EvalDatasetController(
+        public EvalDatasetsController(
             IDataSetRequestHandler dataSetRequestHandler,
             IConfiguration configuration,
-            ILogger<EvalDatasetController> logger)
+            IEvalArtifactsRequestHandler evalArtifactsRequestHandler,
+            ILogger<EvalDatasetsController> logger)
             : base(logger)
         {
             _dataSetRequestHandler = dataSetRequestHandler;
             _configuration = configuration;
+            _evalArtifactsRequestHandler = evalArtifactsRequestHandler;
 
             // Log controller initialization for debugging
             _logger.LogInformation("EvalDatasetController initialized");
@@ -120,43 +124,7 @@ namespace SxgEvalPlatformApi.Controllers
             }
         }
 
-        /// <summary>
-        /// Get dataset metadata by dataset ID
-        /// </summary>
-        /// <param name="datasetId">Unique ID of the dataset</param>
-        /// <returns>Dataset metadata</returns>
-        /// <response code="200">Dataset metadata retrieved successfully</response>
-        /// <response code="404">Dataset not found</response>
-        /// <response code="500">Internal server error</response>
-        [HttpGet("{datasetId}/metadata")]
-        [ProducesResponseType(typeof(DatasetMetadataDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<DatasetMetadataDto>> GetDatasetMetadataById(Guid datasetId)
-        {
-            try
-            {
-                _logger.LogInformation("Request to retrieve dataset metadata for dataset: {DatasetId}", datasetId);
-
-                var metadata = await _dataSetRequestHandler.GetDatasetMetadataByIdAsync(datasetId.ToString());
-
-                if (metadata == null)
-                {
-                    _logger.LogInformation("Dataset metadata not found: {DatasetId}", datasetId);
-                    return NotFound($"Dataset metadata not found: {datasetId}");
-                }
-
-                _logger.LogInformation("Successfully retrieved dataset metadata for dataset: {DatasetId}", datasetId);
-                return Ok(metadata);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while retrieving dataset metadata: {DatasetId}", datasetId);
-                return CreateErrorResponse<DatasetMetadataDto>(
-                    $"Failed to retrieve dataset metadata: {datasetId}", 500);
-            }
-        }
-
+        
         #endregion
 
         #region POST Methods
@@ -319,5 +287,8 @@ namespace SxgEvalPlatformApi.Controllers
         }
 
         #endregion
+
+
+        
     }
 }

@@ -9,8 +9,8 @@ namespace SxgEvalPlatformApi.Models;
 /// </summary>
 public class SaveEvaluationResultDto
 {
-    [Required(ErrorMessage = "EvalRunId is required")]
-    public Guid EvalRunId { get; set; } = Guid.Empty;
+    //[Required(ErrorMessage = "EvalRunId is required")]
+    //public Guid EvalRunId { get; set; } = Guid.Empty;
     
     /// <summary>
     /// Flexible JSON structure containing evaluation results. 

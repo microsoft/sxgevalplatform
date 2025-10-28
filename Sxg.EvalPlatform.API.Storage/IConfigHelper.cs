@@ -1,4 +1,5 @@
-﻿namespace Sxg.EvalPlatform.API.Storage
+﻿
+namespace Sxg.EvalPlatform.API.Storage
 {
     public interface IConfigHelper
     {
@@ -14,5 +15,7 @@
         string GetMetricsConfigurationsTable();
         string GetPlatformConfigurationsContainer();
         string MetricsConfigurationsFolderName();
+        string GetDatasetEnrichmentRequestsQueueName();
+        string GetEvalProcessingRequestsQueueName();
     }
 }

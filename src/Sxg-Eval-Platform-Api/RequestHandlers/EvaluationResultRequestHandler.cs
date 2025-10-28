@@ -1,10 +1,12 @@
-using System.Text.Json;
-using System.Linq;
 using AutoMapper;
-using SxgEvalPlatformApi.Models;
+using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
+using SxgEvalPlatformApi.Models;
+using System.Linq;
+using System.Text.Json;
+using static SXG.EvalPlatform.Common.CommonConstants;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -17,65 +19,68 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IEvalRunRequestHandler _evalRunRequestHandler;
         private readonly ILogger<EvaluationResultRequestHandler> _logger;
         private readonly IMapper _mapper;
+        private readonly IConfigHelper _configHelper;
 
         public EvaluationResultRequestHandler(
             IAzureBlobStorageService blobService,
             IEvalRunRequestHandler evalRunRequestHandler,
             ILogger<EvaluationResultRequestHandler> logger,
+            IConfigHelper configHelper, 
             IMapper mapper)
         {
             _blobService = blobService;
             _evalRunRequestHandler = evalRunRequestHandler;
             _logger = logger;
             _mapper = mapper;
+            _configHelper = configHelper;
         }
 
         /// <summary>
         /// Save evaluation results to blob storage
         /// </summary>
-        public async Task<EvaluationResultSaveResponseDto> SaveEvaluationResultAsync(SaveEvaluationResultDto saveDto)
+        public async Task<EvaluationResultSaveResponseDto> SaveEvaluationResultAsync(Guid evalRunId, SaveEvaluationResultDto saveDto)
         {
             try
             {
-                _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
 
                 // First, verify that the EvalRunId exists and get internal details
-                var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(saveDto.EvalRunId);
+                var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
                 if (evalRun == null)
                 {
-                    _logger.LogWarning("EvalRunId not found: {EvalRunId}", saveDto.EvalRunId);
+                    _logger.LogWarning("EvalRunId not found: {EvalRunId}", evalRunId);
                     return new EvaluationResultSaveResponseDto
                     {
                         Success = false,
-                        Message = $"EvalRunId '{saveDto.EvalRunId}' not found. Please provide a valid EvalRunId.",
-                        EvalRunId = saveDto.EvalRunId
+                        Message = $"EvalRunId '{evalRunId}' not found. Please provide a valid EvalRunId.",
+                        EvalRunId = evalRunId
                     };
                 }
 
                 // Get internal entity details for blob storage
-                var evalRunEntity = await _evalRunRequestHandler.GetEvalRunEntityByIdAsync(saveDto.EvalRunId);
+                var evalRunEntity = await _evalRunRequestHandler.GetEvalRunEntityByIdAsync(evalRunId);
                 if (evalRunEntity == null)
                 {
-                    _logger.LogError("Could not retrieve internal entity details for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                    _logger.LogError("Could not retrieve internal entity details for EvalRunId: {EvalRunId}", evalRunId);
                     return new EvaluationResultSaveResponseDto
                     {
                         Success = false,
                         Message = "Failed to retrieve evaluation run details",
-                        EvalRunId = saveDto.EvalRunId
+                        EvalRunId = evalRunId
                     };
                 }
 
                 // Validate that the evaluation run has a terminal status (Completed or Failed)
-                var allowedStatuses = new[] { Models.EvalRunStatusConstants.Completed, Models.EvalRunStatusConstants.Failed };
+                var allowedStatuses = new[] { EvalRunStatus.EvalRunCompleted, EvalRunStatus.EvalRunFailed };
                 if (!allowedStatuses.Any(status => string.Equals(status, evalRun.Status, StringComparison.OrdinalIgnoreCase)))
                 {
                     _logger.LogWarning("Cannot save evaluation results for EvalRunId: {EvalRunId} with status: {Status}. Results can only be saved for evaluations with status 'Completed' or 'Failed'.", 
-                        saveDto.EvalRunId, evalRun.Status);
+                        evalRunId, evalRun.Status);
                     return new EvaluationResultSaveResponseDto
                     {
                         Success = false,
                         Message = $"Cannot save evaluation results for evaluation run with status '{evalRun.Status}'. Results can only be saved for evaluations with status 'Completed' or 'Failed'.",
-                        EvalRunId = saveDto.EvalRunId
+                        EvalRunId = evalRunId
                     };
                 }
 
@@ -99,20 +104,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     }
                     else
                     {
-                        blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{saveDto.EvalRunId}/{fileName}";
+                        blobPath = evalRunEntity.BlobFilePath ?? $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
                     }
                 }
                 else
                 {
                     // Backward compatibility: parse the old format
                     containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
-                    blobPath = $"evalresults/{saveDto.EvalRunId}/{fileName}";
+                    blobPath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
                 }
 
                 // Serialize evaluation records to JSON using the storage model
                 var storageModel = new StoredEvaluationResultDto
                 {
-                    EvalRunId = saveDto.EvalRunId,
+                    EvalRunId = evalRunId,
                     FileName = fileName,
                     AgentId = evalRun.AgentId,
                     DataSetId = evalRun.DataSetId,
@@ -130,24 +135,24 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 await _blobService.WriteBlobContentAsync(containerName, blobPath, jsonContent);
 
                 _logger.LogInformation("Successfully saved evaluation results for EvalRunId: {EvalRunId} to {BlobPath}", 
-                    saveDto.EvalRunId, $"{containerName}/{blobPath}");
+                    evalRunId, $"{containerName}/{blobPath}");
 
                 return new EvaluationResultSaveResponseDto
                 {
                     Success = true,
                     Message = "Evaluation results saved successfully",
-                    EvalRunId = saveDto.EvalRunId,
+                    EvalRunId = evalRunId,
                     BlobPath = $"{containerName}/{blobPath}"
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
                 return new EvaluationResultSaveResponseDto
                 {
                     Success = false,
                     Message = "Failed to save evaluation results",
-                    EvalRunId = saveDto.EvalRunId
+                    EvalRunId = evalRunId
                 };
             }
         }
@@ -170,6 +175,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     {
                         Success = false,
                         Message = $"EvalRunId '{evalRunId}' not found. Please provide a valid EvalRunId.",
+                        EvalRunId = evalRunId
+                    };
+                }
+
+                // Check if the evaluation run status is EvalRunCompleted
+                if (!string.Equals(evalRun.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Evaluation results not available for EvalRunId: {EvalRunId} with status: {Status}. Results are only available for completed evaluations.", 
+                        evalRunId, evalRun.Status);
+                    
+                    return new EvaluationResultResponseDto
+                    {
+                        Success = false,
+                        Message = "Evaluation results not available. Results are only available for completed evaluations.",
                         EvalRunId = evalRunId
                     };
                 }
@@ -308,13 +327,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Get all evaluation runs for a specific agent
         /// </summary>
-        public async Task<List<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId)
+        public async Task<IList<EvalRunDto>> GetEvalRunsByAgentIdAsync(string agentId, DateTime? startDateTime, DateTime? endDateTime)
         {
             try
             {
                 _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
-                
-                return await _evalRunRequestHandler.GetEvalRunsByAgentIdAsync(agentId);
+
+                return await _evalRunRequestHandler.GetEvalRunsByAgentIdAsync(agentId, startDateTime, endDateTime);
             }
             catch (Exception ex)
             {
@@ -326,7 +345,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Get evaluation results for a specific agent within a date range
         /// </summary>
-        public async Task<List<EvaluationResultResponseDto>> GetEvaluationResultsByDateRangeAsync(string agentId, DateTime startDateTime, DateTime endDateTime)
+        public async Task<IList<EvaluationResultResponseDto>> GetEvaluationResultsByDateRangeAsync(string agentId, DateTime startDateTime, DateTime endDateTime)
         {
             try
             {
@@ -334,14 +353,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     agentId, startDateTime, endDateTime);
 
                 // Get all evaluation runs for the agent
-                var evalRuns = await _evalRunRequestHandler.GetEvalRunsByAgentIdAsync(agentId);
-                
+                var evalRuns = await _evalRunRequestHandler.GetEvalRunsByAgentIdAsync(agentId, startDateTime, endDateTime);
+
                 // Filter runs within the date range and only include completed ones
                 var filteredRuns = evalRuns
                     .Where(run => run.StartedDatetime.HasValue &&
                                  run.StartedDatetime.Value >= startDateTime && 
                                  run.StartedDatetime.Value <= endDateTime && 
-                                 string.Equals(run.Status, Models.EvalRunStatusConstants.Completed, StringComparison.OrdinalIgnoreCase))
+                                 string.Equals(run.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
                 _logger.LogInformation("Found {Count} completed evaluation runs within date range for AgentId: {AgentId}", 

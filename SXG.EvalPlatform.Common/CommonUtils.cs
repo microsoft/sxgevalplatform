@@ -1,6 +1,5 @@
 ﻿using Azure.Core;
 using Azure.Identity;
-using System.Linq;
 
 namespace SXG.EvalPlatform.Common
 {
@@ -11,16 +10,16 @@ namespace SXG.EvalPlatform.Common
         {
             var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
 
-            // Use DefaultAzureCredential for both environments for better fallback support
-            // DefaultAzureCredential tries multiple credential types in this order:
-            // 1. Environment variables (for service principals)
-            // 2. Managed Identity (in Azure environments)
-            // 3. Azure CLI (for local development)
-            // 4. Azure PowerShell
-            // 5. Interactive browser (as last resort)
-            TokenCredential credential = new DefaultAzureCredential();
+            // Forcing CLI Credential instantiation in development environment to avoid Visual Studio Credentails
+            if (isDevelopment)
+            {
+                return new AzureCliCredential(); 
+            }
 
-            return credential;
+            return new DefaultAzureCredential();
+
+            
+
         }
         public static string TrimAndRemoveSpaces(string input)
         {
