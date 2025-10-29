@@ -30,6 +30,7 @@ namespace SxG.EvalPlatform.Plugins.Models
         {
             public const string EvalRunId = "cr890_evalrunid";
             public const string Id = "cr890_id";
+            public const string DatasetId = "cr890_datasetid";
             public const string AgentId = "cr890_agentid";
             public const string EnvironmentId = "cr890_environmentid";
             public const string AgentSchemaName = "cr890_agentschemaname";
@@ -72,6 +73,11 @@ namespace SxG.EvalPlatform.Plugins.Models
         /// Primary name field (Id) - Same value as EvalRunId stored as string
         /// </summary>
         public string Id { get; set; }
+
+        /// <summary>
+        /// Dataset identifier (GUID stored as string)
+        /// </summary>
+        public string DatasetId { get; set; }
 
         /// <summary>
         /// Agent identifier (string)
@@ -212,6 +218,9 @@ namespace SxG.EvalPlatform.Plugins.Models
             if (!string.IsNullOrEmpty(this.Id))
                 entity[Fields.Id] = this.Id;
             
+            if (!string.IsNullOrEmpty(this.DatasetId))
+                entity[Fields.DatasetId] = this.DatasetId;
+            
             if (!string.IsNullOrEmpty(this.AgentId))
                 entity[Fields.AgentId] = this.AgentId;
             
@@ -244,6 +253,7 @@ namespace SxG.EvalPlatform.Plugins.Models
             var evalRun = new EvalRunEntity();
             evalRun.EvalRunId = entity.Id;
             evalRun.Id = GetStringValue(entity, Fields.Id);
+            evalRun.DatasetId = GetStringValue(entity, Fields.DatasetId);
             evalRun.AgentId = GetStringValue(entity, Fields.AgentId);
             evalRun.EnvironmentId = GetStringValue(entity, Fields.EnvironmentId);
             evalRun.AgentSchemaName = GetStringValue(entity, Fields.AgentSchemaName);

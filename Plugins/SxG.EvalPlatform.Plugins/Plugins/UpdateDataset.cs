@@ -3,11 +3,7 @@ namespace SxG.EvalPlatform.Plugins
     using System;
     using System.IO;
     using System.Net;
-    using System.Text;
     using Microsoft.Xrm.Sdk;
-    using Microsoft.Xrm.Sdk.Query;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
@@ -15,11 +11,11 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.CustomApis;
 
     /// <summary>
-    /// Plugin for updating dataset from external eval artifacts API and updating eval run records
+    /// Plugin for updating dataset from external eval datasets API and updating eval run records
     /// </summary>
     public class UpdateDataset : PluginBase
     {
-        private const string ExternalDatasetApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/dataset";
+        private const string ExternalDatasetApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/datasets";
 
         public UpdateDataset(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
@@ -56,11 +52,20 @@ namespace SxG.EvalPlatform.Plugins
                     return;
                 }
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
+                // Validate datasetId is provided
+                if (string.IsNullOrWhiteSpace(request.DatasetId))
+                {
+                    tracingService.Trace($"{nameof(UpdateDataset)}: Validation failed - DatasetId is required");
+                    var errorResponse = UpdateDatasetResponse.CreateError("DatasetId is required", request.EvalRunId);
+                    SetResponseParameters(context, errorResponse, tracingService);
+                    return;
+                }
 
-                // Call external dataset API to get dataset data
-                var datasetResponse = CallExternalDatasetApi(request.EvalRunId, tracingService);
-                if (datasetResponse == null)
+                tracingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
+
+                // Call external dataset API to get dataset data using datasetId
+                var datasetJson = CallExternalDatasetApi(request.DatasetId, tracingService);
+                if (datasetJson == null)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, tracingService);
@@ -68,7 +73,7 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 // Update the eval run record with retrieved dataset content
-                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetResponse.DatasetContent, organizationService, tracingService);
+                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, tracingService);
                 if (!updateSuccess)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to update eval run record", request.EvalRunId);
@@ -105,12 +110,16 @@ namespace SxG.EvalPlatform.Plugins
         {
             var request = new UpdateDatasetRequest();
 
-            // Extract only the evalRunId parameter
+            // Extract evalRunId parameter
             if (context.InputParameters.Contains(CustomApiConfig.UpdateDataset.RequestParameters.EvalRunId))
                 request.EvalRunId = context.InputParameters[CustomApiConfig.UpdateDataset.RequestParameters.EvalRunId]?.ToString();
 
+            // Extract datasetId parameter
+            if (context.InputParameters.Contains(CustomApiConfig.UpdateDataset.RequestParameters.DatasetId))
+                request.DatasetId = context.InputParameters[CustomApiConfig.UpdateDataset.RequestParameters.DatasetId]?.ToString();
+
             tracingService.Trace($"{nameof(UpdateDataset)}: Extracted request parameters from context");
-            tracingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {request.EvalRunId}");
+            tracingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
             return request;
         }
@@ -118,14 +127,14 @@ namespace SxG.EvalPlatform.Plugins
         /// <summary>
         /// Calls external dataset API to retrieve dataset data
         /// </summary>
-        /// <param name="evalRunId">Eval Run ID</param>
+        /// <param name="datasetId">Dataset ID</param>
         /// <param name="tracingService">Tracing service</param>
-        /// <returns>External API response data</returns>
-        private ExternalDatasetResponse CallExternalDatasetApi(string evalRunId, ITracingService tracingService)
+        /// <returns>Dataset JSON string or null if failed</returns>
+        private string CallExternalDatasetApi(string datasetId, ITracingService tracingService)
         {
             try
             {
-                string url = $"{ExternalDatasetApiUrl}?evalRunId={evalRunId}";
+                string url = $"{ExternalDatasetApiUrl}/{datasetId}";
                 tracingService.Trace($"{nameof(UpdateDataset)}: Calling external dataset API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -143,8 +152,8 @@ namespace SxG.EvalPlatform.Plugins
                             string responseBody = reader.ReadToEnd();
                             tracingService.Trace($"{nameof(UpdateDataset)}: External dataset API response received: {responseBody}");
 
-                            // Parse the response
-                            return ParseExternalDatasetApiResponse(responseBody, tracingService);
+                            // Return the raw JSON array string as-is for storage
+                            return responseBody;
                         }
                     }
                     else
@@ -157,86 +166,21 @@ namespace SxG.EvalPlatform.Plugins
             catch (WebException webEx)
             {
                 tracingService.Trace($"{nameof(UpdateDataset)}: WebException occurred - {webEx.Message}");
+                if (webEx.Response != null)
+                {
+                    using (Stream responseStream = webEx.Response.GetResponseStream())
+                    using (StreamReader reader = new StreamReader(responseStream))
+                    {
+                        string errorResponse = reader.ReadToEnd();
+                        tracingService.Trace($"{nameof(UpdateDataset)}: Error response: {errorResponse}");
+                    }
+                }
                 return null;
             }
             catch (Exception ex)
             {
                 tracingService.Trace($"{nameof(UpdateDataset)}: Exception in CallExternalDatasetApi - {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Parses external dataset API response using JSON deserialization
-        /// </summary>
-        /// <param name="responseBody">Response body from external API</param>
-        /// <param name="tracingService">Tracing service</param>
-        /// <returns>Parsed response data</returns>
-        private ExternalDatasetResponse ParseExternalDatasetApiResponse(string responseBody, ITracingService tracingService)
-        {
-            try
-            {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Parsing external dataset API response JSON");
-
-                if (string.IsNullOrWhiteSpace(responseBody))
-                {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Response body is empty or null");
-                    return null;
-                }
-
-                // Parse the JSON response
-                var jsonResponse = JObject.Parse(responseBody);
-                
-                // Extract the required fields from the response
-                var response = new ExternalDatasetResponse
-                {
-                    EvalRunId = jsonResponse.Value<string>("evalRunId"),
-                    AgentId = jsonResponse.Value<string>("agentId"),
-                    DataSetId = jsonResponse.Value<string>("dataSetId"),
-                    DatasetContent = null // Will be set below
-                };
-
-                // Extract datasetContent array and serialize it back to JSON string for storage
-                var datasetContentToken = jsonResponse["datasetContent"];
-                if (datasetContentToken != null)
-                {
-                    // Convert the datasetContent array to JSON string for storage in Dataverse
-                    // Use JsonConvert.SerializeObject for maximum compatibility with .NET Framework 4.6.2
-                    response.DatasetContent = JsonConvert.SerializeObject(datasetContentToken);
-                    
-                    // Count items if it's an array
-                    int itemCount = 0;
-                    if (datasetContentToken is JArray datasetArray)
-                    {
-                        itemCount = datasetArray.Count;
-                    }
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Successfully parsed datasetContent with {itemCount} items");
-                }
-                else
-                {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: No datasetContent found in response");
-                }
-
-                tracingService.Trace($"{nameof(UpdateDataset)}: Successfully parsed external dataset API response");
-                tracingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {response.EvalRunId}, AgentId: {response.AgentId}, DataSetId: {response.DataSetId}");
-                
-                return response;
-            }
-            catch (JsonReaderException jsonEx)
-            {
-                tracingService.Trace($"{nameof(UpdateDataset)}: JSON parsing error - {jsonEx.Message}");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Invalid JSON response: {responseBody}");
-                return null;
-            }
-            catch (JsonException jsonEx)
-            {
-                tracingService.Trace($"{nameof(UpdateDataset)}: JSON processing error - {jsonEx.Message}");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Exception parsing external dataset API response - {ex.Message}");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Response body: {responseBody}");
+                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
                 return null;
             }
         }
@@ -245,11 +189,11 @@ namespace SxG.EvalPlatform.Plugins
         /// Updates eval run record with retrieved dataset content
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
-        /// <param name="datasetContent">Retrieved dataset content as JSON string</param>
+        /// <param name="datasetJson">Retrieved dataset content as JSON string</param>
         /// <param name="organizationService">Organization service</param>
         /// <param name="tracingService">Tracing service</param>
         /// <returns>True if update successful</returns>
-        private bool UpdateEvalRunRecord(string evalRunId, string datasetContent, IOrganizationService organizationService, ITracingService tracingService)
+        private bool UpdateEvalRunRecord(string evalRunId, string datasetJson, IOrganizationService organizationService, ITracingService tracingService)
         {
             try
             {
@@ -267,10 +211,10 @@ namespace SxG.EvalPlatform.Plugins
                 };
 
                 // Set data from external dataset API
-                if (!string.IsNullOrEmpty(datasetContent))
+                if (!string.IsNullOrEmpty(datasetJson))
                 {
-                    updateEntity[EvalRunEntity.Fields.Dataset] = datasetContent;
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Dataset content length: {datasetContent.Length} characters");
+                    updateEntity[EvalRunEntity.Fields.Dataset] = datasetJson;
+                    tracingService.Trace($"{nameof(UpdateDataset)}: Dataset content length: {datasetJson.Length} characters");
                 }
                 else
                 {
@@ -289,6 +233,7 @@ namespace SxG.EvalPlatform.Plugins
             catch (Exception ex)
             {
                 tracingService.Trace($"{nameof(UpdateDataset)}: Exception updating eval run record - {ex.Message}");
+                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
                 return false;
             }
         }
@@ -314,17 +259,6 @@ namespace SxG.EvalPlatform.Plugins
                 tracingService.Trace($"{nameof(UpdateDataset)}: Error setting response parameters - {ex.Message}");
                 // Continue execution - response setting failure shouldn't break the plugin
             }
-        }
-
-        /// <summary>
-        /// Helper class for external dataset API response
-        /// </summary>
-        private class ExternalDatasetResponse
-        {
-            public string EvalRunId { get; set; }
-            public string AgentId { get; set; }
-            public string DataSetId { get; set; }
-            public string DatasetContent { get; set; }
         }
     }
 }

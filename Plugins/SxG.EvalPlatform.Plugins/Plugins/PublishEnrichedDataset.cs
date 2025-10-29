@@ -17,7 +17,7 @@ namespace SxG.EvalPlatform.Plugins
     /// </summary>
     public class PublishEnrichedDataset : PluginBase
     {
-        private const string ExternalApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/artifacts/enriched-dataset";
+        private const string ExternalApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/{0}/enriched-dataset";
 
         public PublishEnrichedDataset(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
@@ -203,7 +203,7 @@ namespace SxG.EvalPlatform.Plugins
         {
             try
             {
-                string url = $"{ExternalApiUrl}?evalRunId={evalRunId}";
+                string url = string.Format(ExternalApiUrl, evalRunId);
                 tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Calling external API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);

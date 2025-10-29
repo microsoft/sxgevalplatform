@@ -6,7 +6,7 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
     public static class CustomApiConfig
     {
         /// <summary>
-        /// PostEvalRun Custom API configuration (updated without datasetId)
+        /// PostEvalRun Custom API configuration
         /// </summary>
         public static class PostEvalRun
         {
@@ -25,6 +25,7 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
             public static class RequestParameters
             {
                 public const string EvalRunId = "evalRunId";
+                public const string DatasetId = "datasetId";
                 public const string AgentId = "agentId";
                 public const string EnvironmentId = "environmentId";
                 public const string AgentSchemaName = "agentSchemaName";
@@ -80,7 +81,7 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
         }
 
         /// <summary>
-        /// UpdateDataset Custom API configuration - Simplified to only require evalRunId
+        /// UpdateDataset Custom API configuration - Accepts evalRunId and datasetId
         /// </summary>
         public static class UpdateDataset
         {
@@ -94,11 +95,12 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
             public const bool IsPrivate = false;
 
             /// <summary>
-            /// Request parameters for UpdateDataset API (only evalRunId)
+            /// Request parameters for UpdateDataset API (evalRunId and datasetId)
             /// </summary>
             public static class RequestParameters
             {
                 public const string EvalRunId = "evalRunId";
+                public const string DatasetId = "datasetId";
             }
 
             /// <summary>

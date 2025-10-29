@@ -35,13 +35,13 @@
 
                 // Extract request parameters from input parameters
                 var request = ExtractRequestFromContext(context, tracingService);
-                
+
                 // Validate request
                 if (!request.IsValid())
                 {
                     string validationError = request.GetValidationError();
                     tracingService.Trace($"{nameof(PostEvalRun)}: Validation failed - {validationError}");
-                    
+
                     var errorResponse = PostEvalRunResponse.CreateError(validationError);
                     SetResponseParameters(context, errorResponse, tracingService);
                     return;
@@ -62,6 +62,7 @@
                 {
                     EvalRunId = evalRunGuid,
                     Id = evalRunGuid.ToString(), // Same value as EvalRunId stored as string
+                    DatasetId = request.DatasetId, // Store DatasetId from request
                     AgentId = request.AgentId, // Set from request
                     EnvironmentId = request.EnvironmentId, // Set from request
                     AgentSchemaName = request.AgentSchemaName, // Set from request
@@ -71,9 +72,9 @@
                 // Convert to Dataverse entity and create record
                 Entity entity = evalRunEntity.ToEntity();
                 Guid createdId = organizationService.Create(entity);
-                
+
                 tracingService.Trace($"{nameof(PostEvalRun)}: Successfully created eval run record with ID: {createdId}");
-                tracingService.Trace($"{nameof(PostEvalRun)}: AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
+                tracingService.Trace($"{nameof(PostEvalRun)}: DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
                 tracingService.Trace($"{nameof(PostEvalRun)}: Status set to: {evalRunEntity.GetStatusName()} (value: {evalRunEntity.Status})");
 
                 // Create success response
@@ -109,6 +110,9 @@
             if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.EvalRunId))
                 request.EvalRunId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.EvalRunId]?.ToString();
 
+            if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.DatasetId))
+                request.DatasetId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.DatasetId]?.ToString();
+
             if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.AgentId))
                 request.AgentId = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.AgentId]?.ToString();
 
@@ -119,7 +123,7 @@
                 request.AgentSchemaName = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.AgentSchemaName]?.ToString();
 
             tracingService.Trace($"{nameof(PostEvalRun)}: Extracted request parameters from context");
-            tracingService.Trace($"{nameof(PostEvalRun)}: EvalRunId: {request.EvalRunId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
+            tracingService.Trace($"{nameof(PostEvalRun)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
 
             return request;
         }

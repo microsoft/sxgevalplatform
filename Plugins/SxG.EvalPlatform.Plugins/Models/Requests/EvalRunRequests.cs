@@ -13,6 +13,11 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
         public string EvalRunId { get; set; }
 
         /// <summary>
+        /// Dataset identifier (optional) - GUID stored as string
+        /// </summary>
+        public string DatasetId { get; set; }
+
+        /// <summary>
         /// Agent identifier (optional) - String
         /// </summary>
         public string AgentId { get; set; }
@@ -51,6 +56,10 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
             // Validate EnvironmentId if provided
             if (!string.IsNullOrWhiteSpace(EnvironmentId) && !IsValidGuid(EnvironmentId))
                 return "EnvironmentId must be a valid GUID if provided";
+
+            // Validate DatasetId if provided
+            if (!string.IsNullOrWhiteSpace(DatasetId) && !IsValidGuid(DatasetId))
+                return "DatasetId must be a valid GUID if provided";
 
             return null;
         }
@@ -157,11 +166,14 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
     }
 
     /// <summary>
-    /// Request model for UpdateDataset Custom API - Uses shared EvalRunRequest
+    /// Request model for UpdateDataset Custom API - Extends EvalRunRequest with DatasetId
     /// </summary>
     public class UpdateDatasetRequest : EvalRunRequest
     {
-        // Inherits all functionality from EvalRunRequest
+        /// <summary>
+        /// Dataset identifier (required) - GUID stored as string
+        /// </summary>
+        public string DatasetId { get; set; }
     }
 
     /// <summary>
