@@ -3,6 +3,7 @@ namespace SxG.EvalPlatform.Plugins
     using System;
     using System.IO;
     using System.Net;
+    using System.Text;
     using Microsoft.Xrm.Sdk;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
@@ -16,6 +17,7 @@ namespace SxG.EvalPlatform.Plugins
     public class UpdateDataset : PluginBase
     {
         private const string ExternalDatasetApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/datasets";
+        private const string ExternalStatusApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs";
 
         public UpdateDataset(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
@@ -62,6 +64,14 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 tracingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
+
+                // Update external status to "EnrichingDataset" before fetching dataset
+                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", tracingService);
+                if (!statusUpdateSuccess)
+                {
+                    tracingService.Trace($"{nameof(UpdateDataset)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch");
+                    // Continue execution even if status update fails
+                }
 
                 // Call external dataset API to get dataset data using datasetId
                 var datasetJson = CallExternalDatasetApi(request.DatasetId, tracingService);
@@ -122,6 +132,73 @@ namespace SxG.EvalPlatform.Plugins
             tracingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
             return request;
+        }
+
+        /// <summary>
+        /// Updates external eval run status via API call
+        /// </summary>
+        /// <param name="evalRunId">Eval Run ID</param>
+        /// <param name="status">Status to set (e.g., "EnrichingDataset")</param>
+        /// <param name="tracingService">Tracing service</param>
+        /// <returns>True if update successful, false otherwise</returns>
+        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, ITracingService tracingService)
+        {
+            try
+            {
+                string url = $"{ExternalStatusApiUrl}/{evalRunId}/status";
+                tracingService.Trace($"{nameof(UpdateDataset)}: Calling external status API: {url}");
+
+                var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+                httpWebRequest.Method = "PUT";
+                httpWebRequest.ContentType = "application/json";
+                httpWebRequest.Timeout = 30000; // 30 seconds
+
+                // Prepare request body
+                string requestBody = $"{{\"status\":\"{status}\"}}";
+                byte[] data = Encoding.UTF8.GetBytes(requestBody);
+                httpWebRequest.ContentLength = data.Length;
+
+                tracingService.Trace($"{nameof(UpdateDataset)}: Status update request body: {requestBody}");
+
+                using (Stream requestStream = httpWebRequest.GetRequestStream())
+                {
+                    requestStream.Write(data, 0, data.Length);
+                }
+
+                using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
+                {
+                    if (httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.NoContent)
+                    {
+                        tracingService.Trace($"{nameof(UpdateDataset)}: Successfully updated external status to {status}");
+                        return true;
+                    }
+                    else
+                    {
+                        tracingService.Trace($"{nameof(UpdateDataset)}: External status API returned status: {httpWebResponse.StatusCode}");
+                        return false;
+                    }
+                }
+            }
+            catch (WebException webEx)
+            {
+                tracingService.Trace($"{nameof(UpdateDataset)}: WebException updating external status - {webEx.Message}");
+                if (webEx.Response != null)
+                {
+                    using (Stream responseStream = webEx.Response.GetResponseStream())
+                    using (StreamReader reader = new StreamReader(responseStream))
+                    {
+                        string errorResponse = reader.ReadToEnd();
+                        tracingService.Trace($"{nameof(UpdateDataset)}: Status update error response: {errorResponse}");
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace($"{nameof(UpdateDataset)}: Exception updating external status - {ex.Message}");
+                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
+                return false;
+            }
         }
 
         /// <summary>
