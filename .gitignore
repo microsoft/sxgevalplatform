@@ -34,3 +34,11 @@ TestResults.xml
 /SXG.EvalPlatform.Common/obj
 /Sxg.EvalPlatform.API.Storage/bin/Release/net8.0
 /SXG.EvalPlatform.Common/bin/Release/net8.0
+
+# Integration Test Sample Files and Documentation
+/SXG.EvalPlatform.API.IntegrationTests/Examples/
+/SXG.EvalPlatform.API.IntegrationTests/Documentation/
+
+**bin
+**obj
+**archive/
