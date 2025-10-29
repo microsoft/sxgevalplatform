@@ -65,7 +65,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
 {
     var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<RedisConfiguration>>();
     var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-    return RedisConnectionFactory.CreateConnectionAsync(config, logger).GetAwaiter().GetResult();
+    
+    // Use ConfigureAwait(false) to avoid deadlocks in synchronous context
+    var task = RedisConnectionFactory.CreateConnectionAsync(config, logger);
+    return task.ConfigureAwait(false).GetAwaiter().GetResult();
 });
 
 // Also register the concrete type for services that need it

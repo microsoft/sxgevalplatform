@@ -84,11 +84,12 @@ public class StartupConnectionValidator : IStartupConnectionValidator
             // Clean up test key
             await database.KeyDeleteAsync(testKey);
             
-            var authMethod = string.IsNullOrEmpty(_redisConfig.Value.AccessKey) 
-                ? "Microsoft Entra Auth" 
-                : "Access Key Auth";
-            
-            _logger.LogInformation("Redis connected ({PingTime}ms) - {AuthMethod}", pingResult.TotalMilliseconds, authMethod);
+            // We only use Microsoft Entra Authentication (no access keys)
+            var userInfo = !string.IsNullOrEmpty(_redisConfig.Value.User) 
+                ? $" for user: {_redisConfig.Value.User}" 
+                : " with DefaultAzureCredential";
+            _logger.LogInformation("Redis connected ({PingTime}ms) - Microsoft Entra Auth{UserInfo}", 
+                pingResult.TotalMilliseconds, userInfo);
         }
         catch (Exception ex)
         {

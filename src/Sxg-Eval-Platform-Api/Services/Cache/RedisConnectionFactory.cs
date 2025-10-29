@@ -19,25 +19,17 @@ public static class RedisConnectionFactory
             Ssl = true,
             SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
             AbortOnConnectFail = false,
-            ConnectRetry = 3,
-            ConnectTimeout = 30000,
-            SyncTimeout = 30000,
-            AsyncTimeout = 30000
+            ConnectRetry = 5,
+            ConnectTimeout = 60000, // Increased to 60 seconds
+            SyncTimeout = 60000,    // Increased to 60 seconds
+            AsyncTimeout = 60000,   // Increased to 60 seconds
+            KeepAlive = 60,
+            ReconnectRetryPolicy = new ExponentialRetry(5000) // 5 second base delay with exponential backoff
         };
 
-        // Configure authentication
-        if (!string.IsNullOrEmpty(redisConfig.AccessKey))
-        {
-            // Use access key authentication
-            configurationOptions.Password = redisConfig.AccessKey;
-            logger.LogInformation("Using access key authentication");
-        }
-        else
-        {
-            // Use Azure AD authentication
-            await ConfigureAzureAdAuthenticationAsync(configurationOptions, logger, redisConfig);
-            logger.LogInformation("Using Azure AD authentication");
-        }
+        // Configure Entra ID authentication (only method supported)
+        await ConfigureAzureAdAuthenticationAsync(configurationOptions, logger, redisConfig);
+        logger.LogInformation("Using Azure AD authentication");
 
         try
         {
@@ -67,16 +59,26 @@ public static class RedisConnectionFactory
             var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://redis.azure.com/.default" });
             var token = await credential.GetTokenAsync(tokenRequestContext);
             
-            // For Azure Redis Cache with Azure AD: Username = configured User, Password = Token
-            configOptions.User = redisConfig.User ?? throw new InvalidOperationException("Redis User is not configured for Azure AD authentication");
-            configOptions.Password = token.Token;
-            
-            // Removed the success log to reduce verbosity
+            // For Azure Cache for Redis with Entra ID authentication:
+            // - If User is specified, use it as the username with the token as password
+            // - If no User is specified, try using the token directly
+            if (!string.IsNullOrEmpty(redisConfig.User))
+            {
+                configOptions.User = redisConfig.User;
+                configOptions.Password = token.Token;
+                logger.LogInformation("Configured Azure AD authentication for user: {User}", redisConfig.User);
+            }
+            else
+            {
+                // Try token-only authentication
+                configOptions.Password = token.Token;
+                logger.LogInformation("Configured Azure AD authentication with token-only");
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to configure Azure AD authentication. Ensure you're logged in with 'az login'");
-            throw new InvalidOperationException("Azure AD authentication failed. Please run 'az login' to authenticate.", ex);
+            logger.LogError(ex, "Failed to configure Azure AD authentication. Ensure you're logged in with 'az login' and have access to the Redis instance");
+            throw new InvalidOperationException("Azure AD authentication failed. Please run 'az login' to authenticate and ensure you have proper permissions.", ex);
         }
     }
 }

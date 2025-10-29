@@ -3,8 +3,7 @@ namespace SxgEvalPlatformApi.Configuration;
 public class RedisConfiguration
 {
     public string Hostname { get; set; } = string.Empty;
-    public string? AccessKey { get; set; } // Optional access key for fallback authentication
-    public string? User { get; set; } // User/Object ID for Microsoft Entra Authentication
+    public string? User { get; set; } // Optional User/Object ID for Microsoft Entra Authentication
     public CacheConfiguration Cache { get; set; } = new();
 }
 
