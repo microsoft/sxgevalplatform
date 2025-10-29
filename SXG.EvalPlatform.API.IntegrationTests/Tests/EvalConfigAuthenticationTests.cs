@@ -11,11 +11,11 @@ namespace SXG.EvalPlatform.API.IntegrationTests.Tests;
 /// Integration tests for authentication and authorization scenarios
 /// </summary>
 [Collection("Integration Tests")]
-public class EvalConfigAuthenticationTests : EnhancedIntegrationTestBase
+public class EvalConfigAuthenticationTests : InMemoryIntegrationTestBase
 {
     private const string BaseUrl = "/api/v1/eval";
 
-    public EvalConfigAuthenticationTests(ContainerizedWebApplicationFactory factory) : base(factory)
+    public EvalConfigAuthenticationTests(InMemoryWebApplicationFactory factory) : base(factory)
     {
     }
 

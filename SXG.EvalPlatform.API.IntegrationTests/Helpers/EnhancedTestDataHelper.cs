@@ -275,3 +275,212 @@ public static class EnhancedTestDataHelper
 
     #endregion
 }
+
+/// <summary>
+/// Helper class for creating dataset test data
+/// </summary>
+public static class DatasetTestDataHelper
+{
+    #region Dataset DTOs
+
+    /// <summary>
+    /// Creates a valid SaveDatasetDto for testing
+    /// </summary>
+    public static SaveDatasetDto CreateValidSaveDatasetDto(
+        string agentId = "test-agent-001",
+        string? datasetName = null,
+        string datasetType = DatasetTypes.Synthetic,
+        int recordCount = 3)
+    {
+        // Generate unique dataset name if not provided
+        if (string.IsNullOrEmpty(datasetName))
+        {
+            datasetName = $"Test Dataset {DateTime.UtcNow:yyyyMMddHHmmssfff}";
+        }
+
+        return new SaveDatasetDto
+        {
+            AgentId = agentId,
+            DatasetType = datasetType,
+            DatasetName = datasetName,
+            DatasetRecords = CreateTestDatasetRecords(recordCount)
+        };
+    }
+
+    /// <summary>
+    /// Creates a valid UpdateDatasetDto for testing
+    /// </summary>
+    public static UpdateDatasetDto CreateValidUpdateDatasetDto(int recordCount = 5)
+    {
+        return new UpdateDatasetDto
+        {
+            DatasetRecords = CreateTestDatasetRecords(recordCount)
+        };
+    }
+
+    /// <summary>
+    /// Creates test dataset records
+    /// </summary>
+    public static List<EvalDataset> CreateTestDatasetRecords(int count = 3)
+    {
+        var records = new List<EvalDataset>();
+        
+        for (int i = 0; i < count; i++)
+        {
+            records.Add(new EvalDataset
+            {
+                Prompt = $"Test prompt {i + 1}: What is the capital of France?",
+                GroundTruth = $"Ground truth {i + 1}: Paris",
+                ActualResponse = $"Actual response {i + 1}: Paris is the capital",
+                ExpectedResponse = $"Expected response {i + 1}: Paris"
+            });
+        }
+
+        return records;
+    }
+
+    /// <summary>
+    /// Creates a complex dataset for testing with varied content
+    /// </summary>
+    public static List<EvalDataset> CreateComplexDatasetRecords()
+    {
+        return new List<EvalDataset>
+        {
+            new EvalDataset
+            {
+                Prompt = "Translate 'Hello, how are you?' to French",
+                GroundTruth = "Bonjour, comment allez-vous ?",
+                ActualResponse = "Bonjour, comment ça va ?",
+                ExpectedResponse = "Bonjour, comment allez-vous ?"
+            },
+            new EvalDataset
+            {
+                Prompt = "What is 2 + 2?",
+                GroundTruth = "4",
+                ActualResponse = "The answer is 4",
+                ExpectedResponse = "4"
+            },
+            new EvalDataset
+            {
+                Prompt = "Explain quantum computing in one sentence",
+                GroundTruth = "Quantum computing uses quantum mechanical phenomena to process information",
+                ActualResponse = "Quantum computing leverages quantum physics to perform calculations",
+                ExpectedResponse = "Quantum computing uses quantum mechanical phenomena to process information"
+            },
+            new EvalDataset
+            {
+                Prompt = "What are the primary colors?",
+                GroundTruth = "Red, blue, and yellow",
+                ActualResponse = "The primary colors are red, blue, and yellow",
+                ExpectedResponse = "Red, blue, and yellow"
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates datasets for performance testing
+    /// </summary>
+    public static SaveDatasetDto CreatePerformanceTestDataset(string agentId, int index)
+    {
+        return new SaveDatasetDto
+        {
+            AgentId = agentId,
+            DatasetType = index % 2 == 0 ? DatasetTypes.Synthetic : DatasetTypes.Golden,
+            DatasetName = $"Performance Dataset {index + 1}",
+            DatasetRecords = CreateTestDatasetRecords(5 + index) // Varying sizes
+        };
+    }
+
+    /// <summary>
+    /// Creates datasets for agent isolation testing
+    /// </summary>
+    public static SaveDatasetDto CreateAgentIsolationDataset(string agentId)
+    {
+        return new SaveDatasetDto
+        {
+            AgentId = agentId,
+            DatasetType = DatasetTypes.Synthetic,
+            DatasetName = $"Dataset for {agentId}",
+            DatasetRecords = CreateTestDatasetRecords(2)
+        };
+    }
+
+    /// <summary>
+    /// Creates a dataset with special characters and edge cases
+    /// </summary>
+    public static SaveDatasetDto CreateEdgeCaseDataset(string agentId)
+    {
+        return new SaveDatasetDto
+        {
+            AgentId = agentId,
+            DatasetType = DatasetTypes.Golden,
+            DatasetName = "Dataset with Unicode: 你好 🌟 Émojis & Special-Chars!",
+            DatasetRecords = new List<EvalDataset>
+            {
+                new EvalDataset
+                {
+                    Prompt = "Handle special characters: !@#$%^&*()",
+                    GroundTruth = "Special characters: !@#$%^&*()",
+                    ActualResponse = "Response with special chars: !@#$%^&*()",
+                    ExpectedResponse = "Special characters: !@#$%^&*()"
+                },
+                new EvalDataset
+                {
+                    Prompt = "Unicode test: 你好世界 🌍",
+                    GroundTruth = "Hello world in Chinese: 你好世界",
+                    ActualResponse = "Chinese greeting: 你好世界",
+                    ExpectedResponse = "Hello world in Chinese: 你好世界"
+                }
+            }
+        };
+    }
+
+    #endregion
+
+    #region Validation Helpers
+
+    /// <summary>
+    /// Validates that a dataset response matches expected values
+    /// </summary>
+    public static void ValidateDatasetSaveResponse(DatasetSaveResponseDto response, string expectedStatus = "created")
+    {
+        response.Should().NotBeNull();
+        response.DatasetId.Should().NotBeEmpty();
+        response.Status.Should().Be(expectedStatus);
+        response.Message.Should().NotBeEmpty();
+        response.CreatedOn.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    /// <summary>
+    /// Validates that dataset metadata matches expected values
+    /// </summary>
+    public static void ValidateDatasetMetadata(DatasetMetadataDto metadata, string expectedAgentId, string expectedDatasetName, string expectedDatasetType, int expectedRecordCount)
+    {
+        metadata.Should().NotBeNull();
+        metadata.DatasetId.Should().NotBeEmpty();
+        metadata.AgentId.Should().Be(expectedAgentId);
+        metadata.DatasetName.Should().Be(expectedDatasetName);
+        metadata.DatasetType.Should().Be(expectedDatasetType);
+        metadata.RecordCount.Should().Be(expectedRecordCount);
+        metadata.CreatedOn.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    /// <summary>
+    /// Validates that dataset content matches expected records
+    /// </summary>
+    public static void ValidateDatasetContent(List<EvalDataset> actualContent, List<EvalDataset> expectedContent)
+    {
+        actualContent.Should().NotBeNull();
+        actualContent.Should().HaveCount(expectedContent.Count);
+        
+        for (int i = 0; i < expectedContent.Count; i++)
+        {
+            actualContent[i].Prompt.Should().Be(expectedContent[i].Prompt);
+            actualContent[i].GroundTruth.Should().Be(expectedContent[i].GroundTruth);
+            actualContent[i].ActualResponse.Should().Be(expectedContent[i].ActualResponse);
+            actualContent[i].ExpectedResponse.Should().Be(expectedContent[i].ExpectedResponse);
+        }
+    }
+
+    #endregion
+}

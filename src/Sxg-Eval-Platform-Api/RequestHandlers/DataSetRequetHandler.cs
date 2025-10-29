@@ -344,7 +344,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                var metadata = ToDatasetMetadataDto(entity);
+                var metadata = await ToDatasetMetadataDtoAsync(entity);
 
                 // Cache the metadata
                 try
@@ -381,9 +381,44 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Convert DataSetTableEntity to DatasetMetadataDto
         /// </summary>
+        private async Task<DatasetMetadataDto> ToDatasetMetadataDtoAsync(DataSetTableEntity entity)
+        {
+            var metadata = _mapper.Map<DatasetMetadataDto>(entity);
+            
+            // Calculate record count by fetching the dataset content
+            try
+            {
+                var datasetContent = await _blobStorageService.ReadBlobContentAsync(entity.ContainerName, entity.BlobFilePath);
+                if (!string.IsNullOrEmpty(datasetContent))
+                {
+                    var records = JsonSerializer.Deserialize<List<EvalDataset>>(datasetContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    metadata.RecordCount = records?.Count ?? 0;
+                }
+                else
+                {
+                    metadata.RecordCount = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to calculate record count for dataset {DatasetId}, defaulting to 0", entity.DatasetId);
+                metadata.RecordCount = 0;
+            }
+            
+            return metadata;
+        }
+
+        /// <summary>
+        /// Convert DataSetTableEntity to DatasetMetadataDto (synchronous version for backward compatibility)
+        /// </summary>
         private DatasetMetadataDto ToDatasetMetadataDto(DataSetTableEntity entity)
         {
-            return _mapper.Map<DatasetMetadataDto>(entity);
+            // For backward compatibility, use the async version but handle it synchronously
+            // Note: This is not ideal but maintains existing method signatures
+            return ToDatasetMetadataDtoAsync(entity).GetAwaiter().GetResult();
         }
 
         public async Task<DatasetSaveResponseDto> UpdateDatasetAsync(string datasetId, UpdateDatasetDto updateDatasetDto)

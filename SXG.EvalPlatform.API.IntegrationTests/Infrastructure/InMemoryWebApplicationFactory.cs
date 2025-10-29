@@ -81,8 +81,7 @@ public class InMemoryWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddSingleton<Sxg.EvalPlatform.API.Storage.Services.IDataSetTableService>(serviceProvider =>
             {
-                var mock = new Mock<Sxg.EvalPlatform.API.Storage.Services.IDataSetTableService>();
-                return mock.Object;
+                return new InMemoryDataSetTableService();
             });
 
             services.AddSingleton<Sxg.EvalPlatform.API.Storage.Services.IEvalRunTableService>(serviceProvider =>
