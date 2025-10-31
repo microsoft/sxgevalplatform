@@ -72,6 +72,16 @@ namespace SxgEvalPlatformApi.Services.Cache
                 _logger.LogDebug("Cache hit for key: {Key}", cacheKey);
                 return value;
             }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Redis connection issue for key: {Key}, falling back to null (cache miss)", key);
+                return null; // Graceful degradation - treat as cache miss
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Redis timeout for key: {Key}, falling back to null (cache miss)", key);
+                return null; // Graceful degradation - treat as cache miss
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting cache value for key: {Key}", key);
@@ -111,6 +121,16 @@ namespace SxgEvalPlatformApi.Services.Cache
                 }
 
                 return result;
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Redis connection issue setting key: {Key}, continuing without cache", key);
+                return false; // Graceful degradation - continue without caching
+            }
+            catch (RedisTimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Redis timeout setting key: {Key}, continuing without cache", key);
+                return false; // Graceful degradation - continue without caching
             }
             catch (Exception ex)
             {

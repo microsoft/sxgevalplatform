@@ -19,12 +19,14 @@ public static class RedisConnectionFactory
             Ssl = true,
             SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
             AbortOnConnectFail = false,
-            ConnectRetry = 5,
-            ConnectTimeout = 60000, // Increased to 60 seconds
-            SyncTimeout = 60000,    // Increased to 60 seconds
-            AsyncTimeout = 60000,   // Increased to 60 seconds
-            KeepAlive = 60,
-            ReconnectRetryPolicy = new ExponentialRetry(5000) // 5 second base delay with exponential backoff
+            ConnectRetry = 3,           // Reduced from 5
+            ConnectTimeout = 10000,     // Reduced from 60000 (10 seconds)
+            SyncTimeout = 5000,         // Reduced from 60000 (5 seconds)
+            AsyncTimeout = 10000,       // Reduced from 60000 (10 seconds)
+            KeepAlive = 30,            // Reduced from 60 (30 seconds)
+            ReconnectRetryPolicy = new ExponentialRetry(1000), // Reduced base delay to 1 second
+            IncludeDetailInExceptions = true,   // Better error debugging
+            AllowAdmin = false                  // Disable admin operations for security
         };
 
         // Configure Entra ID authentication (only method supported)

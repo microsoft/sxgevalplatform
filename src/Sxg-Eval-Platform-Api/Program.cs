@@ -83,27 +83,28 @@ builder.Services.AddSingleton<IGenericCacheService, GenericCacheService>();
 builder.Services.AddScoped<IEvalConfigCache, EvalConfigCacheService>();
 builder.Services.AddScoped<IEvalDatasetCache, EvalDatasetCacheService>();
 
-// Add base storage services (concrete implementations without caching)
-builder.Services.AddScoped<MetricsConfigTableService>();
-builder.Services.AddScoped<AzureBlobStorageService>();
-builder.Services.AddScoped<EvalRunTableService>();
-builder.Services.AddScoped<DataSetTableService>();
+// Add base storage services (concrete implementations) as Singleton to avoid reinitialization
+builder.Services.AddSingleton<MetricsConfigTableService>();
+builder.Services.AddSingleton<AzureBlobStorageService>();
+builder.Services.AddSingleton<EvalRunTableService>();
+builder.Services.AddSingleton<DataSetTableService>();
 
-// Add services with automatic caching using the generic decorator
+// Add services with automatic caching using the generic decorator as Singletons
 // This replaces all the manual cache wrapper registrations
-builder.Services.AddCachedService<IMetricsConfigTableService, MetricsConfigTableService>();
-builder.Services.AddCachedService<IEvalRunTableService, EvalRunTableService>();
-builder.Services.AddCachedService<IDataSetTableService, DataSetTableService>();
-builder.Services.AddCachedService<IAzureBlobStorageService, AzureBlobStorageService>();
+builder.Services.AddCachedService<IMetricsConfigTableService, MetricsConfigTableService>(ServiceLifetime.Singleton);
+builder.Services.AddCachedService<IEvalRunTableService, EvalRunTableService>(ServiceLifetime.Singleton);
+builder.Services.AddCachedService<IDataSetTableService, DataSetTableService>(ServiceLifetime.Singleton);
+builder.Services.AddCachedService<IAzureBlobStorageService, AzureBlobStorageService>(ServiceLifetime.Singleton);
 
 // Add other services (these will automatically use cached services via DI)
 builder.Services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigurationRequestHandler>();
 builder.Services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
-builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
+// Register the Storage project's IConfigHelper as Singleton to avoid Azure service reinitialization
+builder.Services.AddSingleton<IConfigHelper, ConfigHelper>();
 
 // Register evaluation request handlers (will use cached services)
-builder.Services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
-builder.Services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
+builder.Services.AddSingleton<IEvalRunRequestHandler, EvalRunRequestHandler>();
+builder.Services.AddSingleton<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
 
 // Add startup connection validation services
 builder.Services.AddSingleton<IStartupConnectionValidator, StartupConnectionValidator>();

@@ -5,11 +5,12 @@ using SxgEvalPlatformApi.Models;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
+using SxgEvalPlatformApi.Services.Cache;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
     /// <summary>
-    /// Request handler for evaluation result operations
+    /// Request handler for evaluation result operations with caching
     /// </summary>
     public class EvaluationResultRequestHandler : IEvaluationResultRequestHandler
     {
@@ -17,17 +18,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IEvalRunRequestHandler _evalRunRequestHandler;
         private readonly ILogger<EvaluationResultRequestHandler> _logger;
         private readonly IMapper _mapper;
+        private readonly IGenericCacheService _cacheService;
 
         public EvaluationResultRequestHandler(
             IAzureBlobStorageService blobService,
             IEvalRunRequestHandler evalRunRequestHandler,
             ILogger<EvaluationResultRequestHandler> logger,
-            IMapper mapper)
+            IMapper mapper,
+            IGenericCacheService cacheService)
         {
             _blobService = blobService;
             _evalRunRequestHandler = evalRunRequestHandler;
             _logger = logger;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -153,13 +157,19 @@ namespace SxgEvalPlatformApi.RequestHandlers
         }
 
         /// <summary>
-        /// Get evaluation results by EvalRunId
+        /// Get evaluation results by EvalRunId with caching
         /// </summary>
         public async Task<EvaluationResultResponseDto> GetEvaluationResultByIdAsync(Guid evalRunId)
         {
             try
             {
-                _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogInformation("RequestHandler: Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
+
+                // Use cache-aside pattern
+                var cacheKey = $"EvalResult:{evalRunId}";
+                var result = await _cacheService.GetOrSetAsync(cacheKey, async () =>
+                {
+                    _logger.LogInformation("RequestHandler: CACHE MISS - fetching from storage for EvalRunId: {EvalRunId}", evalRunId);
 
                 // First, verify that the EvalRunId exists and get internal details
                 var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
@@ -272,9 +282,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Deserialize the content using the storage model
                 var evaluationResult = JsonSerializer.Deserialize<StoredEvaluationResultDto>(jsonContent);
 
-                _logger.LogInformation("Successfully retrieved evaluation results for EvalRunId: {EvalRunId}", evalRunId);
-
-                return new EvaluationResultResponseDto
+                var result = new EvaluationResultResponseDto
                 {
                     Success = true,
                     Message = "Evaluation results retrieved successfully",
@@ -282,6 +290,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     FileName = evaluationResult?.FileName ?? "Unknown",
                     EvaluationRecords = evaluationResult?.EvaluationRecords
                 };
+
+                return result;
+                }, TimeSpan.FromMinutes(30)); // Cache for 30 minutes
+
+                _logger.LogInformation("RequestHandler: Successfully retrieved evaluation results for EvalRunId: {EvalRunId} (cached)", evalRunId);
+                return result;
             }
             catch (JsonException ex)
             {

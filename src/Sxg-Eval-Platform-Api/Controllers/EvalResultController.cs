@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.RequestHandlers;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
@@ -19,19 +20,22 @@ namespace SxgEvalPlatformApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly IConfigHelper _configHelper;
         private readonly IGenericCacheService _cacheService;
+        private readonly IEvaluationResultRequestHandler _evaluationResultRequestHandler;
 
         public EvalResultController(
             IConfiguration configuration,
             IConfigHelper configHelper,
             IGenericCacheService cacheService,
+            IEvaluationResultRequestHandler evaluationResultRequestHandler,
             ILogger<EvalResultController> logger)
             : base(logger)
         {
             _configuration = configuration;
             _configHelper = configHelper;
             _cacheService = cacheService;
+            _evaluationResultRequestHandler = evaluationResultRequestHandler;
 
-            _logger.LogInformation("EvalResultController (high-performance) initialized");
+            _logger.LogInformation("EvalResultController (hybrid: caching + RequestHandler) initialized");
         }
 
         #region GET Methods
@@ -542,6 +546,92 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogError(ex, "Error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
                     agentId, startDateTime, endDateTime);
                 return CreateErrorResponse<List<EvaluationResultResponseDto>>("Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        #endregion
+
+        #region RequestHandler Methods (Optimized)
+
+        /// <summary>
+        /// Get evaluation results by EvalRunId using RequestHandler (Fast version)
+        /// </summary>
+        /// <param name="evalRunId">Evaluation run ID</param>
+        /// <returns>Evaluation results data</returns>
+        /// <response code="200">Evaluation results retrieved successfully</response>
+        /// <response code="400">Invalid EvalRunId</response>
+        /// <response code="404">Evaluation results not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpGet("fast/{evalRunId}")]
+        [ProducesResponseType(typeof(EvaluationResultResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<EvaluationResultResponseDto>> GetEvaluationResultFast(Guid evalRunId)
+        {
+            try
+            {
+                var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+                if (evalRunIdValidation != null)
+                {
+                    return evalRunIdValidation;
+                }
+
+                _logger.LogInformation("Fast RequestHandler request for EvalRunId: {EvalRunId}", evalRunId);
+
+                // Use RequestHandler for optimized performance (no direct service creation)
+                var result = await _evaluationResultRequestHandler.GetEvaluationResultByIdAsync(evalRunId);
+                
+                if (result == null || !result.Success)
+                {
+                    return NotFound("Evaluation results not found");
+                }
+
+                _logger.LogInformation("Fast RequestHandler successfully retrieved results for EvalRunId: {EvalRunId}", evalRunId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fast RequestHandler error for EvalRunId: {EvalRunId}", evalRunId);
+                return CreateErrorResponse<EvaluationResultResponseDto>("Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        /// <summary>
+        /// Save evaluation results using RequestHandler (Fast version)
+        /// </summary>
+        /// <param name="saveDto">Evaluation result data</param>
+        /// <returns>Save operation result</returns>
+        [HttpPost("fast")]
+        [ProducesResponseType(typeof(EvaluationResultSaveResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<EvaluationResultSaveResponseDto>> SaveEvaluationResultFast([FromBody] SaveEvaluationResultDto saveDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return CreateValidationErrorResponse<EvaluationResultSaveResponseDto>();
+                }
+
+                _logger.LogInformation("Fast RequestHandler saving for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+
+                // Use RequestHandler for optimized performance (no direct service creation)
+                var result = await _evaluationResultRequestHandler.SaveEvaluationResultAsync(saveDto);
+                
+                if (!result.Success)
+                {
+                    return BadRequest(result);
+                }
+
+                _logger.LogInformation("Fast RequestHandler successfully saved results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fast RequestHandler save error for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
+                return CreateErrorResponse<EvaluationResultSaveResponseDto>("Failed to save evaluation results", StatusCodes.Status500InternalServerError);
             }
         }
 
