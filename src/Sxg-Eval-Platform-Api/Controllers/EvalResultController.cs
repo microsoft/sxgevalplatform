@@ -374,28 +374,12 @@ namespace SxgEvalPlatformApi.Controllers
                 // Try to get from cache first using GetOrSetAsync pattern
                 var evalRuns = await _cacheService.GetOrSetAsync(cacheKey, async () =>
                 {
-                    // Cache miss, fetch from storage
+                    // Cache miss, fetch from storage using RequestHandler
                     _logger.LogInformation("Optimized cache miss, fetching eval runs from storage for AgentId: {AgentId}", agentId);
                     
-                    // Create service directly without DI caching decorators
-                    var evalRunTableService = new EvalRunTableService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                    var entities = await evalRunTableService.GetEvalRunsByAgentIdAsync(agentId);
-                    
-                    return entities.Select(entity => new EvalRunDto
-                    {
-                        EvalRunId = entity.EvalRunId,
-                        AgentId = entity.AgentId,
-                        DataSetId = entity.DataSetId,
-                        MetricsConfigurationId = entity.MetricsConfigurationId,
-                        Status = entity.Status,
-                        LastUpdatedBy = entity.LastUpdatedBy,
-                        LastUpdatedOn = entity.LastUpdatedOn,
-                        StartedDatetime = entity.StartedDatetime,
-                        CompletedDatetime = entity.CompletedDatetime
-                    }).ToList();
+                    // Use RequestHandler instead of creating service directly
+                    var evalRunsList = await _evaluationResultRequestHandler.GetEvalRunsByAgentIdAsync(agentId);
+                    return evalRunsList;
                     
                 }, TimeSpan.FromMinutes(30)); // Cache for 30 minutes since this data changes less frequently
 

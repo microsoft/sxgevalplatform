@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.RequestHandlers;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
@@ -17,20 +18,23 @@ namespace SxgEvalPlatformApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly IConfigHelper _configHelper;
         private readonly IGenericCacheService _cacheService;
+        private readonly IEvalRunRequestHandler _evalRunRequestHandler;
 
         public EvalRunController(
             IConfiguration configuration,
             IConfigHelper configHelper,
             IGenericCacheService cacheService,
+            IEvalRunRequestHandler evalRunRequestHandler,
             ILogger<EvalRunController> logger)
             : base(logger)
         {
             _configuration = configuration;
             _configHelper = configHelper;
             _cacheService = cacheService;
+            _evalRunRequestHandler = evalRunRequestHandler;
 
             // Log controller initialization for debugging
-            _logger.LogInformation("EvalRunController (high-performance) initialized");
+            _logger.LogInformation("EvalRunController (high-performance with RequestHandler) initialized");
         }
 
         #region GET Methods
@@ -67,33 +71,13 @@ namespace SxgEvalPlatformApi.Controllers
                 // Try to get from cache first using GetOrSetAsync pattern
                 var evalRun = await _cacheService.GetOrSetAsync(cacheKey, async () =>
                 {
-                    // Cache miss, fetch from storage
+                    // Cache miss, fetch from storage using RequestHandler
                     _logger.LogInformation("High-performance cache miss, fetching from storage for ID: {EvalRunId}", evalRunId);
                     
-                    // Create services directly without DI caching decorators
-                    var evalRunTableService = new EvalRunTableService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                    var entity = await evalRunTableService.GetEvalRunByIdAsync(evalRunId);
+                    // Use RequestHandler instead of creating service directly
+                    var evalRunDto = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
+                    return evalRunDto;
                     
-                    if (entity == null)
-                    {
-                        return null;
-                    }
-
-                    return new EvalRunDto
-                    {
-                        EvalRunId = entity.EvalRunId,
-                        AgentId = entity.AgentId,
-                        DataSetId = entity.DataSetId,
-                        MetricsConfigurationId = entity.MetricsConfigurationId,
-                        Status = entity.Status,
-                        LastUpdatedBy = entity.LastUpdatedBy,
-                        LastUpdatedOn = entity.LastUpdatedOn,
-                        StartedDatetime = entity.StartedDatetime,
-                        CompletedDatetime = entity.CompletedDatetime
-                    };
                 }, TimeSpan.FromMinutes(60));
 
                 if (evalRun == null)
@@ -159,55 +143,10 @@ namespace SxgEvalPlatformApi.Controllers
                     return CreateValidationErrorResponse<EvalRunDto>();
                 }
 
-                // Create the eval run entity
-                var evalRunId = Guid.NewGuid();
-                var currentDateTime = DateTime.UtcNow;
-                var containerName = createDto.AgentId.Trim().Replace(" ", "");
-                var blobFilePath = $"evalresults/{evalRunId}/";
-                
-                var entity = new EvalRunTableEntity
-                {
-                    EvalRunId = evalRunId,
-                    AgentId = createDto.AgentId,
-                    DataSetId = createDto.DataSetId.ToString(),
-                    MetricsConfigurationId = createDto.MetricsConfigurationId.ToString(),
-                    Status = Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Queued,
-                    LastUpdatedBy = "System", // Default since UserMetadata is no longer required
-                    LastUpdatedOn = currentDateTime,
-                    StartedDatetime = currentDateTime,
-                    ContainerName = containerName,
-                    BlobFilePath = blobFilePath,
-                    Type = createDto.Type,
-                    EnvironmentId = createDto.EnvironmentId.ToString(),
-                    AgentSchemaName = createDto.AgentSchemaName
-                };
-                entity.RowKey = evalRunId.ToString();
+                // Use RequestHandler instead of creating service directly
+                var evalRun = await _evalRunRequestHandler.CreateEvalRunAsync(createDto);
 
-                // Create service directly
-                var evalRunTableService = new EvalRunTableService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                var createdEntity = await evalRunTableService.CreateEvalRunAsync(entity);
-                
-                var evalRun = new EvalRunDto
-                {
-                    EvalRunId = createdEntity.EvalRunId,
-                    AgentId = createdEntity.AgentId,
-                    DataSetId = createdEntity.DataSetId,
-                    MetricsConfigurationId = createdEntity.MetricsConfigurationId,
-                    Status = createdEntity.Status,
-                    LastUpdatedBy = createdEntity.LastUpdatedBy,
-                    LastUpdatedOn = createdEntity.LastUpdatedOn,
-                    StartedDatetime = createdEntity.StartedDatetime,
-                    CompletedDatetime = createdEntity.CompletedDatetime
-                };
-
-                // Cache the newly created eval run
-                var cacheKey = $"EvalRun:{evalRunId}";
-                await _cacheService.UpdateCacheAsync(cacheKey, evalRun, TimeSpan.FromMinutes(60));
-
-                _logger.LogInformation("High-performance successfully created evaluation run with ID: {EvalRunId}", evalRunId);
+                _logger.LogInformation("High-performance successfully created evaluation run with ID: {EvalRunId}", evalRun.EvalRunId);
                 
                 return CreatedAtAction(
                     nameof(GetEvalRun), 
@@ -268,14 +207,16 @@ namespace SxgEvalPlatformApi.Controllers
                     return CreateValidationErrorResponse<UpdateResponseDto>();
                 }
 
-                // Create service directly
-                var evalRunTableService = new EvalRunTableService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
+                // First get the eval run using RequestHandler + cache to check current status
+                var cacheKey = $"EvalRun:{evalRunId}";
+                var existingEvalRun = await _cacheService.GetOrSetAsync(cacheKey, async () =>
+                {
+                    // Cache miss, fetch from storage using RequestHandler
+                    _logger.LogInformation("Cache miss during status update, fetching eval run from storage for ID: {EvalRunId}", evalRunId);
+                    return await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
+                }, TimeSpan.FromMinutes(60));
 
-                // First get the eval run to find the agentId and check current status
-                var existingEntity = await evalRunTableService.GetEvalRunByIdAsync(evalRunId);
-                if (existingEntity == null)
+                if (existingEvalRun == null)
                 {
                     _logger.LogWarning("Evaluation run with ID {EvalRunId} not found for status update", evalRunId);
                     return NotFound(new UpdateResponseDto 
@@ -288,13 +229,13 @@ namespace SxgEvalPlatformApi.Controllers
                 // Check if the current status is already in a terminal state
                 var terminalStatuses = new[] { Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Completed, 
                                              Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunStatusConstants.Failed };
-                if (terminalStatuses.Any(status => string.Equals(status, existingEntity.Status, StringComparison.OrdinalIgnoreCase)))
+                if (terminalStatuses.Any(status => string.Equals(status, existingEvalRun.Status, StringComparison.OrdinalIgnoreCase)))
                 {
                     return BadRequest(new UpdateResponseDto
                     {
                         Success = false,
                         Message = $"Cannot update status for evaluation run with ID {evalRunId}. " +
-                                 $"The evaluation run is already in a terminal state '{existingEntity.Status}' and cannot be modified."
+                                 $"The evaluation run is already in a terminal state '{existingEvalRun.Status}' and cannot be modified."
                     });
                 }
 
@@ -312,23 +253,24 @@ namespace SxgEvalPlatformApi.Controllers
                     return CreateBadRequestResponse<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
                 }
 
-                // Update the status
-                var updatedEntity = await evalRunTableService.UpdateEvalRunStatusAsync(
-                    existingEntity.AgentId, 
-                    evalRunId, 
-                    updateDto.Status,
-                    "System"); // Default since UserMetadata is no longer required
+                // Use RequestHandler to update the status
+                var updateRequestDto = new UpdateEvalRunStatusDto
+                {
+                    EvalRunId = evalRunId,
+                    Status = updateDto.Status
+                };
+
+                var updatedEvalRun = await _evalRunRequestHandler.UpdateEvalRunStatusAsync(updateRequestDto);
                 
-                if (updatedEntity == null)
+                if (updatedEvalRun == null)
                 {
                     return CreateErrorResponse<UpdateResponseDto>($"Failed to update evaluation run with ID {evalRunId}", StatusCodes.Status500InternalServerError);
                 }
 
                 // Invalidate cache since data changed
-                var cacheKey = $"EvalRun:{evalRunId}";
                 await _cacheService.InvalidateAsync(cacheKey);
 
-                _logger.LogInformation("High-performance successfully updated evaluation run status for ID: {EvalRunId}", evalRunId);
+                _logger.LogInformation("High-performance successfully updated evaluation run status for ID: {EvalRunId} to {Status}", evalRunId, updateDto.Status);
 
                 return Ok(new UpdateResponseDto
                 {

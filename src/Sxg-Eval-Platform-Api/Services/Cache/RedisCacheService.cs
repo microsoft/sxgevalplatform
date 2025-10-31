@@ -222,7 +222,7 @@ namespace SxgEvalPlatformApi.Services.Cache
                     foreach (var pattern in patterns)
                     {
                         // Use SCAN instead of KEYS for better performance and no admin requirement
-                        var keys = _database.ExecuteAsync("SCAN", "0", "MATCH", pattern, "COUNT", "100");
+                        var keys = await _database.ExecuteAsync("SCAN", "0", "MATCH", pattern, "COUNT", "100");
                         // Note: This is a simplified approach. In production, you'd implement proper SCAN iteration
                         sizeInfo.KeysByPattern[pattern] = 0; // Simplified for now
                     }
