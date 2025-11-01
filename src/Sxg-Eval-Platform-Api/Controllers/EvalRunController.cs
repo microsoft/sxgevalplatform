@@ -19,12 +19,16 @@ namespace SxgEvalPlatformApi.Controllers
         private readonly IConfigHelper _configHelper;
         private readonly IGenericCacheService _cacheService;
         private readonly IEvalRunRequestHandler _evalRunRequestHandler;
+        private readonly IDataSetTableService _dataSetTableService;
+        private readonly IMetricsConfigTableService _metricsConfigTableService;
 
         public EvalRunController(
             IConfiguration configuration,
             IConfigHelper configHelper,
             IGenericCacheService cacheService,
             IEvalRunRequestHandler evalRunRequestHandler,
+            IDataSetTableService dataSetTableService,
+            IMetricsConfigTableService metricsConfigTableService,
             ILogger<EvalRunController> logger)
             : base(logger)
         {
@@ -32,6 +36,8 @@ namespace SxgEvalPlatformApi.Controllers
             _configHelper = configHelper;
             _cacheService = cacheService;
             _evalRunRequestHandler = evalRunRequestHandler;
+            _dataSetTableService = dataSetTableService;
+            _metricsConfigTableService = metricsConfigTableService;
 
             // Log controller initialization for debugging
             _logger.LogInformation("EvalRunController (high-performance with RequestHandler) initialized");
@@ -257,7 +263,8 @@ namespace SxgEvalPlatformApi.Controllers
                 var updateRequestDto = new UpdateEvalRunStatusDto
                 {
                     EvalRunId = evalRunId,
-                    Status = updateDto.Status
+                    Status = updateDto.Status,
+                    AgentId = existingEvalRun.AgentId  // CRITICAL: Must include AgentId for storage lookup
                 };
 
                 var updatedEvalRun = await _evalRunRequestHandler.UpdateEvalRunStatusAsync(updateRequestDto);
@@ -309,11 +316,7 @@ namespace SxgEvalPlatformApi.Controllers
             // Validate DataSet exists and belongs to the agent
             try
             {
-                var dataSetTableService = new DataSetTableService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<DataSetTableService>>());
-
-                var dataset = await dataSetTableService.GetDataSetAsync(createDto.AgentId, createDto.DataSetId.ToString());
+                var dataset = await _dataSetTableService.GetDataSetAsync(createDto.AgentId, createDto.DataSetId.ToString());
                 if (dataset == null)
                 {
                     ModelState.AddModelError(nameof(createDto.DataSetId), 
@@ -331,11 +334,7 @@ namespace SxgEvalPlatformApi.Controllers
             // Validate Metrics Configuration exists
             try
             {
-                var metricsConfigTableService = new MetricsConfigTableService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<MetricsConfigTableService>>());
-
-                var metricsConfig = await metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
+                var metricsConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
                 if (metricsConfig == null)
                 {
                     ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 

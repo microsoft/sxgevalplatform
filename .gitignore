@@ -42,3 +42,5 @@ TestResults.xml
 **bin
 **obj
 **archive/
+**.log
+**.bak

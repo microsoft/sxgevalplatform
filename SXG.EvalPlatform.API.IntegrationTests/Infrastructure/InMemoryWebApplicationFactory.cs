@@ -63,10 +63,21 @@ public class InMemoryWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IRedisCache, InMemoryRedisCache>();
             
             // Replace Azure Storage services with mocks (NO connection strings)
+            // Remove both interface and concrete class registrations
             services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.IMetricsConfigTableService>();
+            services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.MetricsConfigTableService>();
             services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.IAzureBlobStorageService>();
+            services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService>();
             services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.IDataSetTableService>();
+            services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.DataSetTableService>();
             services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.IEvalRunTableService>();
+            services.RemoveAll<Sxg.EvalPlatform.API.Storage.Services.EvalRunTableService>();
+            
+            // Also remove any potential direct concrete registrations made by Program.cs
+            services.RemoveAll(typeof(Sxg.EvalPlatform.API.Storage.Services.MetricsConfigTableService));
+            services.RemoveAll(typeof(Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService));
+            services.RemoveAll(typeof(Sxg.EvalPlatform.API.Storage.Services.DataSetTableService));
+            services.RemoveAll(typeof(Sxg.EvalPlatform.API.Storage.Services.EvalRunTableService));
 
             // Add mock implementations that actually store data in memory
             services.AddSingleton<Sxg.EvalPlatform.API.Storage.Services.IMetricsConfigTableService>(serviceProvider =>
@@ -86,8 +97,7 @@ public class InMemoryWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddSingleton<Sxg.EvalPlatform.API.Storage.Services.IEvalRunTableService>(serviceProvider =>
             {
-                var mock = new Mock<Sxg.EvalPlatform.API.Storage.Services.IEvalRunTableService>();
-                return mock.Object;
+                return new InMemoryEvalRunTableService();
             });
             
             // Override logging to reduce noise in tests

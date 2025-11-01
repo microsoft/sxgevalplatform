@@ -483,4 +483,220 @@ public static class DatasetTestDataHelper
     }
 
     #endregion
+
+    #region EvalResult DTOs
+
+    /// <summary>
+    /// Creates a valid SaveEvaluationResultDto for testing
+    /// </summary>
+    public static SaveEvaluationResultDto CreateValidSaveEvaluationResultDto(
+        Guid evalRunId, 
+        int recordCount = 3)
+    {
+        return new SaveEvaluationResultDto
+        {
+            EvalRunId = evalRunId,
+            EvaluationRecords = CreateTestEvaluationRecords(recordCount)
+        };
+    }
+
+    /// <summary>
+    /// Creates test evaluation result data with sample metrics
+    /// </summary>
+    public static JsonElement CreateTestEvaluationRecords(int recordCount = 3)
+    {
+        var testRecords = new List<object>();
+        for (int i = 1; i <= recordCount; i++)
+        {
+            testRecords.Add(new
+            {
+                id = i,
+                question = $"Test question {i}?",
+                expectedAnswer = $"Expected answer {i}",
+                actualAnswer = $"Actual answer {i}",
+                metrics = new
+                {
+                    bleu = Math.Round(0.85 + (i * 0.01), 3),
+                    rouge = Math.Round(0.78 + (i * 0.02), 3),
+                    accuracy = Math.Round(0.90 + (i * 0.01), 3),
+                    precision = Math.Round(0.88 + (i * 0.015), 3),
+                    recall = Math.Round(0.82 + (i * 0.02), 3),
+                    f1Score = Math.Round(0.85 + (i * 0.01), 3)
+                },
+                metadata = new
+                {
+                    evaluationTime = DateTime.UtcNow.AddMinutes(-i).ToString("O"),
+                    promptTokens = 150 + (i * 10),
+                    responseTokens = 200 + (i * 15),
+                    evaluationDuration = $"00:00:{30 + i:D2}"
+                },
+                timestamp = DateTime.UtcNow.AddMinutes(-i).ToString("O")
+            });
+        }
+
+        var json = JsonSerializer.Serialize(testRecords);
+        return JsonSerializer.Deserialize<JsonElement>(json);
+    }
+
+    /// <summary>
+    /// Creates a test EvalRun entity for integration testing
+    /// </summary>
+    public static EvalRunDto CreateTestEvalRunDto(
+        string agentId = "test-agent-001",
+        string status = "Completed",
+        string? dataSetId = null,
+        string? metricsConfigId = null,
+        DateTime? startedDateTime = null,
+        DateTime? completedDateTime = null)
+    {
+        var startTime = startedDateTime ?? DateTime.UtcNow.AddMinutes(-30);
+        var completedTime = (status == "Completed" || status == "Failed") 
+            ? (completedDateTime ?? DateTime.UtcNow.AddMinutes(-5))
+            : (DateTime?)null;
+
+        return new EvalRunDto
+        {
+            EvalRunId = Guid.NewGuid(),
+            AgentId = agentId,
+            DataSetId = dataSetId ?? $"dataset-{agentId}",
+            MetricsConfigurationId = metricsConfigId ?? $"metrics-{agentId}",
+            Status = status,
+            LastUpdatedBy = "integration-test",
+            LastUpdatedOn = DateTime.UtcNow,
+            StartedDatetime = startTime,
+            CompletedDatetime = completedTime
+        };
+    }
+
+    /// <summary>
+    /// Creates an EvalRunTableEntity for storage testing
+    /// </summary>
+    public static Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunTableEntity CreateTestEvalRunTableEntity(
+        string agentId = "test-agent-001",
+        string status = "Completed",
+        Guid? evalRunId = null,
+        string? dataSetId = null,
+        string? metricsConfigId = null,
+        DateTime? startedDateTime = null,
+        DateTime? completedDateTime = null)
+    {
+        var runId = evalRunId ?? Guid.NewGuid();
+        var startTime = startedDateTime ?? DateTime.UtcNow.AddMinutes(-30);
+        var completedTime = (status == "Completed" || status == "Failed") 
+            ? (completedDateTime ?? DateTime.UtcNow.AddMinutes(-5))
+            : (DateTime?)null;
+
+        return new Sxg.EvalPlatform.API.Storage.TableEntities.EvalRunTableEntity
+        {
+            PartitionKey = agentId,
+            RowKey = runId.ToString(),
+            EvalRunId = runId,
+            AgentId = agentId,
+            DataSetId = dataSetId ?? $"dataset-{agentId}",
+            MetricsConfigurationId = metricsConfigId ?? $"metrics-{agentId}",
+            Status = status,
+            LastUpdatedBy = "integration-test",
+            LastUpdatedOn = DateTime.UtcNow,
+            StartedDatetime = startTime,
+            CompletedDatetime = completedTime,
+            BlobFilePath = $"evalresults/{runId}/",
+            ContainerName = agentId.Replace(" ", "")
+        };
+    }
+
+    #endregion
+
+    #region EvalResult Validation Methods
+
+    /// <summary>
+    /// Validates SaveEvaluationResultDto response
+    /// </summary>
+    public static void ValidateEvaluationResultSaveResponse(EvaluationResultSaveResponseDto response, Guid expectedEvalRunId)
+    {
+        response.Should().NotBeNull();
+        response.Success.Should().BeTrue();
+        response.EvalRunId.Should().Be(expectedEvalRunId);
+        response.Message.Should().NotBeEmpty();
+        response.Message.Should().Contain("successfully");
+    }
+
+    /// <summary>
+    /// Validates EvaluationResultResponseDto response
+    /// </summary>
+    public static void ValidateEvaluationResultResponse(EvaluationResultResponseDto response, Guid expectedEvalRunId)
+    {
+        response.Should().NotBeNull();
+        response.Success.Should().BeTrue();
+        response.EvalRunId.Should().Be(expectedEvalRunId);
+        response.EvaluationRecords.Should().NotBeNull();
+        response.Message.Should().NotBeEmpty();
+        response.Message.Should().Contain("successfully");
+    }
+
+    /// <summary>
+    /// Validates that evaluation records contain expected structure and data
+    /// </summary>
+    public static void ValidateEvaluationRecords(JsonElement? evaluationRecords, int expectedRecordCount)
+    {
+        evaluationRecords.Should().NotBeNull();
+        evaluationRecords!.Value.ValueKind.Should().Be(JsonValueKind.Array);
+        
+        var records = evaluationRecords.Value.EnumerateArray().ToList();
+        records.Should().HaveCount(expectedRecordCount);
+
+        foreach (var record in records)
+        {
+            // Validate required fields exist
+            record.TryGetProperty("id", out _).Should().BeTrue();
+            record.TryGetProperty("question", out _).Should().BeTrue();
+            record.TryGetProperty("actualAnswer", out _).Should().BeTrue();
+            record.TryGetProperty("metrics", out var metrics).Should().BeTrue();
+            record.TryGetProperty("timestamp", out _).Should().BeTrue();
+
+            // Validate metrics structure
+            metrics.TryGetProperty("bleu", out _).Should().BeTrue();
+            metrics.TryGetProperty("rouge", out _).Should().BeTrue();
+            metrics.TryGetProperty("accuracy", out _).Should().BeTrue();
+        }
+    }
+
+    /// <summary>
+    /// Validates EvalRunDto list response
+    /// </summary>
+    public static void ValidateEvalRunList(List<EvalRunDto> evalRuns, string expectedAgentId, int expectedCount)
+    {
+        evalRuns.Should().NotBeNull();
+        evalRuns.Should().HaveCount(expectedCount);
+        evalRuns.Should().OnlyContain(r => r.AgentId == expectedAgentId);
+        
+        foreach (var run in evalRuns)
+        {
+            run.EvalRunId.Should().NotBeEmpty();
+            run.AgentId.Should().Be(expectedAgentId);
+            run.DataSetId.Should().NotBeEmpty();
+            run.MetricsConfigurationId.Should().NotBeEmpty();
+            run.Status.Should().NotBeEmpty();
+            run.LastUpdatedOn.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
+            run.StartedDatetime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
+        }
+    }
+
+    /// <summary>
+    /// Validates EvaluationResultResponseDto list from date range query
+    /// </summary>
+    public static void ValidateEvaluationResultList(List<EvaluationResultResponseDto> results, int expectedCount)
+    {
+        results.Should().NotBeNull();
+        results.Should().HaveCount(expectedCount);
+        results.Should().OnlyContain(r => r.Success);
+        
+        foreach (var result in results)
+        {
+            result.EvalRunId.Should().NotBeEmpty();
+            result.EvaluationRecords.Should().NotBeNull();
+            result.Message.Should().NotBeEmpty();
+        }
+    }
+
+    #endregion
 }

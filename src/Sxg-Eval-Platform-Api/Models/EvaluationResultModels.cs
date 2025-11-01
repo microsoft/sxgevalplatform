@@ -52,8 +52,6 @@ public class EvaluationResultSaveResponseDto
     public string Message { get; set; } = string.Empty;
     
     public Guid EvalRunId { get; set; }
-    
-    public string BlobPath { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -66,8 +64,6 @@ public class EvaluationResultResponseDto
     public string Message { get; set; } = string.Empty;
     
     public Guid EvalRunId { get; set; }
-    
-    public string FileName { get; set; } = string.Empty;
     
     public JsonElement? EvaluationRecords { get; set; }
 }

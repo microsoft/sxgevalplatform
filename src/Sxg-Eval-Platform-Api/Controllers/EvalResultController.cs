@@ -21,12 +21,16 @@ namespace SxgEvalPlatformApi.Controllers
         private readonly IConfigHelper _configHelper;
         private readonly IGenericCacheService _cacheService;
         private readonly IEvaluationResultRequestHandler _evaluationResultRequestHandler;
+        private readonly IEvalRunTableService _evalRunTableService;
+        private readonly IAzureBlobStorageService _azureBlobStorageService;
 
         public EvalResultController(
             IConfiguration configuration,
             IConfigHelper configHelper,
             IGenericCacheService cacheService,
             IEvaluationResultRequestHandler evaluationResultRequestHandler,
+            IEvalRunTableService evalRunTableService,
+            IAzureBlobStorageService azureBlobStorageService,
             ILogger<EvalResultController> logger)
             : base(logger)
         {
@@ -34,6 +38,8 @@ namespace SxgEvalPlatformApi.Controllers
             _configHelper = configHelper;
             _cacheService = cacheService;
             _evaluationResultRequestHandler = evaluationResultRequestHandler;
+            _evalRunTableService = evalRunTableService;
+            _azureBlobStorageService = azureBlobStorageService;
 
             _logger.LogInformation("EvalResultController (hybrid: caching + RequestHandler) initialized");
         }
@@ -88,15 +94,6 @@ namespace SxgEvalPlatformApi.Controllers
                     // First, quickly check if the EvalRun exists in cache
                     var evalRunCacheKey = $"EvalRun:{evalRunId}";
                     var cachedEvalRun = await _cacheService.GetOrSetAsync<EvalRunDto>(evalRunCacheKey, async () => null, TimeSpan.FromMinutes(1));
-                    
-                    // Create services directly without DI caching decorators
-                    var evalRunTableService = new EvalRunTableService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                    var blobService = new AzureBlobStorageService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<AzureBlobStorageService>>());
 
                     // Get EvalRun entity (use cached data if available)
                     EvalRunTableEntity? evalRunEntity;
@@ -104,7 +101,7 @@ namespace SxgEvalPlatformApi.Controllers
                     {
                         _logger.LogInformation("Using cached EvalRun data for ID: {EvalRunId}", evalRunId);
                         // We have cached data, but we still need the entity for container/path info
-                        evalRunEntity = await evalRunTableService.GetEvalRunByIdAsync(evalRunId);
+                        evalRunEntity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
                         if (evalRunEntity == null)
                         {
                             _logger.LogWarning("EvalRun cache inconsistency - cached but not in storage: {EvalRunId}", evalRunId);
@@ -115,7 +112,7 @@ namespace SxgEvalPlatformApi.Controllers
                     else
                     {
                         // First, verify that the EvalRunId exists and get internal details
-                        evalRunEntity = await evalRunTableService.GetEvalRunByIdAsync(evalRunId);
+                        evalRunEntity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
                         if (evalRunEntity == null)
                         {
                             _logger.LogWarning("EvalRunId not found: {EvalRunId}", evalRunId);
@@ -133,7 +130,7 @@ namespace SxgEvalPlatformApi.Controllers
                         if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
                         {
                             // Search for evaluation results files in the folder
-                            var blobs = await blobService.ListBlobsAsync(containerName, evalRunEntity.BlobFilePath);
+                            var blobs = await _azureBlobStorageService.ListBlobsAsync(containerName, evalRunEntity.BlobFilePath);
                             var evaluationResultBlob = blobs.FirstOrDefault(b => 
                                 b.Contains("evaluation_results_") && b.EndsWith(".json"));
                             
@@ -161,7 +158,7 @@ namespace SxgEvalPlatformApi.Controllers
                     _logger.LogInformation("Searching for evaluation results at path: {ContainerName}/{BlobPath}", containerName, blobPath);
 
                     // Check if the blob exists
-                    var blobExists = await blobService.BlobExistsAsync(containerName, blobPath);
+                    var blobExists = await _azureBlobStorageService.BlobExistsAsync(containerName, blobPath);
                     if (!blobExists)
                     {
                         _logger.LogInformation("Evaluation results not found for EvalRunId: {EvalRunId} in path {ContainerName}/{BlobPath}. This could mean the evaluation run hasn't completed yet or something went wrong.", 
@@ -170,7 +167,7 @@ namespace SxgEvalPlatformApi.Controllers
                     }
 
                     // Get the blob content
-                    var jsonContent = await blobService.ReadBlobContentAsync(containerName, blobPath);
+                    var jsonContent = await _azureBlobStorageService.ReadBlobContentAsync(containerName, blobPath);
                     if (string.IsNullOrEmpty(jsonContent))
                     {
                         _logger.LogWarning("Evaluation results file is empty for EvalRunId: {EvalRunId}", evalRunId);
@@ -268,11 +265,7 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogInformation("Optimized saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
 
                 // First verify that the EvalRunId exists using our fast table service
-                var evalRunTableService = new EvalRunTableService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                var evalRun = await evalRunTableService.GetEvalRunByIdAsync(saveDto.EvalRunId);
+                var evalRun = await _evalRunTableService.GetEvalRunByIdAsync(saveDto.EvalRunId);
                 if (evalRun == null)
                 {
                     _logger.LogWarning("EvalRunId not found: {EvalRunId}", saveDto.EvalRunId);
@@ -286,11 +279,6 @@ namespace SxgEvalPlatformApi.Controllers
                     return CreateBadRequestResponse<EvaluationResultSaveResponseDto>("EvalRunId", "Unable to save results - evaluation run status does not allow saving");
                 }
 
-                // Create blob storage service directly
-                var blobService = new AzureBlobStorageService(
-                    _configuration,
-                    this.HttpContext.RequestServices.GetRequiredService<ILogger<AzureBlobStorageService>>());
-
                 // Save the evaluation results to blob storage
                 var containerName = evalRun.ContainerName ?? evalRun.AgentId.Replace(" ", "");
                 var blobPath = $"{evalRun.BlobFilePath}evaluation_results_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
@@ -302,7 +290,7 @@ namespace SxgEvalPlatformApi.Controllers
                         WriteIndented = true
                     });
 
-                await blobService.WriteBlobContentAsync(containerName, blobPath, jsonContent);
+                await _azureBlobStorageService.WriteBlobContentAsync(containerName, blobPath, jsonContent);
 
                 // Invalidate caches for this EvalRunId
                 var cacheKey = $"EvalResult:{saveDto.EvalRunId}";
@@ -453,18 +441,9 @@ namespace SxgEvalPlatformApi.Controllers
                 {
                     // Cache miss, fetch from storage
                     _logger.LogInformation("Optimized cache miss, fetching date range results from storage for AgentId: {AgentId}", agentId);
-                    
-                    // Create services directly without DI caching decorators
-                    var evalRunTableService = new EvalRunTableService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<EvalRunTableService>>());
-
-                    var blobService = new AzureBlobStorageService(
-                        _configuration,
-                        this.HttpContext.RequestServices.GetRequiredService<ILogger<AzureBlobStorageService>>());
 
                     // Get eval runs for agent within date range
-                    var evalRuns = await evalRunTableService.GetEvalRunsByAgentIdAsync(agentId);
+                    var evalRuns = await _evalRunTableService.GetEvalRunsByAgentIdAsync(agentId);
                     var filteredRuns = evalRuns.Where(er => 
                         er.StartedDatetime >= startDateTime && 
                         er.StartedDatetime <= endDateTime &&
@@ -480,7 +459,7 @@ namespace SxgEvalPlatformApi.Controllers
                             var containerName = evalRun.ContainerName ?? evalRun.AgentId.Replace(" ", "");
                             var blobPath = $"{evalRun.BlobFilePath}results.json";
 
-                            var content = await blobService.ReadBlobContentAsync(containerName, blobPath);
+                            var content = await _azureBlobStorageService.ReadBlobContentAsync(containerName, blobPath);
                             if (!string.IsNullOrEmpty(content))
                             {
                                 var evaluationRecords = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(content,
@@ -530,92 +509,6 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogError(ex, "Error occurred while retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
                     agentId, startDateTime, endDateTime);
                 return CreateErrorResponse<List<EvaluationResultResponseDto>>("Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
-            }
-        }
-
-        #endregion
-
-        #region RequestHandler Methods (Optimized)
-
-        /// <summary>
-        /// Get evaluation results by EvalRunId using RequestHandler (Fast version)
-        /// </summary>
-        /// <param name="evalRunId">Evaluation run ID</param>
-        /// <returns>Evaluation results data</returns>
-        /// <response code="200">Evaluation results retrieved successfully</response>
-        /// <response code="400">Invalid EvalRunId</response>
-        /// <response code="404">Evaluation results not found</response>
-        /// <response code="500">Internal server error</response>
-        [HttpGet("fast/{evalRunId}")]
-        [ProducesResponseType(typeof(EvaluationResultResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<EvaluationResultResponseDto>> GetEvaluationResultFast(Guid evalRunId)
-        {
-            try
-            {
-                var evalRunIdValidation = ValidateEvalRunId(evalRunId);
-                if (evalRunIdValidation != null)
-                {
-                    return evalRunIdValidation;
-                }
-
-                _logger.LogInformation("Fast RequestHandler request for EvalRunId: {EvalRunId}", evalRunId);
-
-                // Use RequestHandler for optimized performance (no direct service creation)
-                var result = await _evaluationResultRequestHandler.GetEvaluationResultByIdAsync(evalRunId);
-                
-                if (result == null || !result.Success)
-                {
-                    return NotFound("Evaluation results not found");
-                }
-
-                _logger.LogInformation("Fast RequestHandler successfully retrieved results for EvalRunId: {EvalRunId}", evalRunId);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fast RequestHandler error for EvalRunId: {EvalRunId}", evalRunId);
-                return CreateErrorResponse<EvaluationResultResponseDto>("Failed to retrieve evaluation results", StatusCodes.Status500InternalServerError);
-            }
-        }
-
-        /// <summary>
-        /// Save evaluation results using RequestHandler (Fast version)
-        /// </summary>
-        /// <param name="saveDto">Evaluation result data</param>
-        /// <returns>Save operation result</returns>
-        [HttpPost("fast")]
-        [ProducesResponseType(typeof(EvaluationResultSaveResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<EvaluationResultSaveResponseDto>> SaveEvaluationResultFast([FromBody] SaveEvaluationResultDto saveDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return CreateValidationErrorResponse<EvaluationResultSaveResponseDto>();
-                }
-
-                _logger.LogInformation("Fast RequestHandler saving for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
-
-                // Use RequestHandler for optimized performance (no direct service creation)
-                var result = await _evaluationResultRequestHandler.SaveEvaluationResultAsync(saveDto);
-                
-                if (!result.Success)
-                {
-                    return BadRequest(result);
-                }
-
-                _logger.LogInformation("Fast RequestHandler successfully saved results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fast RequestHandler save error for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
-                return CreateErrorResponse<EvaluationResultSaveResponseDto>("Failed to save evaluation results", StatusCodes.Status500InternalServerError);
             }
         }
 

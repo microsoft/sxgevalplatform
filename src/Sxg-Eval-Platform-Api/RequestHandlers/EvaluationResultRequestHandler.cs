@@ -140,8 +140,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     Success = true,
                     Message = "Evaluation results saved successfully",
-                    EvalRunId = saveDto.EvalRunId,
-                    BlobPath = $"{containerName}/{blobPath}"
+                    EvalRunId = saveDto.EvalRunId
                 };
             }
             catch (Exception ex)
@@ -287,7 +286,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     Success = true,
                     Message = "Evaluation results retrieved successfully",
                     EvalRunId = evalRunId,
-                    FileName = evaluationResult?.FileName ?? "Unknown",
                     EvaluationRecords = evaluationResult?.EvaluationRecords
                 };
 

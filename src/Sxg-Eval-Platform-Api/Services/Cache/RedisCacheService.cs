@@ -206,30 +206,60 @@ namespace SxgEvalPlatformApi.Services.Cache
         {
             try
             {
-                // Since we can't use INFO command without admin mode, provide basic information
+                // Create basic size info - we'll populate what we can
                 var sizeInfo = new CacheSizeInfo
                 {
-                    TotalKeys = 0, // Can't get this without admin mode
+                    TotalKeys = 0, // Can't get this without admin mode or full scan
                     UsedMemory = 0, // Can't get this without admin mode
                     MaxMemory = 0, // Can't get this without admin mode
                     MemoryUsagePercentage = 0
                 };
 
-                // Get key counts by pattern (this works without admin mode)
-                try
+                // Skip advanced operations if configured to do so (e.g., in development)
+                if (_options.SkipAuthRequiredOperations)
                 {
-                    var patterns = new[] { $"{_options.KeyPrefix}:metrics:*", $"{_options.KeyPrefix}:blob:*", $"{_options.KeyPrefix}:dataset:*" };
-                    foreach (var pattern in patterns)
-                    {
-                        // Use SCAN instead of KEYS for better performance and no admin requirement
-                        var keys = await _database.ExecuteAsync("SCAN", "0", "MATCH", pattern, "COUNT", "100");
-                        // Note: This is a simplified approach. In production, you'd implement proper SCAN iteration
-                        sizeInfo.KeysByPattern[pattern] = 0; // Simplified for now
-                    }
+                    _logger.LogDebug("Skipping auth-required operations as configured");
+                    return sizeInfo;
                 }
-                catch (Exception ex)
+
+                // Try to get key counts by pattern (this might fail with auth issues)
+                if (_options.EnableAdvancedMonitoring)
                 {
-                    _logger.LogWarning(ex, "Could not scan keys by pattern");
+                    try
+                    {
+                        // Only attempt pattern scanning if server instance is available
+                        if (_server != null)
+                        {
+                            var patterns = new[] { $"{_options.KeyPrefix}:metrics:*", $"{_options.KeyPrefix}:blob:*", $"{_options.KeyPrefix}:dataset:*" };
+                            foreach (var pattern in patterns)
+                            {
+                                try
+                                {
+                                    // Use Server.Keys which is more reliable for patterns
+                                    var keyCount = _server.Keys(pattern: pattern, pageSize: 100).Take(100).Count();
+                                    sizeInfo.KeysByPattern[pattern] = keyCount;
+                                }
+                                catch (RedisServerException ex) when (ex.Message.Contains("NOAUTH"))
+                                {
+                                    _logger.LogWarning("Authentication required for pattern scanning: {Pattern}. Skipping pattern count.", pattern);
+                                    sizeInfo.KeysByPattern[pattern] = -1; // Indicate auth required
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogDebug(ex, "Could not count keys for pattern: {Pattern}", pattern);
+                                    sizeInfo.KeysByPattern[pattern] = -1; // Indicate unavailable
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Server instance not available - cannot perform pattern scanning");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not perform pattern-based key counting - limited monitoring mode");
+                    }
                 }
 
                 return sizeInfo;
@@ -275,6 +305,16 @@ namespace SxgEvalPlatformApi.Services.Cache
                     health.Version = "Unknown (admin mode required)";
                     health.Warnings.Add("Admin mode not enabled - limited monitoring capabilities");
                 }
+                catch (RedisServerException ex) when (ex.Message.Contains("NOAUTH"))
+                {
+                    health.Version = "Unknown (authentication required)";
+                    health.Warnings.Add("Redis authentication required for server info - limited monitoring");
+                }
+                catch (RedisConnectionException ex)
+                {
+                    health.Version = "Unknown (connection issue)";
+                    health.Warnings.Add($"Redis connection issue: {ex.Message}");
+                }
 
                 // Get size information (simplified without admin mode)
                 health.SizeInfo = await GetCacheSizeAsync();
@@ -297,6 +337,14 @@ namespace SxgEvalPlatformApi.Services.Cache
                     {
                         health.Warnings.Add("Cache read/write test failed");
                     }
+                }
+                catch (RedisServerException ex) when (ex.Message.Contains("NOAUTH"))
+                {
+                    health.Warnings.Add("Cache operations require authentication - basic connectivity confirmed");
+                }
+                catch (RedisConnectionException ex)
+                {
+                    health.Warnings.Add($"Cache connection issue during operations: {ex.Message}");
                 }
                 catch (Exception ex)
                 {
@@ -468,5 +516,7 @@ namespace SxgEvalPlatformApi.Services.Cache
         public int DefaultTtlMinutes { get; set; } = 60;
         public int MaxMemoryMB { get; set; } = 500;
         public bool EnableCompression { get; set; } = false;
+        public bool EnableAdvancedMonitoring { get; set; } = true;
+        public bool SkipAuthRequiredOperations { get; set; } = false;
     }
 }
