@@ -34,3 +34,13 @@ TestResults.xml
 /SXG.EvalPlatform.Common/obj
 /Sxg.EvalPlatform.API.Storage/bin/Release/net8.0
 /SXG.EvalPlatform.Common/bin/Release/net8.0
+/src/APIs/.vs/Sxg.Eval.Platform.Api
+/src/APIs/SXG.EvalPlatform.API/bin
+/src/APIs/SXG.EvalPlatform.API/obj
+/src/APIs/SXG.EvalPlatform.API/publish
+/src/APIs/Sxg.EvalPlatform.API.Storage/bin
+/src/APIs/Sxg.EvalPlatform.API.Storage/obj
+/src/APIs/Sxg.EvalPlatform.API.Storage.UnitTests/bin/Debug/net8.0
+/src/APIs/Sxg.EvalPlatform.API.Storage.UnitTests/obj
+/src/APIs/SXG.EvalPlatform.Common/bin
+/src/APIs/SXG.EvalPlatform.Common/obj

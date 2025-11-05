@@ -1,0 +1,364 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerAppName": {
+            "type": "string",
+            "defaultValue": "eval-framework-app",
+            "metadata": {
+                "description": "Name of the Container App"
+            }
+        },
+        "containerRegistryName": {
+            "type": "string",
+            "defaultValue": "evalplatformregistry",
+            "metadata": {
+                "description": "Name of the Azure Container Registry"
+            }
+        },
+        "resourceGroupName": {
+            "type": "string",
+            "defaultValue": "rg-sxg-agent-evaluation-platform",
+            "metadata": {
+                "description": "Resource Group Name"
+            }
+        },
+        "imageTag": {
+            "type": "string",
+            "defaultValue": "latest",
+            "metadata": {
+                "description": "Container image tag"
+            }
+        },
+        "minReplicas": {
+            "type": "int",
+            "defaultValue": 3,
+            "metadata": {
+                "description": "Minimum number of replicas"
+            }
+        },
+        "maxReplicas": {
+            "type": "int",
+            "defaultValue": 10,
+            "metadata": {
+                "description": "Maximum number of replicas"
+            }
+        },
+        "targetPort": {
+            "type": "int",
+            "defaultValue": 8080,
+            "metadata": {
+                "description": "Target port for the container"
+            }
+        },
+        "cpuCores": {
+            "type": "string",
+            "defaultValue": "2.0",
+            "metadata": {
+                "description": "CPU cores allocation (optimized for concurrent processing)"
+            }
+        },
+        "memorySize": {
+            "type": "string",
+            "defaultValue": "4.0Gi",
+            "metadata": {
+                "description": "Memory allocation (optimized for concurrent processing)"
+            }
+        },
+        "applicationInsightsConnectionString": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Application Insights Connection String"
+            }
+        },
+        "azureStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure Storage Account Name for managed identity access"
+            }
+        },
+        "azureQueueName": {
+            "type": "string",
+            "defaultValue": "evaluation-requests",
+            "metadata": {
+                "description": "Azure Storage Queue Name"
+            }
+        },
+        "evaluationApiBaseUrl": {
+            "type": "string",
+            "metadata": {
+                "description": "Base URL for the Evaluation API"
+            }
+        },
+        "azureOpenAiEndpoint": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure OpenAI Endpoint"
+            }
+        },
+        "azureOpenAiApiVersion": {
+            "type": "string",
+            "defaultValue": "2025-01-01-preview",
+            "metadata": {
+                "description": "Azure OpenAI API Version"
+            }
+        },
+        "azureOpenAiDeploymentName": {
+            "type": "string",
+            "defaultValue": "gpt-4.1",
+            "metadata": {
+                "description": "Azure OpenAI Deployment Name"
+            }
+        },
+        "azureTenantId": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure Tenant ID for managed identity"
+            }
+        },
+        "azureSubscriptionId": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure Subscription ID"
+            }
+        },
+        "azureAiProjectName": {
+            "type": "string",
+            "defaultValue": "evalplatformproject",
+            "metadata": {
+                "description": "Azure AI Foundry Project Name"
+            }
+        },
+        "managedEnvironmentName": {
+            "type": "string",
+            "defaultValue": "eval-framework-env",
+            "metadata": {
+                "description": "Container Apps managed environment name"
+            }
+        }
+    },
+    "variables": {
+        "containerRegistryFqdn": "[concat(parameters('containerRegistryName'), '.azurecr.io')]",
+        "containerImageName": "[concat(variables('containerRegistryFqdn'), '/eval-framework-app:', parameters('imageTag'))]",
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('managedEnvironmentName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2022-03-01",
+            "name": "[parameters('containerAppName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "managedEnvironmentId": "[variables('managedEnvironmentId')]",
+                "configuration": {
+                    "secrets": [
+                        {
+                            "name": "application-insights-connection-string",
+                            "value": "[parameters('applicationInsightsConnectionString')]"
+                        }
+                    ],
+                    "registries": [
+                        {
+                            "server": "[variables('containerRegistryFqdn')]",
+                            "identity": "system"
+                        }
+                    ],
+                    "ingress": {
+                        "external": false,
+                        "targetPort": "[parameters('targetPort')]",
+                        "allowInsecure": false,
+                        "traffic": [
+                            {
+                                "weight": 100,
+                                "latestRevision": true
+                            }
+                        ]
+                    }
+                },
+                "template": {
+                    "revisionSuffix": "[concat('rev-', utcNow('yyyyMMddHHmmss'))]",
+                    "containers": [
+                        {
+                            "name": "eval-framework-container",
+                            "image": "[variables('containerImageName')]",
+                            "resources": {
+                                "cpu": "[parameters('cpuCores')]",
+                                "memory": "[parameters('memorySize')]"
+                            },
+                            "env": [
+                                {
+                                    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                                    "secretRef": "application-insights-connection-string"
+                                },
+                                {
+                                    "name": "AZURE_STORAGE_ACCOUNT_NAME",
+                                    "value": "[parameters('azureStorageAccountName')]"
+                                },
+                                {
+                                    "name": "AZURE_QUEUE_NAME",
+                                    "value": "[parameters('azureQueueName')]"
+                                },
+                                {
+                                    "name": "AZURE_USE_MANAGED_IDENTITY",
+                                    "value": "true"
+                                },
+                                {
+                                    "name": "AZURE_TENANT_ID",
+                                    "value": "[parameters('azureTenantId')]"
+                                },
+                                {
+                                    "name": "AZURE_SUBSCRIPTION_ID",
+                                    "value": "[parameters('azureSubscriptionId')]"
+                                },
+                                {
+                                    "name": "AZURE_RESOURCE_GROUP_NAME",
+                                    "value": "[parameters('resourceGroupName')]"
+                                },
+                                {
+                                    "name": "AZURE_AI_PROJECT_NAME",
+                                    "value": "[parameters('azureAiProjectName')]"
+                                },
+                                {
+                                    "name": "EVALUATION_API_BASE_URL",
+                                    "value": "[parameters('evaluationApiBaseUrl')]"
+                                },
+                                {
+                                    "name": "AZURE_OPENAI_ENDPOINT",
+                                    "value": "[parameters('azureOpenAiEndpoint')]"
+                                },
+                                {
+                                    "name": "AZURE_OPENAI_API_VERSION",
+                                    "value": "[parameters('azureOpenAiApiVersion')]"
+                                },
+                                {
+                                    "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
+                                    "value": "[parameters('azureOpenAiDeploymentName')]"
+                                },
+                                {
+                                    "name": "AZURE_OPENAI_USE_MANAGED_IDENTITY",
+                                    "value": "true"
+                                },
+                                {
+                                    "name": "PYTHONPATH",
+                                    "value": "/app/src"
+                                },
+                                {
+                                    "name": "PYTHON_UNBUFFERED",
+                                    "value": "1"
+                                },
+                                {
+                                    "name": "LOG_LEVEL",
+                                    "value": "INFO"
+                                },
+                                {
+                                    "name": "MAX_DATASET_CONCURRENCY",
+                                    "value": "3"
+                                },
+                                {
+                                    "name": "MAX_METRICS_CONCURRENCY",
+                                    "value": "8"
+                                },
+                                {
+                                    "name": "EVALUATION_TIMEOUT",
+                                    "value": "30"
+                                },
+                                {
+                                    "name": "HTTP_POOL_CONNECTIONS",
+                                    "value": "20"
+                                },
+                                {
+                                    "name": "HTTP_POOL_MAXSIZE",
+                                    "value": "10"
+                                },
+                                {
+                                    "name": "HTTP_SESSION_LIFETIME",
+                                    "value": "3600"
+                                },
+                                {
+                                    "name": "AZURE_STORAGE_TIMEOUT",
+                                    "value": "30"
+                                },
+                                {
+                                    "name": "AZURE_STORAGE_CONNECT_TIMEOUT",
+                                    "value": "60"
+                                },
+                                {
+                                    "name": "ENABLE_PERFORMANCE_LOGGING",
+                                    "value": "true"
+                                }
+                            ],
+                            "probes": [
+                                {
+                                    "type": "Liveness",
+                                    "httpGet": {
+                                        "path": "/health",
+                                        "port": "[parameters('targetPort')]"
+                                    },
+                                    "initialDelaySeconds": 30,
+                                    "periodSeconds": 30,
+                                    "timeoutSeconds": 10,
+                                    "failureThreshold": 3
+                                },
+                                {
+                                    "type": "Readiness",
+                                    "httpGet": {
+                                        "path": "/ready",
+                                        "port": "[parameters('targetPort')]"
+                                    },
+                                    "initialDelaySeconds": 10,
+                                    "periodSeconds": 10,
+                                    "timeoutSeconds": 5,
+                                    "failureThreshold": 3
+                                }
+                            ]
+                        }
+                    ],
+                    "scale": {
+                        "minReplicas": "[parameters('minReplicas')]",
+                        "maxReplicas": "[parameters('maxReplicas')]",
+                        "rules": [
+                            {
+                                "name": "azure-storage-queue-scaling",
+                                "custom": {
+                                    "type": "azure-queue",
+                                    "metadata": {
+                                        "queueName": "[parameters('azureQueueName')]",
+                                        "queueLength": "5",
+                                        "accountName": "[parameters('azureStorageAccountName')]"
+                                    },
+                                    "auth": [
+                                        {
+                                            "triggerParameter": "connection",
+                                            "identity": "system"
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "cpu-scaling-rule",
+                                "http": {
+                                    "metadata": {
+                                        "concurrentRequests": "10"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            }
+        }
+    ],
+    "outputs": {
+        "containerAppFqdn": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName'))).configuration.ingress.fqdn]"
+        },
+        "containerAppId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.App/containerApps', parameters('containerAppName'))]"
+        }
+    }
+}

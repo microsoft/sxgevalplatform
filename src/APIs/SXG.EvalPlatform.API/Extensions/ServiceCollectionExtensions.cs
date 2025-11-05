@@ -1,0 +1,230 @@
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Azure.Monitor.OpenTelemetry.Exporter;
+using Sxg.EvalPlatform.API.Storage;
+using Sxg.EvalPlatform.API.Storage.Services;
+using SxgEvalPlatformApi.RequestHandlers;
+using SxgEvalPlatformApi.Services;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
+
+namespace SxgEvalPlatformApi.Extensions;
+
+/// <summary>
+/// Extension methods for service collection configuration
+/// </summary>
+public static class ServiceCollectionExtensions
+{
+    /// <summary>
+    /// Configure OpenTelemetry services
+    /// </summary>
+    public static IServiceCollection AddOpenTelemetryServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
+    {
+        var serviceName = configuration["OpenTelemetry:ServiceName"] ?? "SXG-EvalPlatform-API";
+        var serviceVersion = configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
+        var appInsightsConnectionString = configuration["Telemetry:AppInsightsConnectionString"];
+        var enableConsoleExporter = configuration.GetValue<bool>("OpenTelemetry:EnableConsoleExporter", false);
+        var samplingRatio = configuration.GetValue<double>("OpenTelemetry:SamplingRatio", 1.0);
+
+        services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource
+                .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+                .AddAttributes(new Dictionary<string, object>
+                 {
+                     ["deployment.environment"] = environment.EnvironmentName,
+                     ["service.instance.id"] = Environment.MachineName
+                 }))
+                .WithTracing(tracing =>
+                  {
+                      tracing
+                .AddAspNetCoreInstrumentation(options =>
+                     {
+                         options.RecordException = true;
+                         options.EnrichWithHttpRequest = (activity, httpRequest) =>
+                               {
+                                   activity.SetTag("http.request.body.size", httpRequest.ContentLength ?? 0);
+                                   activity.SetTag("http.request.user_agent", httpRequest.Headers.UserAgent.ToString());
+                               };
+                         options.EnrichWithHttpResponse = (activity, httpResponse) =>
+                      {
+                          activity.SetTag("http.response.body.size", httpResponse.ContentLength ?? 0);
+                      };
+                     })
+                .AddHttpClientInstrumentation(options =>
+                   {
+                       options.RecordException = true;
+                       options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+                       {
+                           activity.SetTag("http.request.method", httpRequestMessage.Method.ToString());
+                       };
+                       options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
+                          {
+                              activity.SetTag("http.response.status_code", (int)httpResponseMessage.StatusCode);
+                          };
+                   })
+               .AddSqlClientInstrumentation(options =>
+                  {
+                      options.RecordException = true;
+                      options.SetDbStatementForText = true;
+                  })
+                .AddSource("SXG.EvalPlatform.API")
+                .SetSampler(new TraceIdRatioBasedSampler(samplingRatio));
+
+                      // Add console exporter if enabled
+                      if (enableConsoleExporter)
+                      {
+                          tracing.AddConsoleExporter();
+                      }
+
+                      // Add Application Insights exporter
+                      if (!string.IsNullOrEmpty(appInsightsConnectionString))
+                      {
+                          tracing.AddAzureMonitorTraceExporter(options =>
+                        {
+                            options.ConnectionString = appInsightsConnectionString;
+                        });
+                      }
+                  })
+          .WithMetrics(metrics =>
+            {
+                metrics
+                          .AddAspNetCoreInstrumentation()
+               .AddHttpClientInstrumentation()
+               .AddMeter("SXG.EvalPlatform.API");
+
+                // Add console exporter if enabled
+                if (enableConsoleExporter)
+                {
+                    metrics.AddConsoleExporter();
+                }
+
+                // Add Application Insights exporter
+                if (!string.IsNullOrEmpty(appInsightsConnectionString))
+                {
+                    metrics.AddAzureMonitorMetricExporter(options =>
+                       {
+                           options.ConnectionString = appInsightsConnectionString;
+                       });
+                }
+            });
+
+        // Add Application Insights (traditional integration)
+        if (!string.IsNullOrEmpty(appInsightsConnectionString))
+        {
+            services.AddApplicationInsightsTelemetry(options =>
+              {
+                  options.ConnectionString = appInsightsConnectionString;
+                  options.EnableAdaptiveSampling = true;
+                  options.EnableQuickPulseMetricStream = true;
+                  options.EnableHeartbeat = true;
+              });
+        }
+
+        // Add OpenTelemetry service
+        services.AddSingleton<IOpenTelemetryService, OpenTelemetryService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure Swagger/OpenAPI services
+    /// </summary>
+    public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
+    {
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c =>
+         {
+             c.SwaggerDoc("v1", new OpenApiInfo
+             {
+                 Title = "SXG Evaluation Platform API",
+                 Version = "v1",
+                 Description = "API for SXG Evaluation Platform components with OpenTelemetry integration",
+                 Contact = new OpenApiContact
+                 {
+                     Name = "SXG Team",
+                     Email = "sxg@microsoft.com"
+                 }
+             });
+
+             // Include XML comments
+             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+             if (File.Exists(xmlPath))
+             {
+                 c.IncludeXmlComments(xmlPath);
+             }
+         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure CORS policies
+    /// </summary>
+    public static IServiceCollection AddCorsServices(this IServiceCollection services)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+                     {
+                         policy.AllowAnyOrigin()
+                 .AllowAnyMethod()
+           .AllowAnyHeader();
+                     });
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure AutoMapper services
+    /// </summary>
+    public static IServiceCollection AddAutoMapperServices(this IServiceCollection services)
+    {
+        services.AddAutoMapper(typeof(MappingProfile));
+        return services;
+    }
+
+    /// <summary>
+    /// Configure HTTP client services
+    /// </summary>
+    public static IServiceCollection AddHttpClientServices(this IServiceCollection services)
+    {
+        services.AddHttpClient<IDataVerseAPIService, DataVerseAPIService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "SXG-EvalPlatform-API/1.0");
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure business services (Storage, Request Handlers, etc.)
+    /// </summary>
+    public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+    {
+        // Storage services
+        services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
+        services.AddScoped<IAzureQueueStorageService, AzureQueueStorageService>();
+        services.AddScoped<IDataVerseAPIService, DataVerseAPIService>();
+
+        // Table services
+        services.AddScoped<IMetricsConfigTableService, MetricsConfigTableService>();
+        services.AddScoped<IDataSetTableService, DataSetTableService>();
+        services.AddScoped<IEvalRunTableService, EvalRunTableService>();
+
+        // Request handlers
+        services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigurationRequestHandler>();
+        services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
+        services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
+        services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
+        services.AddScoped<IEvalArtifactsRequestHandler, EvalArtifactsRequestHandler>();
+
+        // Helper services
+        services.AddScoped<IConfigHelper, ConfigHelper>();
+
+        return services;
+    }
+}

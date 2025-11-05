@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SxgEvalPlatformApi</RootNamespace>
+    <AssemblyName>SxgEvalPlatformApi</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="AutoMapper" Version="15.1.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
+    <PackageReference Include="Azure.Identity" Version="1.17.0" />
+    
+    <!-- OpenTelemetry packages - Updated to compatible versions -->
+    <PackageReference Include="OpenTelemetry" Version="1.13.1" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.13.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.13.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.7.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.13.1" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
+    
+    <!-- Application Insights (traditional) -->
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="archive\**" />
+    <Content Remove="archive\**" />
+    <EmbeddedResource Remove="archive\**" />
+    <None Remove="archive\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sxg.EvalPlatform.API.Storage\Sxg.EvalPlatform.API.Storage.csproj" />
+    <ProjectReference Include="..\SXG.EvalPlatform.Common\SXG.EvalPlatform.Common.csproj" />
+  </ItemGroup>
+
+</Project>
