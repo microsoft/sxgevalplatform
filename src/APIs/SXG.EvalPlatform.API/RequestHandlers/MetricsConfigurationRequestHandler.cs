@@ -22,34 +22,41 @@ namespace SxgEvalPlatformApi.RequestHandlers
         IConfigHelper _configHelper;
         private readonly ILogger<MetricsConfigurationRequestHandler> _logger;
         private readonly IMapper _mapper;
+        private readonly StorageFactory _factory;
 
         public MetricsConfigurationRequestHandler(
             IMetricsConfigTableService metricsConfigTableService,
             IAzureBlobStorageService blobStorageService,
             ILogger<MetricsConfigurationRequestHandler> logger,
             IMapper mapper,
-            IConfigHelper configHelper)
+            IConfigHelper configHelper,
+            StorageFactory factory)
         {
             _metricsConfigTableService = metricsConfigTableService;
             _logger = logger;
             _mapper = mapper;
             _blobStorageService = blobStorageService;
             _configHelper = configHelper;
+            _factory = factory;
         }
 
         public async Task<MetricsConfiguration> GetDefaultMetricsConfigurationAsync()
         {
             string containerName = _configHelper.GetPlatformConfigurationsContainer();
             string blobFilePath = _configHelper.GetDefaultMetricsConfiguration();
-            var blobContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobFilePath);
+            string storageProvider = _configHelper.GetStorageProvider();
+            //var blobContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobFilePath);
 
-            if (blobContent == null)
+            var storage = _factory.GetProvider(storageProvider);
+            var content = await storage.ReadAsync(containerName, blobFilePath);
+
+            if (content == null)
             {
                 throw new Exception($"Default metrics configuration blob not found: {containerName}/{blobFilePath}");
             }
 
             // Parse the JSON to handle the wrapper structure
-            using var document = JsonDocument.Parse(blobContent);
+            using var document = JsonDocument.Parse(content);
             var root = document.RootElement;
             
             // Check if the JSON has a "metricConfiguration" wrapper
@@ -65,7 +72,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             else
             {
                 // Try direct deserialization for backward compatibility
-                var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(blobContent);
+                var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(content);
                 if (metrics == null)
                 {
                     throw new Exception("Failed to deserialize default metrics configuration from blob content.");

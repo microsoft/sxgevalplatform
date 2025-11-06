@@ -17,6 +17,7 @@
         string GetDatasetEnrichmentRequestsQueueName();
         string GetEvalProcessingRequestsQueueName();
         string GetDatasetEnrichmentRequestAPIEndPoint();
-        string GetDataVerseAPIScope(); 
+        string GetDataVerseAPIScope();
+        string GetStorageProvider();
     }
 }

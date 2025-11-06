@@ -166,5 +166,15 @@ namespace Sxg.EvalPlatform.API.Storage
             }
             return scope;
         }
+
+        public string GetStorageProvider()
+        {
+            var providerName = _configuration["StorageProvider"];
+            if (string.IsNullOrEmpty(providerName))
+            {
+                throw new InvalidOperationException("Azure Storage Platform Configurations container name is not configured.");
+            }
+            return providerName;
+        }
     }
 }
