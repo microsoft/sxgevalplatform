@@ -117,7 +117,7 @@ Write-Host "App Settings configured for PPE environment" -ForegroundColor Green
 
 # Step 5: Build and Deploy
 Write-Host "Building application..." -ForegroundColor Yellow
-$projectPath = "../../SXG.EvalPlatform.API.csproj"
+$projectPath = "../SXG.EvalPlatform.API.csproj"
 
 if (-not (Test-Path $projectPath)) {
     Write-Host "Project file not found: $projectPath" -ForegroundColor Red
@@ -147,10 +147,20 @@ Write-Host "Publish successful" -ForegroundColor Green
 
 # Step 7: Deploy to Azure
 Write-Host "Deploying to Azure App Service..." -ForegroundColor Yellow
+
+# Create a zip file for deployment
+$zipPath = ".\deploy-ppe.zip"
+if (Test-Path $zipPath) {
+    Remove-Item $zipPath -Force
+}
+
+# Compress the publish folder to a zip file
+Compress-Archive -Path "$publishPath\*" -DestinationPath $zipPath -Force
+
 az webapp deploy `
     --name $AppName `
     --resource-group $ResourceGroupName `
-    --src-path "$publishPath" `
+    --src-path $zipPath `
     --type zip `
     --async false
 
@@ -161,6 +171,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Clean up
 Remove-Item $publishPath -Recurse -Force
+Remove-Item $zipPath -Force
 
 Write-Host "Deployment completed successfully!" -ForegroundColor Green
 Write-Host ""

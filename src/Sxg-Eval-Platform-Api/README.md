@@ -51,8 +51,9 @@ Controllers/        # API controllers
 ├── EvalConfigController.cs
 └── ...
 
+RequestHandlers/   # Business logic and request processing
 Models/            # Data models and DTOs
-Services/          # Business logic services
+archive/           # Legacy code (Services, unused models)
 Properties/        # Launch settings
 deploy/           # Deployment scripts and guides
 ```
@@ -111,24 +112,27 @@ The application can be configured through:
 
 ```
 Controllers/        # API controllers
-├── BaseController.cs
-├── EvaluationController.cs
+├── EvalRunController.cs
+├── EvalConfigController.cs
 └── HealthController.cs
 
+RequestHandlers/   # Business logic and request processing
+├── EvalRunRequestHandler.cs
+├── EvaluationResultRequestHandler.cs
+└── MetricsConfigurationRequestHandler.cs
+
 Models/            # Data models and DTOs
-└── EvaluationModels.cs
+└── (Various DTO models)
 
-Services/          # Business logic services
-├── IEvaluationService.cs
-└── EvaluationService.cs
-
+archive/           # Legacy code (Services, unused models)
 Properties/        # Project configuration
 └── launchSettings.json
 ```
 
 ## Development Notes
 
-- The current implementation uses in-memory storage for simplicity
-- Entity Framework integration can be added for persistent storage
-- Authentication and authorization can be implemented using JWT tokens
+- Uses Azure Table Storage and Blob Storage for persistent data
+- RequestHandlers pattern provides business logic separation from controllers  
+- Storage services provide abstraction layer over Azure SDK clients
+- Authentication uses Azure Active Directory OAuth tokens
 - Additional validation and business rules can be added as needed

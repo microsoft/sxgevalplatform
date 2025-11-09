@@ -79,7 +79,10 @@ public class EvalRunService : IEvalRunService
                 LastUpdatedOn = currentDateTime,
                 StartedDatetime = currentDateTime,
                 ContainerName = containerName,
-                BlobFilePath = blobFilePath
+                BlobFilePath = blobFilePath,
+                Type = createDto.Type,
+                EnvironmentId = createDto.EnvironmentId.ToString(),
+                AgentSchemaName = createDto.AgentSchemaName
             };
 
             await _tableClient.AddEntityAsync(entity);

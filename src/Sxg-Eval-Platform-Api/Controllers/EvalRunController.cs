@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
-using SxgEvalPlatformApi.Services;
+using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.RequestHandlers;
 using Azure;
+using Sxg.EvalPlatform.API.Storage.Services;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -12,18 +14,26 @@ namespace SxgEvalPlatformApi.Controllers;
 [Route("api/v1/eval/runs")]
 public class EvalRunController : BaseController
 {
-    private readonly IEvalRunService _evalRunService;
+    private readonly IEvalRunRequestHandler _evalRunRequestHandler;
+    private readonly IDataSetTableService _dataSetTableService;
+    private readonly IMetricsConfigTableService _metricsConfigTableService;
 
-    public EvalRunController(IEvalRunService evalRunService, ILogger<EvalRunController> logger)
+    public EvalRunController(
+        IEvalRunRequestHandler evalRunRequestHandler, 
+        IDataSetTableService dataSetTableService,
+        IMetricsConfigTableService metricsConfigTableService,
+        ILogger<EvalRunController> logger)
         : base(logger)
     {
-        _evalRunService = evalRunService;
+        _evalRunRequestHandler = evalRunRequestHandler;
+        _dataSetTableService = dataSetTableService;
+        _metricsConfigTableService = metricsConfigTableService;
     }
 
     /// <summary>
     /// Create a new evaluation run
     /// </summary>
-    /// <param name="createDto">Evaluation run creation data containing AgentId, DataSetId, and MetricsConfigurationId (all required)</param>
+    /// <param name="createDto">Evaluation run creation data containing AgentId, DataSetId, MetricsConfigurationId, Type, EnvironmentId, and AgentSchemaName (all required)</param>
     /// <returns>Created evaluation run with generated EvalRunId</returns>
     /// <response code="201">Evaluation run created successfully</response>
     /// <response code="400">Invalid input data</response>
@@ -36,18 +46,23 @@ public class EvalRunController : BaseController
     {
         try
         {
-            // Add custom validation for AgentId only (DataSetId and MetricsConfigurationId are now Guid types)
+            // Add custom validation for string fields (DataSetId and MetricsConfigurationId are now Guid types)
             ValidateAndAddToModelState(createDto.AgentId, "AgentId", "agentid");
+            ValidateAndAddToModelState(createDto.Type, "Type", "type");
+            ValidateAndAddToModelState(createDto.AgentSchemaName, "AgentSchemaName", "agentschemaname");
+            
+            // Validate that the referenced entities exist
+            await ValidateReferencedEntitiesAsync(createDto);
             
             if (!ModelState.IsValid)
             {
                 return CreateValidationErrorResponse<EvalRunDto>();
             }
 
-            _logger.LogInformation("Creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}", 
-                createDto.AgentId, createDto.DataSetId);
+            _logger.LogInformation("Creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}, Type: {Type}, EnvironmentId: {EnvironmentId}", 
+                createDto.AgentId, createDto.DataSetId, createDto.Type, createDto.EnvironmentId);
 
-            var evalRun = await _evalRunService.CreateEvalRunAsync(createDto);
+            var evalRun = await _evalRunRequestHandler.CreateEvalRunAsync(createDto);
             
             return CreatedAtAction(
                 nameof(GetEvalRun), 
@@ -86,8 +101,8 @@ public class EvalRunController : BaseController
     /// <response code="500">Internal server error</response>
     [HttpPut("{evalRunId}")]
     [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(UpdateResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<UpdateResponseDto>> UpdateEvalRun(Guid evalRunId, [FromBody] UpdateStatusDto updateDto)
     {
@@ -106,7 +121,7 @@ public class EvalRunController : BaseController
 
             // First, get the current evaluation run to check its status
             // Use the cross-partition search since we don't have AgentId in the request
-            var currentEvalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
+            var currentEvalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
             if (currentEvalRun == null)
             {
                 return NotFound(new UpdateResponseDto 
@@ -153,7 +168,7 @@ public class EvalRunController : BaseController
                 AgentId = currentEvalRun.AgentId // Get AgentId from the current evaluation run
             };
 
-            var updatedEvalRun = await _evalRunService.UpdateEvalRunStatusAsync(serviceUpdateDto);
+            var updatedEvalRun = await _evalRunRequestHandler.UpdateEvalRunStatusAsync(serviceUpdateDto);
             
             // Since we already validated the evaluation run exists above, this should not be null
             // But we'll still check for safety
@@ -215,7 +230,7 @@ public class EvalRunController : BaseController
 
             _logger.LogInformation("Retrieving evaluation run with ID: {EvalRunId}", evalRunId);
 
-            var evalRun = await _evalRunService.GetEvalRunByIdAsync(evalRunId);
+            var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
             
             if (evalRun == null)
             {
@@ -239,6 +254,54 @@ public class EvalRunController : BaseController
             
             _logger.LogError(ex, "Error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
             return CreateErrorResponse<EvalRunDto>("Failed to retrieve evaluation run", StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    /// <summary>
+    /// Validates that referenced entities (dataset, metrics configuration) exist and belong to the specified agent
+    /// </summary>
+    /// <param name="createDto">The evaluation run creation DTO</param>
+    private async Task ValidateReferencedEntitiesAsync(CreateEvalRunDto createDto)
+    {
+        // Validate DataSet exists and belongs to the agent
+        try
+        {
+            var dataset = await _dataSetTableService.GetDataSetAsync(createDto.AgentId, createDto.DataSetId.ToString());
+            if (dataset == null)
+            {
+                ModelState.AddModelError(nameof(createDto.DataSetId), 
+                    $"Dataset with ID '{createDto.DataSetId}' not found for agent '{createDto.AgentId}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating dataset ID: {DataSetId} for agent: {AgentId}", 
+                createDto.DataSetId, createDto.AgentId);
+            ModelState.AddModelError(nameof(createDto.DataSetId), 
+                "Unable to validate dataset. Please check the dataset ID.");
+        }
+
+        // Validate Metrics Configuration exists
+        try
+        {
+            var metricsConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
+            if (metricsConfig == null)
+            {
+                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                    $"Metrics configuration with ID '{createDto.MetricsConfigurationId}' not found");
+            }
+            else if (metricsConfig.PartitionKey != createDto.AgentId)
+            {
+                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                    $"Metrics configuration '{createDto.MetricsConfigurationId}' does not belong to agent '{createDto.AgentId}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating metrics configuration ID: {MetricsConfigurationId}", 
+                createDto.MetricsConfigurationId);
+            ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                "Unable to validate metrics configuration. Please check the configuration ID.");
         }
     }
 

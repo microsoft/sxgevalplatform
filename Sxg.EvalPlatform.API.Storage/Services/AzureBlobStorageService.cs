@@ -99,8 +99,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             {
                 _logger.LogError(ex, "Failed to write blob content to {ContainerName}/{BlobName}",
                     containerName, blobName);
-                throw ex; 
-                return false;
+                throw;
             }
         }
 
@@ -146,6 +145,41 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _logger.LogError(ex, "Failed to delete blob {ContainerName}/{BlobName}",
                     containerName, blobName);
                 return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<List<string>> ListBlobsAsync(string containerName, string prefix)
+        {
+            try
+            {
+                _logger.LogInformation("Listing blobs in container: {ContainerName} with prefix: {Prefix}",
+                    containerName, prefix);
+
+                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
+                var blobNames = new List<string>();
+
+                if (!await containerClient.ExistsAsync())
+                {
+                    _logger.LogWarning("Container does not exist: {ContainerName}", containerName);
+                    return blobNames;
+                }
+
+                await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
+                {
+                    blobNames.Add(blobItem.Name);
+                }
+
+                _logger.LogInformation("Found {Count} blobs with prefix {Prefix} in container {ContainerName}",
+                    blobNames.Count, prefix, containerName);
+
+                return blobNames;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list blobs in container {ContainerName} with prefix {Prefix}",
+                    containerName, prefix);
+                throw;
             }
         }
     }

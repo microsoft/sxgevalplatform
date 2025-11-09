@@ -18,13 +18,31 @@ namespace SxgEvalPlatformApi
 
         public MappingProfile()
         {
-            // CreateMetricsConfigurationDto to MetricsConfigurationTableEntity
-            CreateMap<CreateMetricsConfigurationDto, MetricsConfigurationTableEntity>()
+            // CreateConfigurationRequestDto to MetricsConfigurationTableEntity  
+            CreateMap<CreateConfigurationRequestDto, MetricsConfigurationTableEntity>()
                 .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => src.ConfigurationId ?? Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.ConfigurationId, opt => opt.Ignore()) // Set manually to ensure consistency
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System")) // Default since UserMetadata is no longer required
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System")) // Default since UserMetadata is no longer required
                 .ForMember(dest => dest.ConainerName, opt => opt.MapFrom(src => src.AgentId))
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
+                .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
+                .ForMember(dest => dest.ETag, opt => opt.Ignore());
+
+            // UpdateConfigurationRequestDto to MetricsConfigurationTableEntity  
+            CreateMap<UpdateConfigurationRequestDto, MetricsConfigurationTableEntity>()
+                .ForMember(dest => dest.PartitionKey, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.RowKey, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.ConfigurationId, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.CreatedOn, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System")) // Default since UserMetadata is no longer required
+                .ForMember(dest => dest.ConainerName, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Preserve existing
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
@@ -34,16 +52,21 @@ namespace SxgEvalPlatformApi
 
             // MetricsConfigurationTableEntity to MetricsConfigurationMetadataDto
             CreateMap<MetricsConfigurationTableEntity, MetricsConfigurationMetadataDto>()
-                .ForMember(dest => dest.MetricsConfiguration, opt => opt.Ignore()); // This is loaded from blob storage separately
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))
+                .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => src.LastUpdatedOn));
 
-            // SaveDatasetDto to DataSetTableEntity
+            // SaveDatasetDto to DataSetTableEntity (for create operations)
             CreateMap<SaveDatasetDto, DataSetTableEntity>()
                 .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
-                .ForMember(dest => dest.DatasetId, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+                .ForMember(dest => dest.RowKey, opt => opt.Ignore()) // Set manually with GUID
+                .ForMember(dest => dest.DatasetId, opt => opt.Ignore()) // Set manually with GUID
                 .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System")) // Default since UserMetadata is no longer required
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
-                .ForMember(dest => dest.LastUpdatedBy, opt => opt.Ignore()) // Will be set from auth context
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System")) // Default since UserMetadata is no longer required
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.ContainerName, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
@@ -52,7 +75,10 @@ namespace SxgEvalPlatformApi
             // DataSetTableEntity to DatasetMetadataDto
             CreateMap<DataSetTableEntity, DatasetMetadataDto>()
                 .ForMember(dest => dest.DatasetName, opt => opt.MapFrom(src => src.DatasetName))
-                .ForMember(dest => dest.RecordCount, opt => opt.Ignore()); // Calculated separately if needed
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))
+                .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => src.LastUpdatedOn));
 
             // Additional mappings for collections
             CreateMap<IList<SelectedMetricsConfigurationDto>, IList<SelectedMetricsConfiguration>>()

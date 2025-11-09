@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
-using SxgEvalPlatformApi.Services;
+using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.RequestHandlers;
 using Azure;
 
 namespace SxgEvalPlatformApi.Controllers;
@@ -12,22 +13,22 @@ namespace SxgEvalPlatformApi.Controllers;
 [Route("api/v1/eval/results")]
 public class EvalResultController : BaseController
 {
-    private readonly IEvaluationResultService _evaluationResultService;
+    private readonly IEvaluationResultRequestHandler _evaluationResultRequestHandler;
 
     public EvalResultController(
-        IEvaluationResultService evaluationResultService, 
+        IEvaluationResultRequestHandler evaluationResultRequestHandler, 
         ILogger<EvalResultController> logger)
         : base(logger)
     {
-        _evaluationResultService = evaluationResultService;
+        _evaluationResultRequestHandler = evaluationResultRequestHandler;
     }
 
     /// <summary>
     /// Save evaluation results for a specific evaluation run
     /// </summary>
-    /// <param name="saveDto">Evaluation result data containing EvalRunId, FileName, and EvaluationRecords</param>
-    /// <returns>Save operation result</returns>
-    /// <response code="200">Evaluation results saved successfully</response>
+    /// <param name="saveDto">Evaluation result data containing EvalRunId and EvaluationRecords</param>
+    /// <returns>Save operation result with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results saved successfully with metadata information</response>
     /// <response code="400">Invalid input data, EvalRunId not found, or evaluation run status is not terminal (must be 'Completed' or 'Failed')</response>
     /// <response code="403">Access denied - authorization failed</response>
     /// <response code="500">Internal server error</response>
@@ -35,7 +36,6 @@ public class EvalResultController : BaseController
     [ProducesResponseType(typeof(EvaluationResultSaveResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<EvaluationResultSaveResponseDto>> SaveEvaluationResult([FromBody] SaveEvaluationResultDto saveDto)
     {
@@ -48,7 +48,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", saveDto.EvalRunId);
 
-            var result = await _evaluationResultService.SaveEvaluationResultAsync(saveDto);
+            var result = await _evaluationResultRequestHandler.SaveEvaluationResultAsync(saveDto);
             
             if (!result.Success)
             {
@@ -93,15 +93,15 @@ public class EvalResultController : BaseController
     /// Get evaluation results by EvalRunId
     /// </summary>
     /// <param name="evalRunId">Evaluation run ID</param>
-    /// <returns>Evaluation results data</returns>
-    /// <response code="200">Evaluation results retrieved successfully</response>
+    /// <returns>Evaluation results data with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results retrieved successfully with metadata information</response>
     /// <response code="400">Invalid EvalRunId</response>
     /// <response code="404">Evaluation results not found</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("{evalRunId}")]
     [ProducesResponseType(typeof(EvaluationResultResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<EvaluationResultResponseDto>> GetEvaluationResult(Guid evalRunId)
     {
@@ -115,7 +115,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
 
-            var result = await _evaluationResultService.GetEvaluationResultByIdAsync(evalRunId);
+            var result = await _evaluationResultRequestHandler.GetEvaluationResultByIdAsync(evalRunId);
             
             if (!result.Success)
             {
@@ -160,8 +160,8 @@ public class EvalResultController : BaseController
     /// Get all evaluation runs for a specific agent
     /// </summary>
     /// <param name="agentId">Agent ID</param>
-    /// <returns>List of evaluation runs for the agent</returns>
-    /// <response code="200">Evaluation runs retrieved successfully</response>
+    /// <returns>List of evaluation runs for the agent with metadata (lastUpdatedBy, lastUpdatedOn, startedBy, startedDatetime)</returns>
+    /// <response code="200">Evaluation runs retrieved successfully with metadata information</response>
     /// <response code="400">Invalid AgentId</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("agent/{agentId}")]
@@ -179,7 +179,7 @@ public class EvalResultController : BaseController
 
             _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
 
-            var evalRuns = await _evaluationResultService.GetEvalRunsByAgentIdAsync(agentId);
+            var evalRuns = await _evaluationResultRequestHandler.GetEvalRunsByAgentIdAsync(agentId);
             
             return Ok(evalRuns);
         }
@@ -207,8 +207,8 @@ public class EvalResultController : BaseController
     /// <param name="agentId">Agent ID</param>
     /// <param name="startDateTime">Start date and time (ISO 8601 format)</param>
     /// <param name="endDateTime">End date and time (ISO 8601 format)</param>
-    /// <returns>List of evaluation results within the specified date range</returns>
-    /// <response code="200">Evaluation results retrieved successfully</response>
+    /// <returns>List of evaluation results within the specified date range with metadata (lastUpdatedBy, lastUpdatedOn)</returns>
+    /// <response code="200">Evaluation results retrieved successfully with metadata information</response>
     /// <response code="400">Invalid parameters</response>
     /// <response code="500">Internal server error</response>
     [HttpGet("agent/{agentId}/daterange")]
@@ -240,7 +240,7 @@ public class EvalResultController : BaseController
             _logger.LogInformation("Retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}", 
                 agentId, startDateTime, endDateTime);
 
-            var results = await _evaluationResultService.GetEvaluationResultsByDateRangeAsync(agentId, startDateTime, endDateTime);
+            var results = await _evaluationResultRequestHandler.GetEvaluationResultsByDateRangeAsync(agentId, startDateTime, endDateTime);
             
             return Ok(results);
         }

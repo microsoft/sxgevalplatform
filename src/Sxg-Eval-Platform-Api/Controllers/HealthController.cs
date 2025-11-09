@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SxgEvalPlatformApi.Models.Dtos;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -21,12 +22,12 @@ public class HealthController : ControllerBase
     /// </summary>
     /// <returns>Health status information</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public IActionResult GetHealth()
+    [ProducesResponseType(typeof(HealthStatusDto), StatusCodes.Status200OK)]
+    public ActionResult<HealthStatusDto> GetHealth()
     {
         _logger.LogInformation("Health check requested");
         
-        var healthStatus = new
+        var healthStatus = new HealthStatusDto
         {
             Status = "Healthy",
             Timestamp = DateTime.UtcNow,

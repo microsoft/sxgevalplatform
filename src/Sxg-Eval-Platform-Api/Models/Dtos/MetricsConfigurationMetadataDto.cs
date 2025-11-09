@@ -32,10 +32,10 @@ public class MetricsConfigurationMetadataDto
 
     [StringLength(500)]
     public string? Description { get; set; }
-        
 
-    [Required]
-    public IList<MetricsConfiguration> MetricsConfiguration { get; set; } = new List<MetricsConfiguration>();
+    public string CreatedBy { get; set; } = string.Empty;
+
+    public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
     public string LastUpdatedBy { get; set; } = string.Empty;
 

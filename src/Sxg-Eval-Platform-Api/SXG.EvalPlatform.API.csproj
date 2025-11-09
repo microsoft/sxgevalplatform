@@ -29,4 +29,11 @@
     <ProjectReference Include="..\..\SXG.EvalPlatform.Common\SXG.EvalPlatform.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="archive\**" />
+    <Content Remove="archive\**" />
+    <EmbeddedResource Remove="archive\**" />
+    <None Remove="archive\**" />
+  </ItemGroup>
+
 </Project>

@@ -40,6 +40,21 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="datasetId">Dataset ID</param>
         /// <returns>Dataset metadata</returns>
         Task<DatasetMetadataDto?> GetDatasetMetadataByIdAsync(string datasetId);
+
+        /// <summary>
+        /// Update an existing dataset
+        /// </summary>
+        /// <param name="datasetId">Dataset ID</param>
+        /// <param name="updateDatasetDto">Update dataset request</param>
+        /// <returns>Dataset save response</returns>
+        Task<DatasetSaveResponseDto> UpdateDatasetAsync(string datasetId, UpdateDatasetDto updateDatasetDto);
+
+        /// <summary>
+        /// Delete a dataset by dataset ID
+        /// </summary>
+        /// <param name="datasetId">Dataset ID</param>
+        /// <returns>True if deleted, false if not found</returns>
+        Task<bool> DeleteDatasetAsync(string datasetId);
     }
 
     /// <summary>
@@ -71,41 +86,46 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation("Creating/saving dataset: {DatasetName} for agent: {AgentId}, type: {DatasetType}",
+                _logger.LogInformation("Creating dataset: {DatasetName} for agent: {AgentId}, type: {DatasetType}",
                     saveDatasetDto.DatasetName, saveDatasetDto.AgentId, saveDatasetDto.DatasetType);
 
-                // Check if dataset already exists
+                // Check if dataset already exists (for validation only - POST should not update)
                 var existingDatasets = await _dataSetTableService.GetDataSetsByDatasetNameAsync(
                     saveDatasetDto.AgentId, saveDatasetDto.DatasetName);
 
                 var existingDataset = existingDatasets
                     .FirstOrDefault(d => d.DatasetType.Equals(saveDatasetDto.DatasetType, StringComparison.OrdinalIgnoreCase));
 
-                DataSetTableEntity entity;
-                bool isUpdate = false;
-
-                var blobContainer = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId).ToLowerInvariant();
-                string blobFileName;
-                string blobFilePath;
-
                 if (existingDataset != null)
                 {
-                    entity = existingDataset;
-                    blobFileName = entity.BlobFilePath;
-                    blobFilePath = entity.BlobFilePath;
-                    isUpdate = true;
-                }
-                else
-                {
-                    entity = ToDataSetTableEntity(saveDatasetDto);
-                    blobFileName = $"{saveDatasetDto.DatasetType}_{saveDatasetDto.DatasetName}_{entity.DatasetId}.json";
-                    blobFilePath = $"{_configHelper.GetDatasetsFolderName()}/{blobFileName}";
-                    entity.BlobFilePath = blobFilePath;
-                    entity.ContainerName = blobContainer;
+                    return new DatasetSaveResponseDto
+                    {
+                        DatasetId = existingDataset.DatasetId,
+                        Status = "conflict",
+                        Message = $"Dataset with name '{saveDatasetDto.DatasetName}' and type '{saveDatasetDto.DatasetType}' already exists for agent '{saveDatasetDto.AgentId}'"
+                    };
                 }
 
-                entity.LastUpdatedOn = DateTime.UtcNow;
-                // TODO: Set LastUpdatedBy from Auth Token
+                // Generate GUID first for filename
+                var datasetId = Guid.NewGuid().ToString();
+                var currentTime = DateTime.UtcNow;
+
+                // Create entity with GUID
+                var entity = _mapper.Map<DataSetTableEntity>(saveDatasetDto);
+                entity.DatasetId = datasetId;
+                entity.RowKey = datasetId;
+                entity.CreatedBy = "System"; // Default since UserMetadata is no longer required
+                entity.CreatedOn = currentTime;
+                entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
+                entity.LastUpdatedOn = currentTime;
+
+                // Create blob path with GUID in filename
+                var blobContainer = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId);
+                var blobFileName = $"{saveDatasetDto.DatasetType}_{saveDatasetDto.DatasetName}_{datasetId}.json";
+                var blobFilePath = $"{_configHelper.GetDatasetsFolderName()}/{blobFileName}";
+                
+                entity.BlobFilePath = blobFilePath;
+                entity.ContainerName = blobContainer;
 
                 // Save dataset content to blob
                 var datasetContent = JsonSerializer.Serialize(saveDatasetDto.DatasetRecords, new JsonSerializerOptions
@@ -122,12 +142,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var response = new DatasetSaveResponseDto
                 {
                     DatasetId = savedEntity.DatasetId,
-                    Status = isUpdate ? "updated" : "created",
-                    Message = isUpdate ? "Dataset updated successfully" : "Dataset created successfully"
+                    Status = "created",
+                    Message = "Dataset created successfully"
                 };
 
-                _logger.LogInformation("Successfully {Action} dataset with ID: {DatasetId}",
-                    isUpdate ? "updated" : "created", savedEntity.DatasetId);
+                _logger.LogInformation("Successfully created dataset with ID: {DatasetId} by user: {UserEmail}",
+                    savedEntity.DatasetId, "System");
 
                 return response;
             }
@@ -240,15 +260,128 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private DatasetMetadataDto ToDatasetMetadataDto(DataSetTableEntity entity)
         {
-            return new DatasetMetadataDto
+            return _mapper.Map<DatasetMetadataDto>(entity);
+        }
+
+        public async Task<DatasetSaveResponseDto> UpdateDatasetAsync(string datasetId, UpdateDatasetDto updateDatasetDto)
+        {
+            try
             {
-                DatasetId = entity.DatasetId,
-                AgentId = entity.AgentId,
-                DatasetType = entity.DatasetType,
-                DatasetName = entity.DatasetName,
-                LastUpdatedOn = entity.LastUpdatedOn,
-                RecordCount = 0 // TODO: Calculate from blob content if needed
-            };
+                _logger.LogInformation("Updating dataset with ID: {DatasetId}", datasetId);
+
+                // Get existing dataset
+                var existingEntity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+                if (existingEntity == null)
+                {
+                    _logger.LogWarning("Dataset not found with ID: {DatasetId}", datasetId);
+                    return new DatasetSaveResponseDto
+                    {
+                        DatasetId = datasetId,
+                        Status = "not found",
+                        Message = $"Dataset with ID '{datasetId}' not found"
+                    };
+                }
+
+                var currentTime = DateTime.UtcNow;
+
+                // Update audit fields
+                existingEntity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
+                existingEntity.LastUpdatedOn = currentTime;
+
+                // Update blob with new dataset content
+                var blobContainer = existingEntity.ContainerName;
+                var blobFilePath = existingEntity.BlobFilePath;
+
+                // Save updated dataset content to blob
+                var datasetContent = JsonSerializer.Serialize(updateDatasetDto.DatasetRecords, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var blobWriteResult = await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, datasetContent);
+
+                // Save updated metadata to table storage
+                var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity);
+
+                var response = new DatasetSaveResponseDto
+                {
+                    DatasetId = savedEntity.DatasetId,
+                    Status = "updated",
+                    Message = "Dataset updated successfully"
+                };
+
+                _logger.LogInformation("Successfully updated dataset with ID: {DatasetId} by user: {UserEmail}",
+                    savedEntity.DatasetId, "System");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update dataset with ID: {DatasetId}", datasetId);
+                return new DatasetSaveResponseDto
+                {
+                    DatasetId = datasetId,
+                    Status = "error",
+                    Message = "Failed to update dataset: " + ex.Message
+                };
+            }
+        }
+
+        public async Task<bool> DeleteDatasetAsync(string datasetId)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting dataset with ID: {DatasetId}", datasetId);
+
+                // First get the dataset to get the AgentId and blob path for deletion
+                var existingDataset = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+
+                if (existingDataset == null)
+                {
+                    _logger.LogWarning("Dataset with ID: {DatasetId} not found", datasetId);
+                    return false;
+                }
+
+                // Delete from table storage
+                bool deleted = await _dataSetTableService.DeleteDataSetAsync(existingDataset.AgentId, datasetId);
+
+                if (deleted)
+                {
+                    _logger.LogInformation("Dataset with ID: {DatasetId} deleted successfully", datasetId);
+                    
+                    // Also delete the blob file if it exists
+                    try
+                    {
+                        var containerName = $"agent-{CommonUtils.TrimAndRemoveSpaces(existingDataset.AgentId)}";
+                        var blobPath = $"datasets/{datasetId}.json";
+                        
+                        // Check if blob exists before attempting to delete
+                        bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
+                        if (blobExists)
+                        {
+                            await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
+                            _logger.LogInformation("Dataset blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                        }
+                    }
+                    catch (Exception blobEx)
+                    {
+                        _logger.LogWarning(blobEx, "Failed to delete blob file for dataset ID: {DatasetId}, but table record was deleted", datasetId);
+                        // Continue - table deletion was successful, blob deletion failure is not critical
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete dataset with ID: {DatasetId}", datasetId);
+                }
+
+                return deleted;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}", datasetId);
+                return false;
+            }
         }
 
         #endregion

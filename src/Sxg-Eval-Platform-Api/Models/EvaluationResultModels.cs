@@ -12,10 +12,6 @@ public class SaveEvaluationResultDto
     [Required(ErrorMessage = "EvalRunId is required")]
     public Guid EvalRunId { get; set; } = Guid.Empty;
     
-    [Required(ErrorMessage = "FileName is required")]
-    [StringLength(100, MinimumLength = 1, ErrorMessage = "FileName must be between 1 and 100 characters")]
-    public string FileName { get; set; } = string.Empty;
-    
     /// <summary>
     /// Flexible JSON structure containing evaluation results. 
     /// Can be an array of objects, a single object, or any valid JSON format.
@@ -57,7 +53,9 @@ public class EvaluationResultSaveResponseDto
     
     public Guid EvalRunId { get; set; }
     
-    public string BlobPath { get; set; } = string.Empty;
+    public string LastUpdatedBy { get; set; } = "System";
+    
+    public DateTime? LastUpdatedOn { get; set; }
 }
 
 /// <summary>
@@ -71,7 +69,9 @@ public class EvaluationResultResponseDto
     
     public Guid EvalRunId { get; set; }
     
-    public string FileName { get; set; } = string.Empty;
-    
     public JsonElement? EvaluationRecords { get; set; }
+    
+    public string LastUpdatedBy { get; set; } = "System";
+    
+    public DateTime? LastUpdatedOn { get; set; }
 }

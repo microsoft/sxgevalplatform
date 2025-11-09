@@ -125,11 +125,11 @@ public abstract class BaseController : ControllerBase
     }
 
     /// <summary>
-    /// Validates agent ID input and adds to ModelState if invalid
+    /// Validates string input and adds to ModelState if invalid
     /// </summary>
     /// <param name="value">Value to validate</param>
     /// <param name="fieldName">Field name for ModelState</param>
-    /// <param name="validationType">Type of validation to perform (currently only supports "agentid")</param>
+    /// <param name="validationType">Type of validation to perform (supports "agentid", "type", "agentschemaname")</param>
     protected void ValidateAndAddToModelState(string? value, string fieldName, string validationType)
     {
         var alphanumericPattern = new Regex(@"^[a-zA-Z0-9\-_\.]+$", RegexOptions.Compiled);
@@ -139,8 +139,28 @@ public abstract class BaseController : ControllerBase
             case "agentid":
                 if (string.IsNullOrWhiteSpace(value))
                     ModelState.AddModelError(fieldName, "Agent ID is required");
+                else if (value == "string" || value.Length < 3)
+                    ModelState.AddModelError(fieldName, "Agent ID must be a valid identifier (minimum 3 characters, not 'string')");
                 else if (value.Length > 100 || !alphanumericPattern.IsMatch(value))
                     ModelState.AddModelError(fieldName, "Invalid agent ID format");
+                break;
+                
+            case "type":
+                if (string.IsNullOrWhiteSpace(value))
+                    ModelState.AddModelError(fieldName, "Type is required");
+                else if (value == "string" || value.Length < 2)
+                    ModelState.AddModelError(fieldName, "Type must be a valid type (e.g., MCS, AI Foundary, SK), not 'string'");
+                else if (value.Length > 50)
+                    ModelState.AddModelError(fieldName, "Type cannot exceed 50 characters");
+                break;
+                
+            case "agentschemaname":
+                if (string.IsNullOrWhiteSpace(value))
+                    ModelState.AddModelError(fieldName, "Agent Schema Name is required");
+                else if (value == "string" || value.Length < 3)
+                    ModelState.AddModelError(fieldName, "Agent Schema Name must be a valid schema name (minimum 3 characters, not 'string')");
+                else if (value.Length > 200)
+                    ModelState.AddModelError(fieldName, "Agent Schema Name cannot exceed 200 characters");
                 break;
                 
             default:
@@ -200,5 +220,61 @@ public abstract class BaseController : ControllerBase
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response with proper JSON formatting
+    /// </summary>
+    /// <param name="message">The error message</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected new ActionResult NotFound(string message)
+    {
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = message,
+            type = "https://httpstatuses.com/404"
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response for generic types with proper JSON formatting
+    /// </summary>
+    /// <typeparam name="T">The generic type</typeparam>
+    /// <param name="message">The error message</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected ActionResult<T> NotFound<T>(string message)
+    {
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = message,
+            type = "https://httpstatuses.com/404"
+        });
+    }
+
+    /// <summary>
+    /// Creates a standardized 404 Not Found response when passing an object with proper JSON formatting
+    /// </summary>
+    /// <param name="value">The response object (will be wrapped in standard error format)</param>
+    /// <returns>NotFound ActionResult with structured JSON</returns>
+    protected new ActionResult NotFound(object value)
+    {
+        // If the value is already a structured error response, return it as is
+        if (value != null && value.GetType().GetProperty("status") != null)
+        {
+            return base.NotFound(value);
+        }
+
+        // Otherwise, wrap it in a standard error format
+        return base.NotFound(new
+        {
+            title = "Not Found",
+            status = 404,
+            detail = value?.ToString() ?? "The requested resource was not found",
+            type = "https://httpstatuses.com/404"
+        });
     }
 }

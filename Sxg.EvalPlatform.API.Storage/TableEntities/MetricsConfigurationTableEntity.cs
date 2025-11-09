@@ -18,7 +18,9 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public MetricsConfigurationTableEntity()
         {
             ConfigurationId = Guid.NewGuid().ToString(); // This automatically sets RowKey
-            LastUpdatedOn = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            CreatedOn = now;
+            LastUpdatedOn = now;
         }
 
         /// <summary>
@@ -41,6 +43,10 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string? Description { get; set; }
 
         //public IList<MetricsConfiguration> MetricsConfiguration { get; set; } = new List<MetricsConfiguration>();
+
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime CreatedOn { get; set; }
 
         public string LastUpdatedBy { get; set; } = string.Empty;
 

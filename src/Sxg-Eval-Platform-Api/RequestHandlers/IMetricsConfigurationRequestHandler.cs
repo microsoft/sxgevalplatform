@@ -9,6 +9,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
         Task<IList<MetricsConfigurationMetadataDto>> GetAllMetricsConfigurationsByAgentIdAndEnvironmentAsync(string agentId, string enviornmentName);
         Task<IList<SelectedMetricsConfiguration>?> GetMetricsConfigurationByConfigurationIdAsync(string configurationId);
 
-        Task<ConfigurationSaveResponseDto> CreateOrSaveConfigurationAsync(CreateMetricsConfigurationDto createConfigDto); 
+        Task<ConfigurationSaveResponseDto> CreateConfigurationAsync(CreateConfigurationRequestDto createConfigDto);
+        Task<ConfigurationSaveResponseDto> UpdateConfigurationAsync(string configurationId, UpdateConfigurationRequestDto updateConfigDto);
+        Task<bool> DeleteConfigurationAsync(string configurationId);
     }
 }

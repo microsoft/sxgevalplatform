@@ -68,6 +68,16 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string DatasetName { get; set; } = string.Empty;
 
         /// <summary>
+        /// Who created the dataset
+        /// </summary>
+        public string CreatedBy { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When the dataset was created
+        /// </summary>
+        public DateTime CreatedOn { get; set; }
+
+        /// <summary>
         /// When the dataset was last updated
         /// </summary>
         public DateTime LastUpdatedOn { get; set; }

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Azure;
 using Azure.Data.Tables;
+using SxgEvalPlatformApi.Models.Dtos;
 
 namespace SxgEvalPlatformApi.Models
 {
@@ -10,8 +11,11 @@ namespace SxgEvalPlatformApi.Models
     public class EvalDataset
     {
         public string Prompt { get; set; } = string.Empty;
+        
         public string GroundTruth { get; set; } = string.Empty;
+        
         public string ActualResponse { get; set; } = string.Empty;
+        
         public string ExpectedResponse { get; set; } = string.Empty;
     }
 
@@ -37,6 +41,16 @@ namespace SxgEvalPlatformApi.Models
     }
 
     /// <summary>
+    /// DTO for updating datasets
+    /// </summary>
+    public class UpdateDatasetDto
+    {
+        [Required]
+        [MinLength(1)]
+        public List<EvalDataset> DatasetRecords { get; set; } = new();
+    }
+
+    /// <summary>
     /// Dataset types constants
     /// </summary>
     public static class DatasetTypes
@@ -53,6 +67,16 @@ namespace SxgEvalPlatformApi.Models
         public string DatasetId { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Dataset conflict response for 409 errors
+    /// </summary>
+    public class DatasetConflictResponseDto
+    {
+        public string Status { get; set; } = "conflict";
+        public string Message { get; set; } = string.Empty;
+        public string ExistingDatasetId { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -113,11 +137,13 @@ namespace SxgEvalPlatformApi.Models
     public class DatasetMetadataDto
     {
         public string DatasetId { get; set; } = string.Empty;
-        public DateTime LastUpdatedOn { get; set; }
         public string AgentId { get; set; } = string.Empty;
         public string DatasetType { get; set; } = string.Empty;
         public string DatasetName { get; set; } = string.Empty;
-        public int RecordCount { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; }
+        public string LastUpdatedBy { get; set; } = string.Empty;
+        public DateTime LastUpdatedOn { get; set; }
     }
 
     /// <summary>

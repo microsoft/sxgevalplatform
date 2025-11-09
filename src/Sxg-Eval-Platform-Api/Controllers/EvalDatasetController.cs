@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
+using System.ComponentModel.DataAnnotations;
 
 namespace SxgEvalPlatformApi.Controllers
 {
@@ -28,16 +30,17 @@ namespace SxgEvalPlatformApi.Controllers
         /// <summary>
         /// Get all datasets for an agent
         /// </summary>
-        /// <param name="agentId">Unique ID of the agent (from query string)</param>
+        /// <param name="agentId">Unique ID of the agent (from query string) - Required</param>
         /// <returns>All datasets associated with the agent</returns>
         /// <response code="200">Datasets retrieved successfully</response>
+        /// <response code="400">Invalid or missing agent ID</response>
         /// <response code="404">No datasets found for this agent</response>
         /// <response code="500">Internal server error</response>
         [HttpGet]
         [ProducesResponseType(typeof(IList<DatasetMetadataDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery] string agentId)
+        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery][Required] string agentId)
         {
             try
             {
@@ -81,7 +84,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("{datasetId}")]
         [ProducesResponseType(typeof(List<EvalDataset>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDatasetById(Guid datasetId)
         {
@@ -129,7 +132,7 @@ namespace SxgEvalPlatformApi.Controllers
         /// <response code="500">Internal server error</response>
         [HttpGet("{datasetId}/metadata")]
         [ProducesResponseType(typeof(DatasetMetadataDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<DatasetMetadataDto>> GetDatasetMetadataById(Guid datasetId)
         {
@@ -161,18 +164,18 @@ namespace SxgEvalPlatformApi.Controllers
         #region POST Methods
 
         /// <summary>
-        /// Save evaluation dataset (creates new or updates existing based on AgentId, DatasetType, and DatasetName)
+        /// Create a new evaluation dataset
         /// </summary>
         /// <param name="saveDatasetDto">Dataset save request containing agent ID, dataset type, dataset name, and records</param>
         /// <returns>Dataset save response with dataset ID</returns>
         /// <response code="201">Dataset created successfully</response>
-        /// <response code="200">Dataset updated successfully</response>
         /// <response code="400">Invalid input or validation failed</response>
+        /// <response code="409">Dataset with same name and type already exists</response>
         /// <response code="500">Internal server error</response>
         [HttpPost]
         [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(DatasetConflictResponseDto), StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<DatasetSaveResponseDto>> SaveDataset([FromBody] SaveDatasetDto saveDatasetDto)
         {
@@ -189,6 +192,20 @@ namespace SxgEvalPlatformApi.Controllers
 
                 var result = await _dataSetRequestHandler.SaveDatasetAsync(saveDatasetDto);
 
+                if (result.Status == "conflict")
+                {
+                    _logger.LogWarning("Dataset save failed due to conflict: {Message}", result.Message);
+                    
+                    var conflictResponse = new DatasetConflictResponseDto
+                    {
+                        Status = "conflict",
+                        Message = $"Dataset save failed due to conflict: {result.Message}. If you want to update the dataset, use the PUT endpoint with dataset ID: {result.DatasetId}",
+                        ExistingDatasetId = result.DatasetId
+                    };
+                    
+                    return Conflict(conflictResponse);
+                }
+
                 if (result.Status == "error")
                 {
                     _logger.LogError("Dataset save failed: {Message}", result.Message);
@@ -199,6 +216,7 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogInformation("Dataset processed successfully: {DatasetId}, Status: {Status}",
                     result.DatasetId, result.Status);
 
+                // POST only creates new datasets, never updates
                 if (result.Status == "created")
                 {
                     return CreatedAtAction(
@@ -206,12 +224,9 @@ namespace SxgEvalPlatformApi.Controllers
                         new { datasetId = result.DatasetId },
                         result);
                 }
-                else if (result.Status == "updated")
-                {
-                    return Ok(result);
-                }
                 else
                 {
+                    // This should only happen for unexpected statuses
                     return Ok(result);
                 }
             }
@@ -221,6 +236,105 @@ namespace SxgEvalPlatformApi.Controllers
                     saveDatasetDto.AgentId);
                 return CreateErrorResponse<DatasetSaveResponseDto>(
                     "Failed to save dataset", 500);
+            }
+        }
+
+        /// <summary>
+        /// Update an existing dataset
+        /// </summary>
+        /// <param name="datasetId">The ID of the dataset to update</param>
+        /// <param name="updateDatasetDto">The updated dataset data</param>
+        /// <returns>Updated dataset information</returns>
+        /// <response code="200">Dataset updated successfully</response>
+        /// <response code="400">Invalid input or validation failed</response>
+        /// <response code="404">Dataset not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPut("{datasetId}")]
+        [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<DatasetSaveResponseDto>> UpdateDataset(
+            [FromRoute] Guid datasetId,
+            [FromBody] UpdateDatasetDto updateDatasetDto)
+        {
+            try
+            {
+                _logger.LogInformation("Request to update dataset: {DatasetId}",
+                    datasetId);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid model state for dataset update");
+                    return CreateValidationErrorResponse<DatasetSaveResponseDto>();
+                }
+
+                var result = await _dataSetRequestHandler.UpdateDatasetAsync(datasetId.ToString(), updateDatasetDto);
+
+                if (result.Status == "not found")
+                {
+                    _logger.LogWarning("Dataset not found for update: {DatasetId}", datasetId);
+                    return NotFound($"Dataset with ID '{datasetId}' not found");
+                }
+
+                if (result.Status == "error")
+                {
+                    _logger.LogError("Dataset update failed: {Message}", result.Message);
+                    return CreateErrorResponse<DatasetSaveResponseDto>(
+                        result.Message, StatusCodes.Status500InternalServerError);
+                }
+
+                _logger.LogInformation("Dataset updated successfully: {DatasetId}", 
+                    result.DatasetId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating dataset: {DatasetId}",
+                    datasetId);
+                return CreateErrorResponse<DatasetSaveResponseDto>(
+                    "Failed to update dataset", StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        #endregion
+
+        #region DELETE Methods
+
+        /// <summary>
+        /// Delete a dataset by ID
+        /// </summary>
+        /// <param name="datasetId">The ID of the dataset to delete</param>
+        /// <returns>Deletion result</returns>
+        /// <response code="200">Dataset deleted successfully</response>
+        /// <response code="404">Dataset with the specified ID not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpDelete("{datasetId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteDataset([FromRoute] Guid datasetId)
+        {
+            try
+            {
+                _logger.LogInformation("Request to delete dataset: {DatasetId}", datasetId);
+
+                bool deleted = await _dataSetRequestHandler.DeleteDatasetAsync(datasetId.ToString());
+
+                if (!deleted)
+                {
+                    _logger.LogWarning("Dataset not found for deletion: {DatasetId}", datasetId);
+                    return NotFound($"Dataset with ID '{datasetId}' not found");
+                }
+
+                _logger.LogInformation("Dataset deleted successfully: {DatasetId}", datasetId);
+                return Ok(new { message = $"Dataset '{datasetId}' deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}", datasetId);
+                return StatusCode(500, new { message = "Failed to delete dataset", error = ex.Message });
             }
         }
 

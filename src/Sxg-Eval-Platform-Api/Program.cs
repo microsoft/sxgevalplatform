@@ -2,8 +2,8 @@ using AutoMapper;
 using Microsoft.OpenApi.Models;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
+using SxgEvalPlatformApi;
 using SxgEvalPlatformApi.RequestHandlers;
-using SxgEvalPlatformApi.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,20 +48,25 @@ builder.Services.AddCors(options =>
 });
 
 // Add AutoMapper with explicit mapping profiles
-builder.Services.AddAutoMapper(typeof(SxgEvalPlatformApi.MappingProfile));
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add custom services
 //builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
 builder.Services.AddScoped<IMetricsConfigTableService, MetricsConfigTableService>();
 builder.Services.AddScoped<IDataSetTableService, DataSetTableService>();
+builder.Services.AddScoped<IEvalRunTableService, EvalRunTableService>();
 builder.Services.AddScoped<IMetricsConfigurationRequestHandler, MetricsConfigurationRequestHandler>();
 builder.Services.AddScoped<IDataSetRequestHandler, DataSetRequestHandler>();
 builder.Services.AddScoped<IConfigHelper, ConfigHelper>();
 
-// Add evaluation services
-builder.Services.AddScoped<IEvalRunService, EvalRunService>();
-builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
+// Add evaluation services (commented out - using RequestHandlers instead)
+//builder.Services.AddScoped<IEvalRunService, EvalRunService>();
+//builder.Services.AddScoped<IEvaluationResultService, EvaluationResultService>();
+
+// Add evaluation request handlers
+builder.Services.AddScoped<IEvalRunRequestHandler, EvalRunRequestHandler>();
+builder.Services.AddScoped<IEvaluationResultRequestHandler, EvaluationResultRequestHandler>();
 
 // Register Azure services from Storage project
 //builder.Services.AddScoped<Sxg.EvalPlatform.API.Storage.Services.IAzureBlobStorageService, Sxg.EvalPlatform.API.Storage.Services.AzureBlobStorageService>();

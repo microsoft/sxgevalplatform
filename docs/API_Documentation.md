@@ -406,7 +406,7 @@ Datasets contain the test data used for evaluations, including prompts, expected
 **Authentication**: Required
 
 **Query Parameters**:
-- `agentId` (string): The unique identifier of the agent
+- `agentId` (string, required): The unique identifier of the agent
 
 **Response** (200 OK):
 ```json
@@ -416,7 +416,9 @@ Datasets contain the test data used for evaluations, including prompts, expected
     "agentId": "agent-123",
     "datasetName": "Golden Dataset v1.0",
     "datasetType": "Golden",
-    "recordCount": 150,
+    "createdBy": "user@example.com",
+    "createdOn": "2025-10-15T14:30:00.000Z",
+    "lastUpdatedBy": "user@example.com",
     "lastUpdatedOn": "2025-10-15T14:30:00.000Z"
   },
   {
@@ -424,7 +426,9 @@ Datasets contain the test data used for evaluations, including prompts, expected
     "agentId": "agent-123", 
     "datasetName": "Synthetic Test Data",
     "datasetType": "Synthetic",
-    "recordCount": 500,
+    "createdBy": "user@example.com",
+    "createdOn": "2025-10-16T09:15:00.000Z",
+    "lastUpdatedBy": "user@example.com",
     "lastUpdatedOn": "2025-10-16T09:15:00.000Z"
   }
 ]
