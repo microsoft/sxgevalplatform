@@ -48,9 +48,9 @@ public class EvalProcessingRequest
     public string Priority { get; set; } = "Normal";
 
     /// <summary>
-    /// Path to the enriched dataset blob
+    /// Path to the enriched dataset
     /// </summary>
-    public string? EnrichedDatasetBlobPath { get; set; }
+    public string? EnrichedDatasetPath { get; set; }
 
     /// <summary>
     /// Optional metadata for the processing request
@@ -89,9 +89,9 @@ public class EvalProcessingResponse
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Path to the evaluation results blob
+    /// Path to the evaluation results
     /// </summary>
-    public string? ResultsBlobPath { get; set; }
+    public string? ResultsPath { get; set; }
 
     /// <summary>
     /// Processing results or metrics data

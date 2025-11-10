@@ -20,7 +20,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         /// <returns>DataSetTableEntity with keys properly set</returns>
         public static DataSetTableEntity CreateEntity(
             string agentId, 
-            string blobFilePath, 
+            string filePath, 
             string containerName, 
             string datasetType, 
             string datasetName, 
@@ -29,7 +29,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             var entity = new DataSetTableEntity
             {
                 AgentId = agentId, // Automatically sets PartitionKey
-                BlobFilePath = blobFilePath,
+                FilePath = filePath,
                 ContainerName = containerName,
                 DatasetType = datasetType,
                 DatasetName = datasetName,
@@ -55,7 +55,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
         public static DataSetTableEntity CreateEntity(
             string agentId, 
             string datasetId, 
-            string blobFilePath, 
+            string filePath, 
             string containerName, 
             string datasetType, 
             string datasetName, 
@@ -65,7 +65,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             {
                 AgentId = agentId, // Automatically sets PartitionKey
                 DatasetId = datasetId, // Automatically sets RowKey
-                BlobFilePath = blobFilePath,
+                FilePath = filePath,
                 ContainerName = containerName,
                 DatasetType = datasetType,
                 DatasetName = datasetName,
@@ -193,8 +193,8 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             if (string.IsNullOrEmpty(entity.DatasetId))
                 errors.Add("DatasetId is required");
 
-            if (string.IsNullOrEmpty(entity.BlobFilePath))
-                errors.Add("BlobFilePath is required");
+            if (string.IsNullOrEmpty(entity.FilePath))
+                errors.Add("FilePath is required");
 
             if (string.IsNullOrEmpty(entity.ContainerName))
                 errors.Add("ContainerName is required");
@@ -223,7 +223,7 @@ namespace Sxg.EvalPlatform.API.Storage.Helpers
             {
                 AgentId = original.AgentId,
                 DatasetId = original.DatasetId,
-                BlobFilePath = original.BlobFilePath,
+                FilePath = original.FilePath,
                 ContainerName = original.ContainerName,
                 DatasetType = original.DatasetType,
                 DatasetName = original.DatasetName,

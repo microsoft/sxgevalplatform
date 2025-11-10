@@ -53,7 +53,7 @@ public class EvaluationResultSaveResponseDto
     
     public Guid EvalRunId { get; set; }
     
-    public string BlobPath { get; set; } = string.Empty;
+    public string ResultsPath { get; set; } = string.Empty;
 }
 
 /// <summary>

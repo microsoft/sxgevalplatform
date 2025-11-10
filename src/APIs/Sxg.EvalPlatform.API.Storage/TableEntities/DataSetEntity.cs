@@ -48,12 +48,12 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         }
 
         /// <summary>
-        /// Path to the blob file in Azure Blob Storage
+        /// Path to the file in Storage
         /// </summary>
-        public string BlobFilePath { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
 
         /// <summary>
-        /// Container name in Azure Blob Storage
+        /// Container name in Storage
         /// </summary>
         public string ContainerName { get; set; } = string.Empty;
 

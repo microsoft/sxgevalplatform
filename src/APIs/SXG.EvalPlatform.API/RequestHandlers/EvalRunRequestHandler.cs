@@ -45,9 +45,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var evalRunId = Guid.NewGuid();
                 var currentDateTime = DateTime.UtcNow;
                 
-                // Store container name and blob path separately for better blob storage handling
-                var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
-                var blobFilePath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/"; // Create folder structure for multiple output files
+                // Store container name and data path separately for better storage handling
+                var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Storage
+                var filePath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/"; // Create folder structure for multiple output files
                 
                 var entity = new EvalRunTableEntity
                 {
@@ -59,7 +59,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     LastUpdatedOn = currentDateTime,
                     StartedDatetime = currentDateTime,
                     ContainerName = containerName,
-                    BlobFilePath = blobFilePath,
+                    FilePath = filePath,
                     Type = createDto.Type,
                     EnvironmentId = createDto.EnvironmentId.ToString(),
                     AgentSchemaName = createDto.AgentSchemaName
@@ -334,7 +334,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 LastUpdatedOn = entity.LastUpdatedOn,
                 StartedDatetime = entity.StartedDatetime,
                 CompletedDatetime = entity.CompletedDatetime
-                // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
+                // Note: FilePath and ContainerName are internal details and not exposed to API consumers
             };
         }
     }

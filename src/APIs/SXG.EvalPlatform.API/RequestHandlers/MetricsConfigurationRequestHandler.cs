@@ -48,7 +48,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
             if (content == null)
             {
-                throw new Exception($"Default metrics configuration blob not found: {containerName}/{filePath}");
+                throw new Exception($"Default metrics configuration not found: {containerName}/{filePath}");
             }
 
             // Parse the JSON to handle the wrapper structure
@@ -71,7 +71,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var metrics = System.Text.Json.JsonSerializer.Deserialize<MetricsConfiguration>(content);
                 if (metrics == null)
                 {
-                    throw new Exception("Failed to deserialize default metrics configuration from blob content.");
+                    throw new Exception("Failed to deserialize default metrics configuration from content.");
                 }
                 return metrics;
             }
@@ -112,7 +112,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                         configurationId);
                     return null;
                 }
-                var filePath = entity.BlobFilePath;
+                var filePath = entity.FilePath;
                 var containerName = entity.ConainerName;
 
                 string storageProvider = _configHelper.GetStorageProvider();
@@ -121,7 +121,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (string.IsNullOrEmpty(content))
                 {
-                    throw new Exception($"Metrics configuration blob not found: {containerName}/{filePath}");
+                    throw new Exception($"Metrics configuration not found: {containerName}/{filePath}");
                 }
 
                 IList<SelectedMetricsConfiguration>? metrics = null;
@@ -145,18 +145,18 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     }
                     else
                     {
-                        throw new Exception("Blob content does not contain metrics configuration in expected format");
+                        throw new Exception("Retrieved content does not contain metrics configuration in expected format");
                     }
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", configurationId);
-                    throw new Exception("Invalid JSON format in metrics configuration blob", ex);
+                    _logger.LogError(ex, "Failed to parse JSON for ConfigId: {ConfigId}", configurationId);
+                    throw new Exception("Invalid JSON format in metrics configuration", ex);
                 }
 
                 if (metrics == null)
                 {
-                    throw new Exception("Failed to deserialize metrics configuration from blob content.");
+                    throw new Exception("Failed to deserialize metrics configuration from content.");
                 }
 
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}",
@@ -259,9 +259,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 existingEntity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 existingEntity.LastUpdatedOn = currentTime;
 
-                // Update blob with new metrics configuration
+                // Update new metrics configuration
                 var containerName = existingEntity.ConainerName;
-                var filePath = existingEntity.BlobFilePath;
+                var filePath = existingEntity.FilePath;
 
                 // Read existing data content
                 string storageProvider = _configHelper.GetStorageProvider();
@@ -270,7 +270,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (string.IsNullOrEmpty(content))
                 {
-                    throw new InvalidOperationException("Existing blob content is empty or null");
+                    throw new InvalidOperationException("Existing content is empty or null");
                 }
                 
                 // Parse existing JSON to preserve other fields
@@ -297,13 +297,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     }
                     else if (rootElement.ValueKind == JsonValueKind.Array)
                     {
-                        // If existing blob is just an array, treat it as metricsConfiguration
+                        // If existing content is just an array, treat it as metricsConfiguration
                         var existingMetrics = JsonSerializer.Deserialize<object>(rootElement.GetRawText());
                         if (existingMetrics != null)
                         {
                             jsonObject["metricsConfiguration"] = existingMetrics;
                         }
-                        _logger.LogInformation("Converted array-based blob to object structure for ConfigurationId: {ConfigId}", existingEntity.ConfigurationId);
+                        _logger.LogInformation("Converted array-based content to object structure for ConfigurationId: {ConfigId}", existingEntity.ConfigurationId);
                     }
                     else
                     {
@@ -312,14 +312,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogError(ex, "Failed to parse existing blob JSON for ConfigurationId: {ConfigId}", existingEntity.ConfigurationId);
-                    throw new InvalidOperationException("Existing blob contains invalid JSON", ex);
+                    _logger.LogError(ex, "Failed to parse existing JSON for ConfigurationId: {ConfigId}", existingEntity.ConfigurationId);
+                    throw new InvalidOperationException("Existing object contains invalid JSON", ex);
                 }
                 
                 // Update only the metricsConfiguration field
                 jsonObject["metricsConfiguration"] = updateConfigDto.MetricsConfiguration;
 
-                // Serialize and save updated JSON back to blob
+                // Serialize and save updated JSON
                 var updatedJsonContent = JsonSerializer.Serialize(jsonObject, new JsonSerializerOptions 
                 { 
                     WriteIndented = true 
@@ -387,13 +387,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
 
                     // Use existing file path if available, otherwise create new one with GUID
-                    if (string.IsNullOrEmpty(entity.BlobFilePath))
+                    if (string.IsNullOrEmpty(entity.FilePath))
                     {
-                        entity.BlobFilePath = filePath;
+                        entity.FilePath = filePath;
                     }
                     else
                     {
-                        filePath = entity.BlobFilePath;
+                        filePath = entity.FilePath;
                     }
                 }
                 else
@@ -406,7 +406,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     // Create new entity directly from CreateConfigurationRequestDto
                     entity = _mapper.Map<MetricsConfigurationTableEntity>(configDto);
                     entity.ConfigurationId = configurationId; // Override the AutoMapper generated GUID
-                    entity.BlobFilePath = filePath;
+                    entity.FilePath = filePath;
                     entity.ConainerName = Container;
                     entity.CreatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.CreatedOn = currentTime;
@@ -414,7 +414,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     entity.LastUpdatedOn = currentTime;
                 }
 
-                // Save metrics configuration to blob
+                // Save metrics configuration
                 string storageProvider = _configHelper.GetStorageProvider();
                 var storage = _factory.GetProvider(storageProvider);
                 var blobWriteResult = await storage.WriteAsync(Container, filePath,
@@ -651,9 +651,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     try
                     {
                         var containerName = $"{CommonUtils.TrimAndRemoveSpaces(existingConfig.AgentId)}";
-                        var filePath = $"configurations/{configurationId}.json";
+                        var filePath = $"configurations/{existingConfig.ConfigurationName}_{existingConfig.EnvironmentName}_{configurationId}.json";
 
-                        // Check if blob exists before attempting to delete
+                        // Check if data exists before attempting to delete
                         string storageProvider = _configHelper.GetStorageProvider();
                         var storage = _factory.GetProvider(storageProvider);
                         bool configExists = await storage.ExistsAsync(containerName, filePath);

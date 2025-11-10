@@ -35,7 +35,7 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.ConainerName, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
+                .ForMember(dest => dest.FilePath, opt => opt.Ignore())
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
@@ -49,7 +49,7 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.ConainerName, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Preserve existing
+                .ForMember(dest => dest.FilePath, opt => opt.Ignore()) // Preserve existing
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
@@ -77,7 +77,7 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
-                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Set in request handler
+                .ForMember(dest => dest.FilePath, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.ContainerName, opt => opt.Ignore()) // Set in request handler
                 .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());

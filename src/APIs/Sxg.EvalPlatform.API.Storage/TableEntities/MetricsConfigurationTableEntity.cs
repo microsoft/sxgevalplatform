@@ -56,7 +56,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
 
         public string ConainerName { get; set; } = string.Empty;
 
-        public string BlobFilePath { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
 
         /// <summary>
         /// Unique identifier for this configuration entity - automatically updates RowKey when set

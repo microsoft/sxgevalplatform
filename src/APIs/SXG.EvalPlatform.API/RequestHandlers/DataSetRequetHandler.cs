@@ -119,15 +119,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 entity.LastUpdatedOn = currentTime;
 
-                // Create blob path with GUID in filename
-                var blobContainer = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId);
-                var blobFileName = $"{saveDatasetDto.DatasetType}_{saveDatasetDto.DatasetName}_{datasetId}.json";
-                var blobFilePath = $"{_configHelper.GetDatasetsFolderName()}/{blobFileName}";
+                // Create data path with GUID in filename
+                var container = CommonUtils.TrimAndRemoveSpaces(saveDatasetDto.AgentId);
+                var fileName = $"{saveDatasetDto.DatasetType}_{saveDatasetDto.DatasetName}_{datasetId}.json";
+                var filePath = $"{_configHelper.GetDatasetsFolderName()}/{fileName}";
                 
-                entity.BlobFilePath = blobFilePath;
-                entity.ContainerName = blobContainer;
+                entity.FilePath = filePath;
+                entity.ContainerName = container;
 
-                // Save dataset content to blob
+                // Save dataset content to DB
                 var datasetContent = JsonSerializer.Serialize(saveDatasetDto.DatasetRecords, new JsonSerializerOptions
                 {
                     WriteIndented = true,
@@ -136,7 +136,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 string storageProvider = _configHelper.GetStorageProvider();
                 var storage = _factory.GetProvider(storageProvider);
-                var blobWriteResult = await storage.WriteAsync(blobContainer, blobFilePath, datasetContent);
+                var writeResult = await storage.WriteAsync(container, filePath, datasetContent);
 
                 // Save metadata to table storage
                 var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity);
@@ -206,20 +206,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                var filePath = entity.BlobFilePath;
+                var filePath = entity.FilePath;
                 var container = entity.ContainerName;
 
                 string storageProvider = _configHelper.GetStorageProvider();
                 var storage = _factory.GetProvider(storageProvider);
-                var blobContent = await storage.ReadAsync(container, filePath);
+                var content = await storage.ReadAsync(container, filePath);
 
-                if (string.IsNullOrEmpty(blobContent))
+                if (string.IsNullOrEmpty(content))
                 {
-                    throw new Exception($"Dataset blob not found: {container}/{filePath}");
+                    throw new Exception($"Dataset not found: {container}/{filePath}");
                 }
 
                 _logger.LogInformation("Retrieved dataset content for DatasetId: {DatasetId}", datasetId);
-                return blobContent;
+                return content;
             }
             catch (Exception ex)
             {
@@ -296,11 +296,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 existingEntity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                 existingEntity.LastUpdatedOn = currentTime;
 
-                // Update blob with new dataset content
+                // Update existing dataset content
                 var container = existingEntity.ContainerName;
-                var filePath = existingEntity.BlobFilePath;
+                var filePath = existingEntity.FilePath;
 
-                // Save updated dataset content to blob
+                // Save updated dataset content to DB
                 var datasetContent = JsonSerializer.Serialize(updateDatasetDto.DatasetRecords, new JsonSerializerOptions
                 {
                     WriteIndented = true,
@@ -348,7 +348,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Deleting dataset with ID: {DatasetId}", datasetId);
 
-                // First get the dataset to get the AgentId and blob path for deletion
+                // First get the dataset to get the AgentId and dataset path for deletion
                 var existingDataset = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
 
                 if (existingDataset == null)
@@ -364,13 +364,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     _logger.LogInformation("Dataset with ID: {DatasetId} deleted successfully", datasetId);
                     
-                    // Also delete the blob file if it exists
+                    // Also delete the dataset file if it exists
                     try
                     {
-                        var containerName = $"agent-{CommonUtils.TrimAndRemoveSpaces(existingDataset.AgentId)}";
-                        var filePath = $"datasets/{datasetId}.json";
+                        var containerName = $"{CommonUtils.TrimAndRemoveSpaces(existingDataset.AgentId)}";
+                        var filePath = $"datasets/{existingDataset.DatasetType}_{existingDataset.DatasetName}_{datasetId}.json";
 
-                        // Check if blob exists before attempting to delete
+                        // Check if dataset exists before attempting to delete
                         string storageProvider = _configHelper.GetStorageProvider();
                         var storage = _factory.GetProvider(storageProvider);
                         bool dataExists = await storage.ExistsAsync(containerName, filePath);
@@ -383,7 +383,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     catch (Exception dataEx)
                     {
                         _logger.LogWarning(dataEx, "Failed to delete dataset file for dataset ID: {DatasetId}, but table record was deleted", datasetId);
-                        // Continue - table deletion was successful, blob deletion failure is not critical
+                        // Continue - table deletion was successful, dataset deletion failure is not critical
                     }
                 }
                 else
