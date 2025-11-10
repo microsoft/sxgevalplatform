@@ -13,12 +13,11 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 namespace SxgEvalPlatformApi.RequestHandlers
 {
     /// <summary>
-    /// Request handler for metrics configuration operations using the storage project services
+    /// Request handler for metrics configuration operations using the storage factory services
     /// </summary>
     public class MetricsConfigurationRequestHandler : IMetricsConfigurationRequestHandler
     {
         private readonly IMetricsConfigTableService _metricsConfigTableService;
-        private readonly IAzureBlobStorageService _blobStorageService;
         IConfigHelper _configHelper;
         private readonly ILogger<MetricsConfigurationRequestHandler> _logger;
         private readonly IMapper _mapper;
@@ -26,7 +25,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
         public MetricsConfigurationRequestHandler(
             IMetricsConfigTableService metricsConfigTableService,
-            IAzureBlobStorageService blobStorageService,
             ILogger<MetricsConfigurationRequestHandler> logger,
             IMapper mapper,
             IConfigHelper configHelper,
@@ -35,7 +33,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _metricsConfigTableService = metricsConfigTableService;
             _logger = logger;
             _mapper = mapper;
-            _blobStorageService = blobStorageService;
             _configHelper = configHelper;
             _factory = factory;
         }
@@ -43,16 +40,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
         public async Task<MetricsConfiguration> GetDefaultMetricsConfigurationAsync()
         {
             string containerName = _configHelper.GetPlatformConfigurationsContainer();
-            string blobFilePath = _configHelper.GetDefaultMetricsConfiguration();
+            string filePath = _configHelper.GetDefaultMetricsConfiguration();
             string storageProvider = _configHelper.GetStorageProvider();
-            //var blobContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobFilePath);
 
             var storage = _factory.GetProvider(storageProvider);
-            var content = await storage.ReadAsync(containerName, blobFilePath);
+            var content = await storage.ReadAsync(containerName, filePath);
 
             if (content == null)
             {
-                throw new Exception($"Default metrics configuration blob not found: {containerName}/{blobFilePath}");
+                throw new Exception($"Default metrics configuration blob not found: {containerName}/{filePath}");
             }
 
             // Parse the JSON to handle the wrapper structure
@@ -116,14 +112,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                         configurationId);
                     return null;
                 }
-                var blobPath = entity.BlobFilePath;
-                var blobContainer = entity.ConainerName;
+                var filePath = entity.BlobFilePath;
+                var containerName = entity.ConainerName;
 
-                var blobContent = await _blobStorageService.ReadBlobContentAsync(blobContainer, blobPath);
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var content = await storage.ReadAsync(containerName, filePath);
 
-                if (string.IsNullOrEmpty(blobContent))
+                if (string.IsNullOrEmpty(content))
                 {
-                    throw new Exception($"Metrics configuration blob not found: {blobContainer}/{blobPath}");
+                    throw new Exception($"Metrics configuration blob not found: {containerName}/{filePath}");
                 }
 
                 IList<SelectedMetricsConfiguration>? metrics = null;
@@ -131,13 +129,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Handle both old array format and new object format
                 try
                 {
-                    var jsonDocument = JsonDocument.Parse(blobContent);
+                    var jsonDocument = JsonDocument.Parse(content);
                     var rootElement = jsonDocument.RootElement;
 
                     if (rootElement.ValueKind == JsonValueKind.Array)
                     {
                         // Old format: direct array
-                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(blobContent);
+                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(content);
                     }
                     else if (rootElement.ValueKind == JsonValueKind.Object && rootElement.TryGetProperty("metricsConfiguration", out var metricsConfigElement))
                     {
@@ -262,13 +260,15 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 existingEntity.LastUpdatedOn = currentTime;
 
                 // Update blob with new metrics configuration
-                var blobContainer = existingEntity.ConainerName;
-                var blobFilePath = existingEntity.BlobFilePath;
+                var containerName = existingEntity.ConainerName;
+                var filePath = existingEntity.BlobFilePath;
 
-                // Read existing blob content
-                var existingBlobContent = await _blobStorageService.ReadBlobContentAsync(blobContainer, blobFilePath);
-                
-                if (string.IsNullOrEmpty(existingBlobContent))
+                // Read existing data content
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var content = await storage.ReadAsync(containerName, filePath);
+
+                if (string.IsNullOrEmpty(content))
                 {
                     throw new InvalidOperationException("Existing blob content is empty or null");
                 }
@@ -279,7 +279,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 
                 try
                 {
-                    var existingJson = JsonDocument.Parse(existingBlobContent);
+                    var existingJson = JsonDocument.Parse(content);
                     rootElement = existingJson.RootElement;
                     
                     // Handle both object and array structures
@@ -324,7 +324,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 { 
                     WriteIndented = true 
                 });
-                var blobWriteResult = await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, updatedJsonContent);
+                
+                var writeResponse = await storage.WriteAsync(containerName, filePath, updatedJsonContent);
 
                 // Save to storage
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity);
@@ -362,13 +363,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                var blobContainer = CommonUtils.TrimAndRemoveSpaces(configDto.AgentId);
+                var Container = CommonUtils.TrimAndRemoveSpaces(configDto.AgentId);
                 
                 MetricsConfigurationTableEntity entity;
                 var currentTime = DateTime.UtcNow;
                 string configurationId;
-                string blobFileName;
-                string blobFilePath;
+                string fileName;
+                string filePath;
 
                 if (isUpdate && existingEntity != null)
                 {
@@ -380,33 +381,33 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.LastUpdatedOn = currentTime;
                     
-                    // Use existing ConfigurationId and blob path
+                    // Use existing ConfigurationId and file path
                     configurationId = entity.ConfigurationId;
-                    blobFileName = $"{configDto.ConfigurationName}_{configDto.EnvironmentName}_{configurationId}.json";
-                    blobFilePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{blobFileName}";
-                    
-                    // Use existing blob path if available, otherwise create new one with GUID
+                    fileName = $"{configDto.ConfigurationName}_{configDto.EnvironmentName}_{configurationId}.json";
+                    filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+
+                    // Use existing file path if available, otherwise create new one with GUID
                     if (string.IsNullOrEmpty(entity.BlobFilePath))
                     {
-                        entity.BlobFilePath = blobFilePath;
+                        entity.BlobFilePath = filePath;
                     }
                     else
                     {
-                        blobFilePath = entity.BlobFilePath;
+                        filePath = entity.BlobFilePath;
                     }
                 }
                 else
                 {
                     // Generate ConfigurationId first for new entity
                     configurationId = Guid.NewGuid().ToString();
-                    blobFileName = $"{configDto.ConfigurationName}_{configDto.EnvironmentName}_{configurationId}.json";
-                    blobFilePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{blobFileName}";
-                    
+                    fileName = $"{configDto.ConfigurationName}_{configDto.EnvironmentName}_{configurationId}.json";
+                    filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+
                     // Create new entity directly from CreateConfigurationRequestDto
                     entity = _mapper.Map<MetricsConfigurationTableEntity>(configDto);
                     entity.ConfigurationId = configurationId; // Override the AutoMapper generated GUID
-                    entity.BlobFilePath = blobFilePath;
-                    entity.ConainerName = blobContainer;
+                    entity.BlobFilePath = filePath;
+                    entity.ConainerName = Container;
                     entity.CreatedBy = "System"; // Default since UserMetadata is no longer required
                     entity.CreatedOn = currentTime;
                     entity.LastUpdatedBy = "System"; // Default since UserMetadata is no longer required
@@ -414,7 +415,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 // Save metrics configuration to blob
-                var blobWriteResult = await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath,
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var blobWriteResult = await storage.WriteAsync(Container, filePath,
                     System.Text.Json.JsonSerializer.Serialize(configDto.MetricsConfiguration));
 
                 // Save to storage
@@ -644,24 +647,27 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
                     
-                    // Also delete the blob file if it exists
+                    // Also delete the config file if it exists
                     try
                     {
-                        var containerName = $"agent-{CommonUtils.TrimAndRemoveSpaces(existingConfig.AgentId)}";
-                        var blobPath = $"configurations/{configurationId}.json";
-                        
+                        var containerName = $"{CommonUtils.TrimAndRemoveSpaces(existingConfig.AgentId)}";
+                        var filePath = $"configurations/{configurationId}.json";
+
                         // Check if blob exists before attempting to delete
-                        bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
-                        if (blobExists)
+                        string storageProvider = _configHelper.GetStorageProvider();
+                        var storage = _factory.GetProvider(storageProvider);
+                        bool configExists = await storage.ExistsAsync(containerName, filePath);
+
+                        if (configExists)
                         {
-                            await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
-                            _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                            await storage.DeleteAsync(containerName, filePath);
+                            _logger.LogInformation("Configuration file deleted: {ContainerName}/{FilePath}", containerName, filePath);
                         }
                     }
-                    catch (Exception blobEx)
+                    catch (Exception configEx)
                     {
-                        _logger.LogWarning(blobEx, "Failed to delete blob file for configuration ID: {ConfigurationId}, but table record was deleted", configurationId);
-                        // Continue - table deletion was successful, blob deletion failure is not critical
+                        _logger.LogWarning(configEx, "Failed to delete config file for configuration ID: {ConfigurationId}, but table record was deleted", configurationId);
+                        // Continue - table deletion was successful, config deletion failure is not critical
                     }
                 }
                 else

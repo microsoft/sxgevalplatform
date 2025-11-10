@@ -18,6 +18,7 @@ public class StorageFactory
         return providerName.ToLower() switch
         {
             "azureblobstorage" => new AzureBlobStorageServiceV2(_config, _logger),
+            //"redisstorage" => new AzureBlobStorageServiceV2(_config, _logger),
             _ => throw new ArgumentException("Invalid storage provider")
         };
     }

@@ -1,12 +1,9 @@
 using AutoMapper;
-using Azure.Core;
-using Azure.Identity;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
-using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -16,7 +13,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
     public class EvalRunRequestHandler : IEvalRunRequestHandler
     {
         private readonly IEvalRunTableService _evalRunTableService;
-        private readonly IAzureBlobStorageService _blobStorageService;
         private readonly IAzureQueueStorageService _queueStorageService;
         private readonly IDataVerseAPIService _dataVerseAPIService;
         private readonly IConfigHelper _configHelper;
@@ -25,7 +21,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
         public EvalRunRequestHandler(
             IEvalRunTableService evalRunTableService,
-            IAzureBlobStorageService blobStorageService,
             IAzureQueueStorageService queueStorageService,
             IDataVerseAPIService dataVerseAPIService,
             ILogger<EvalRunRequestHandler> logger,
@@ -33,7 +28,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
             IConfigHelper configHelper)
         {
             _evalRunTableService = evalRunTableService;
-            _blobStorageService = blobStorageService;
             _queueStorageService = queueStorageService;
             _dataVerseAPIService = dataVerseAPIService;
             _configHelper = configHelper;
