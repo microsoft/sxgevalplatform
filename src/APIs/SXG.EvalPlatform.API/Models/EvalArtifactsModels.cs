@@ -68,5 +68,5 @@ public class EnrichedDatasetResponseDto
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public Guid EvalRunId { get; set; }
-    public string BlobPath { get; set; } = string.Empty;
+    public string DataSetPath { get; set; } = string.Empty;
 }

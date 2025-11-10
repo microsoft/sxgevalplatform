@@ -70,7 +70,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public DateTime? LastUpdatedOn { get; set; }
         public DateTime? StartedDatetime { get; set; }
         public DateTime? CompletedDatetime { get; set; }
-        public string? BlobFilePath { get; set; }
+        public string? FilePath { get; set; }
         public string? ContainerName { get; set; }
         public string Type { get; set; } = string.Empty;
         public string EnvironmentId { get; set; } = string.Empty;

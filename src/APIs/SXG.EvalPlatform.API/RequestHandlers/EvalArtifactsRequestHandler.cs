@@ -14,27 +14,27 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IEvalRunRequestHandler _evalRunRequestHandler;
         private readonly IDataSetTableService _dataSetTableService;
         private readonly IMetricsConfigTableService _metricsConfigTableService;
-        private readonly IAzureBlobStorageService _blobStorageService;
         private readonly IAzureQueueStorageService _queueStorageService;
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<EvalArtifactsRequestHandler> _logger;
+        private readonly StorageFactory _factory;
 
         public EvalArtifactsRequestHandler(
             IEvalRunRequestHandler evalRunRequestHandler,
             IDataSetTableService dataSetTableService,
             IMetricsConfigTableService metricsConfigTableService,
-            IAzureBlobStorageService blobStorageService,
             IAzureQueueStorageService queueStorageService,
             IConfigHelper configHelper,
-            ILogger<EvalArtifactsRequestHandler> logger)
+            ILogger<EvalArtifactsRequestHandler> logger,
+            StorageFactory factory)
         {
             _evalRunRequestHandler = evalRunRequestHandler;
             _dataSetTableService = dataSetTableService;
             _metricsConfigTableService = metricsConfigTableService;
-            _blobStorageService = blobStorageService;
             _queueStorageService = queueStorageService;
             _configHelper = configHelper;
             _logger = logger;
+            _factory = factory;
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 // Create container name from agent ID (using common utility for consistent naming)
                 var containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
-                var blobPath = $"enriched-datasets/{evalRunId}.json";
+                var filePath = $"enriched-datasets/{evalRunId}.json";
 
                 
                 // Serialize the enriched dataset to JSON string
@@ -165,29 +165,31 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     WriteIndented = true 
                 });
 
-                // Store in blob storage
-                var success = await _blobStorageService.WriteBlobContentAsync(containerName, blobPath, jsonContent);
+                // Store enriched dataset
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var success = await storage.WriteAsync(containerName, filePath, jsonContent);
 
                 if (!success)
                 {
-                    throw new InvalidOperationException("Failed to store enriched dataset in blob storage");
+                    throw new InvalidOperationException("Failed to store enriched dataset in storage");
                 }
 
-                _logger.LogInformation("Successfully stored enriched dataset for EvalRunId: {EvalRunId} at path: {BlobPath}", 
-                    evalRunId, blobPath);
+                _logger.LogInformation("Successfully stored enriched dataset for EvalRunId: {EvalRunId} at path: {FilePath}", 
+                    evalRunId, filePath);
 
                 //Update evaluation run entity to mark enriched dataset as stored
                 await _evalRunRequestHandler.UpdateEvalRunStatusAsync(new UpdateEvalRunStatusDto() { AgentId = evalRunEntity.AgentId, EvalRunId = evalRunEntity.EvalRunId, Status = CommonConstants.EvalRunStatus.DatasetEnrichmentCompleted });
 
                 // Send message to evaluation processing queue (now includes dataset ID)
-                await SendEvalProcessingRequestAsync(evalRunId, evalRunEntity.MetricsConfigurationId, evalRunId.ToString(), evalRunEntity.AgentId, evalRunEntity.DataSetId, blobPath);
+                await SendEvalProcessingRequestAsync(evalRunId, evalRunEntity.MetricsConfigurationId, evalRunId.ToString(), evalRunEntity.AgentId, evalRunEntity.DataSetId, filePath);
 
                 return new EnrichedDatasetResponseDto
                 {
                     Success = true,
                     Message = "Enriched dataset stored successfully",
                     EvalRunId = evalRunId,
-                    BlobPath = blobPath
+                    DataSetPath = filePath
                 };
             }
             catch (Exception ex)
@@ -205,8 +207,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="enrichedDatasetId">Enriched dataset ID</param>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Original dataset ID</param>
-        /// <param name="enrichedDatasetBlobPath">Path to the enriched dataset blob</param>
-        private async Task SendEvalProcessingRequestAsync(Guid evalRunId, string metricsConfigurationId, string enrichedDatasetId, string agentId, string datasetId, string enrichedDatasetBlobPath)
+        /// <param name="enrichedDatasetPath">Path to the enriched dataset</param>
+        private async Task SendEvalProcessingRequestAsync(Guid evalRunId, string metricsConfigurationId, string enrichedDatasetId, string agentId, string datasetId, string enrichedDatasetPath)
         {
             try
             {
@@ -221,7 +223,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     DatasetId = datasetId,
                     RequestedAt = DateTime.UtcNow,
                     Priority = "Normal",
-                    EnrichedDatasetBlobPath = enrichedDatasetBlobPath
+                    EnrichedDatasetPath = enrichedDatasetPath
                 };
 
                 var messageContent = JsonSerializer.Serialize(processingRequest, new JsonSerializerOptions 
@@ -265,19 +267,21 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 var containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
-                var blobPath = $"enriched-datasets/{evalRunId}.json";
+                var filePath = $"enriched-datasets/{evalRunId}.json";
 
-                // Check if blob exists first
-                var blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
-                if (!blobExists)
+                // Check if artifact exists first
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var dataExists = await storage.ExistsAsync(containerName, filePath);
+                if (!dataExists)
                 {
-                    _logger.LogWarning("Enriched dataset not found for EvalRunId: {EvalRunId} at path: {BlobPath}", 
-                        evalRunId, blobPath);
+                    _logger.LogWarning("Enriched dataset not found for EvalRunId: {EvalRunId} at path: {FilePath}", 
+                        evalRunId, filePath);
                     return null;
                 }
 
-                // Read blob content
-                var jsonContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobPath);
+                // Read content
+                var jsonContent = await storage.ReadAsync(containerName, filePath);
                 if (string.IsNullOrEmpty(jsonContent))
                 {
                     _logger.LogWarning("Empty enriched dataset content for EvalRunId: {EvalRunId}", evalRunId);
@@ -326,8 +330,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                // Read blob content for metrics configuration
-                var configContent = await _blobStorageService.ReadBlobContentAsync(metricsConfig.ConainerName, metricsConfig.BlobFilePath);
+                // Read content for metrics configuration
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var configContent = await storage.ReadAsync(metricsConfig.ConainerName, metricsConfig.FilePath);
                 if (string.IsNullOrEmpty(configContent))
                 {
                     _logger.LogWarning("Empty metrics configuration content for ID: {MetricsConfigurationId}", metricsConfigurationId);
@@ -357,8 +363,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                // Read blob content for dataset
-                var datasetContent = await _blobStorageService.ReadBlobContentAsync(dataset.ContainerName, dataset.BlobFilePath);
+                // Read dataset content
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var datasetContent = await storage.ReadAsync(dataset.ContainerName, dataset.FilePath);
                 if (string.IsNullOrEmpty(datasetContent))
                 {
                     _logger.LogWarning("Empty dataset content for ID: {DataSetId}", dataSetId);

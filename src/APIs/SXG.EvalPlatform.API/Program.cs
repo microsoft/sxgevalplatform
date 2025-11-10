@@ -1,18 +1,6 @@
-using AutoMapper;
-using Microsoft.OpenApi.Models;
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using Azure.Monitor.OpenTelemetry.Exporter;
-using Sxg.EvalPlatform.API.Storage;
-using Sxg.EvalPlatform.API.Storage.Services;
-using SxgEvalPlatformApi;
-using SxgEvalPlatformApi.RequestHandlers;
-using SxgEvalPlatformApi.Services;
-using SxgEvalPlatformApi.Middleware;
-using System.Reflection;
 using SxgEvalPlatformApi.Extensions;
+using SxgEvalPlatformApi.Middleware;
+using SxgEvalPlatformApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +19,7 @@ builder.Services.AddCorsServices();
 builder.Services.AddAutoMapperServices();
 builder.Services.AddHttpClientServices();
 builder.Services.AddBusinessServices();
+builder.Services.AddSingleton<StorageFactory>();
 
 var app = builder.Build();
 

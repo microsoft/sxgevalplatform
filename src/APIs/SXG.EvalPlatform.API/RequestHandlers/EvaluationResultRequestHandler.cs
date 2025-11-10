@@ -1,6 +1,5 @@
 using AutoMapper;
 using Sxg.EvalPlatform.API.Storage;
-using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
@@ -14,28 +13,28 @@ namespace SxgEvalPlatformApi.RequestHandlers
     /// </summary>
     public class EvaluationResultRequestHandler : IEvaluationResultRequestHandler
     {
-        private readonly IAzureBlobStorageService _blobService;
         private readonly IEvalRunRequestHandler _evalRunRequestHandler;
         private readonly ILogger<EvaluationResultRequestHandler> _logger;
         private readonly IMapper _mapper;
         private readonly IConfigHelper _configHelper;
+        private readonly StorageFactory _factory;
 
         public EvaluationResultRequestHandler(
-            IAzureBlobStorageService blobService,
             IEvalRunRequestHandler evalRunRequestHandler,
             ILogger<EvaluationResultRequestHandler> logger,
             IConfigHelper configHelper, 
-            IMapper mapper)
+            IMapper mapper,
+            StorageFactory factory)
         {
-            _blobService = blobService;
             _evalRunRequestHandler = evalRunRequestHandler;
             _logger = logger;
             _mapper = mapper;
             _configHelper = configHelper;
+            _factory = factory;
         }
 
         /// <summary>
-        /// Save evaluation results to blob storage
+        /// Save evaluation results to storage
         /// </summary>
         public async Task<EvaluationResultSaveResponseDto> SaveEvaluationResultAsync(Guid evalRunId, SaveEvaluationResultDto saveDto)
         {
@@ -56,7 +55,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     };
                 }
 
-                // Get internal entity details for blob storage
+                // Get internal entity details from storage
                 var evalRunEntity = await _evalRunRequestHandler.GetEvalRunEntityByIdAsync(evalRunId);
                 if (evalRunEntity == null)
                 {
@@ -87,30 +86,30 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // we can use it as-is without transformation
                 var evaluationRecordsJson = saveDto.EvaluationResults;
 
-                // Handle container name and blob path with support for folder structure
+                // Handle container name and results path with support for folder structure
                 string containerName;
-                string blobPath;
+                string filePath;
                 string fileName = $"evaluation_results_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
                 
                 if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
                 {
-                    // New format: use stored container name and blob path
+                    // New format: use stored container name and results path
                     containerName = evalRunEntity.ContainerName;
-                    // If BlobFilePath is a folder (ends with /), append the filename
-                    if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
+                    // If FilePath is a folder (ends with /), append the filename
+                    if (!string.IsNullOrEmpty(evalRunEntity.FilePath) && evalRunEntity.FilePath.EndsWith('/'))
                     {
-                        blobPath = $"{evalRunEntity.BlobFilePath}{fileName}";
+                        filePath = $"{evalRunEntity.FilePath}{fileName}";
                     }
                     else
                     {
-                        blobPath = evalRunEntity.BlobFilePath ?? $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
+                        filePath = evalRunEntity.FilePath ?? $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
                     }
                 }
                 else
                 {
                     // Backward compatibility: parse the old format
                     containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
-                    blobPath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
+                    filePath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/{fileName}";
                 }
 
                 // Serialize evaluation records to JSON using the storage model
@@ -130,18 +129,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     WriteIndented = true 
                 });
 
-                // Save to blob storage
-                await _blobService.WriteBlobContentAsync(containerName, blobPath, jsonContent);
+                // Save to storage
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                await storage.WriteAsync(containerName, filePath, jsonContent);
 
-                _logger.LogInformation("Successfully saved evaluation results for EvalRunId: {EvalRunId} to {BlobPath}", 
-                    evalRunId, $"{containerName}/{blobPath}");
+                _logger.LogInformation("Successfully saved evaluation results for EvalRunId: {EvalRunId} to {FilePath}", 
+                    evalRunId, $"{containerName}/{filePath}");
 
                 return new EvaluationResultSaveResponseDto
                 {
                     Success = true,
                     Message = "Evaluation results saved successfully",
                     EvalRunId = evalRunId,
-                    BlobPath = $"{containerName}/{blobPath}"
+                    ResultsPath = $"{containerName}/{filePath}"
                 };
             }
             catch (Exception ex)
@@ -164,7 +165,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
-                var evalSummaryBlobPath = $"evaluation-results/{evalRunId}_summary.json";
+                var evalSummaryFilePath = $"evaluation-results/{evalRunId}_summary.json";
                 var evalResultDatasetPath = $"evaluation-results/{evalRunId}_dataset.json";
 
                 // First, verify that the EvalRunId exists and get internal details
@@ -194,7 +195,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     };
                 }
 
-                // Get internal entity details for blob storage
+                // Get internal entity details from storage
                 var evalRunEntity = await _evalRunRequestHandler.GetEvalRunEntityByIdAsync(evalRunId);
                 if (evalRunEntity == null)
                 {
@@ -222,48 +223,50 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Reading evaluation results from container: {ContainerName} for EvalRunId: {EvalRunId}", 
                     containerName, evalRunId);
 
-                // Try to read summary blob first
+                // Try to read summary first
                 string summaryContent = null;
-                var summaryExists = await _blobService.BlobExistsAsync(containerName, evalSummaryBlobPath);
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+                var summaryExists = await storage.ExistsAsync(containerName, evalSummaryFilePath);
                 if (summaryExists)
                 {
-                    summaryContent = await _blobService.ReadBlobContentAsync(containerName, evalSummaryBlobPath);
-                    _logger.LogInformation("Successfully read summary blob from {ContainerName}/{BlobPath}", 
-                        containerName, evalSummaryBlobPath);
+                    summaryContent = await storage.ReadAsync(containerName, evalSummaryFilePath);
+                    _logger.LogInformation("Successfully read summary from {ContainerName}/{FilePath}", 
+                        containerName, evalSummaryFilePath);
                 }
                 else
                 {
-                    _logger.LogWarning("Summary blob not found at {ContainerName}/{BlobPath}", 
-                        containerName, evalSummaryBlobPath);
+                    _logger.LogWarning("Summary not found at {ContainerName}/{FilePath}", 
+                        containerName, evalSummaryFilePath);
                 }
 
-                // Try to read dataset results blob
+                // Try to read dataset results
                 string datasetContent = null;
-                var datasetExists = await _blobService.BlobExistsAsync(containerName, evalResultDatasetPath);
+                var datasetExists = await storage.ExistsAsync(containerName, evalResultDatasetPath);
                 if (datasetExists)
                 {
-                    datasetContent = await _blobService.ReadBlobContentAsync(containerName, evalResultDatasetPath);
-                    _logger.LogInformation("Successfully read dataset blob from {ContainerName}/{BlobPath}", 
+                    datasetContent = await storage.ReadAsync(containerName, evalResultDatasetPath);
+                    _logger.LogInformation("Successfully read dataset from {ContainerName}/{FilePath}", 
                         containerName, evalResultDatasetPath);
                 }
                 else
                 {
-                    _logger.LogWarning("Dataset blob not found at {ContainerName}/{BlobPath}", 
+                    _logger.LogWarning("Dataset not found at {ContainerName}/{FilePath}", 
                         containerName, evalResultDatasetPath);
                 }
 
-                // Check if at least one blob exists
+                // Check if summary and dataset exists
                 if (!summaryExists && !datasetExists)
                 {
-                    _logger.LogInformation("No evaluation result blobs found for EvalRunId: {EvalRunId} in container: {ContainerName}. " +
+                    _logger.LogInformation("No evaluation result data found for EvalRunId: {EvalRunId} in container: {ContainerName}. " +
                         "Tried paths: {SummaryPath}, {DatasetPath}.", 
-                        evalRunId, containerName, evalSummaryBlobPath, evalResultDatasetPath);
+                        evalRunId, containerName, evalSummaryFilePath, evalResultDatasetPath);
                     
                     // Fallback: try to find any evaluation results using the original logic
                     return await GetEvaluationResultByIdFallbackAsync(evalRunId, evalRun, evalRunEntity);
                 }
 
-                // Combine the results from both blobs
+                // Combine the results from both sources
                 var combinedResults = new Dictionary<string, object>();
 
                 // Add summary data if available
@@ -305,8 +308,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     MetricsConfigurationId = evalRun.MetricsConfigurationId,
                     Status = evalRun.Status,
                     CompletedDatetime = evalRun.CompletedDatetime,
-                    SummaryBlobPath = summaryExists ? evalSummaryBlobPath : null,
-                    DatasetBlobPath = datasetExists ? evalResultDatasetPath : null,
+                    SummaryPath = summaryExists ? evalSummaryFilePath : null,
+                    DatasetPath = datasetExists ? evalResultDatasetPath : null,
                     RetrievedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 };
 
@@ -324,7 +327,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     Success = true,
                     Message = "Evaluation results retrieved successfully",
                     EvalRunId = evalRunId,
-                    FileName = summaryExists ? Path.GetFileName(evalSummaryBlobPath) : Path.GetFileName(evalResultDatasetPath),
+                    FileName = summaryExists ? Path.GetFileName(evalSummaryFilePath) : Path.GetFileName(evalResultDatasetPath),
                     EvaluationRecords = combinedJsonElement
                 };
             }
@@ -359,35 +362,37 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Using fallback method to retrieve evaluation results for EvalRunId: {EvalRunId}", evalRunId);
 
-                // Handle container name and blob path with support for folder structure
+                // Handle container name and evalRun path with support for folder structure
                 string containerName;
-                string blobPath;
-                
+                string filePath;
+                string storageProvider = _configHelper.GetStorageProvider();
+                var storage = _factory.GetProvider(storageProvider);
+
                 if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
                 {
-                    // New format: use stored container name and blob path
+                    // New format: use stored container name and evalRun path
                     containerName = evalRunEntity.ContainerName;
-                    // If BlobFilePath is a folder (ends with /), look for evaluation results file dynamically
-                    if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
+                    // If FilePath is a folder (ends with /), look for evaluation results file dynamically
+                    if (!string.IsNullOrEmpty(evalRunEntity.FilePath) && evalRunEntity.FilePath.EndsWith('/'))
                     {
                         // Search for evaluation results files in the folder
-                        var blobs = await _blobService.ListBlobsAsync(containerName, evalRunEntity.BlobFilePath);
-                        var evaluationResultBlob = blobs.FirstOrDefault(b => 
+                        var evalResults = await storage.ListAsync(containerName, evalRunEntity.FilePath);
+                        var evaluationResults = evalResults.FirstOrDefault(b => 
                             b.Contains("evaluation_results_") && b.EndsWith(".json"));
                         
-                        if (evaluationResultBlob != null)
+                        if (evaluationResults != null)
                         {
-                            blobPath = evaluationResultBlob;
+                            filePath = evaluationResults;
                         }
                         else
                         {
                             // Fallback to looking for results.json for backward compatibility
-                            blobPath = $"{evalRunEntity.BlobFilePath}results.json";
+                            filePath = $"{evalRunEntity.FilePath}results.json";
                         }
                     }
                     else
                     {
-                        blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{evalRunId}/results.json";
+                        filePath = evalRunEntity.FilePath ?? $"evalresults/{evalRunId}/results.json";
                     }
                 }
                 else
@@ -396,28 +401,28 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
                     // Try to find the evaluation results file dynamically first
                     var folderPath = $"evalresults/{evalRunId}/";
-                    var blobs = await _blobService.ListBlobsAsync(containerName, folderPath);
-                    var evaluationResultBlob = blobs.FirstOrDefault(b => 
+                    var evalResults = await storage.ListAsync(containerName, folderPath);
+                    var evaluationResults = evalResults.FirstOrDefault(b => 
                         b.Contains("evaluation_results_") && b.EndsWith(".json"));
                     
-                    if (evaluationResultBlob != null)
+                    if (evaluationResults != null)
                     {
-                        blobPath = evaluationResultBlob;
+                        filePath = evaluationResults;
                     }
                     else
                     {
                         // Fallback to the old hardcoded name
-                        blobPath = $"evalresults/{evalRunId}/results.json";
+                        filePath = $"evalresults/{evalRunId}/results.json";
                     }
                 }
 
-                // Check if blob exists
-                var blobExists = await _blobService.BlobExistsAsync(containerName, blobPath);
-                if (!blobExists)
+                // Check if evalResults exists
+                var evalExists = await storage.ExistsAsync(containerName, filePath);
+                if (!evalExists)
                 {
-                    _logger.LogInformation("Evaluation results not found for EvalRunId: {EvalRunId} in path {BlobPath}. " +
+                    _logger.LogInformation("Evaluation results not found for EvalRunId: {EvalRunId} in path {FilePath}. " +
                         "This could mean the evaluation run hasn't completed yet or something went wrong.", 
-                        evalRunId, $"{containerName}/{blobPath}");
+                        evalRunId, $"{containerName}/{filePath}");
                     
                     return new EvaluationResultResponseDto
                     {
@@ -427,8 +432,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     };
                 }
 
-                // Read blob content
-                var jsonContent = await _blobService.ReadBlobContentAsync(containerName, blobPath);
+                // Read results content
+                var jsonContent = await storage.ReadAsync(containerName, filePath);
                 
                 if (string.IsNullOrEmpty(jsonContent))
                 {
@@ -451,7 +456,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     Success = true,
                     Message = "Evaluation results retrieved successfully (fallback)",
                     EvalRunId = evalRunId,
-                    FileName = evaluationResult?.FileName ?? Path.GetFileName(blobPath),
+                    FileName = evaluationResult?.FileName ?? Path.GetFileName(filePath),
                     EvaluationRecords = evaluationResult?.EvaluationResults
                 };
             }
