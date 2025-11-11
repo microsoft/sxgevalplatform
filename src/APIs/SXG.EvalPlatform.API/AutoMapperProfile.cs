@@ -22,43 +22,56 @@ namespace SxgEvalPlatformApi
             ConfigureDataSetMappings();
             ConfigureCollectionMappings();
         }
-
+        
         private void ConfigureMetricsConfigurationMappings()
         {
-            // CreateConfigurationRequestDto to MetricsConfigurationTableEntity (optimized)
             CreateMap<CreateConfigurationRequestDto, MetricsConfigurationTableEntity>()
                 .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
-                .ForMember(dest => dest.RowKey, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
-                .ForMember(dest => dest.ConfigurationId, opt => opt.Ignore()) // Set manually to ensure consistency
+                .ForMember(dest => dest.AgentId, opt => opt.MapFrom(src => src.AgentId)) // Set manually to ensure consistency
+                .ForMember(dest => dest.ConfigurationName, opt => opt.MapFrom(src => src.ConfigurationName)) // Set manually to ensure consistency
+                .ForMember(dest => dest.EnvironmentName, opt => opt.MapFrom(src => src.EnvironmentName)) // Set manually to ensure consistency
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description)) // Set manually to ensure consistency
+                .ForMember(dest => dest.ConfigurationId, opt => opt.MapFrom(src => Guid.NewGuid().ToString())) // Set manually to ensure consistency
+
                 .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
-                .ForMember(dest => dest.ConainerName, opt => opt.MapFrom(src => src.AgentId))
+
+                .ForMember(dest => dest.ConainerName, opt => opt.Ignore())
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
-                .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
+                .ForMember(dest => dest.Timestamp, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
-            // UpdateConfigurationRequestDto to MetricsConfigurationTableEntity (optimized)
-            CreateMap<UpdateConfigurationRequestDto, MetricsConfigurationTableEntity>()
-                .ForMember(dest => dest.PartitionKey, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.RowKey, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.ConfigurationId, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.CreatedOn, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore()) // Preserve existing
+            CreateMap<MetricsConfigurationTableEntity, CreateConfigurationRequestDto>().ReverseMap(); 
+
+            CreateMap<UpdateMetricsConfigurationRequestDto, MetricsConfigurationTableEntity>()
+                .ForMember(dest => dest.PartitionKey, opt => opt.MapFrom(src => src.AgentId))
+                .ForMember(dest => dest.AgentId, opt => opt.MapFrom(src => src.AgentId)) // Set manually to ensure consistency
+                .ForMember(dest => dest.ConfigurationName, opt => opt.MapFrom(src => src.ConfigurationName)) // Set manually to ensure consistency
+                .ForMember(dest => dest.EnvironmentName, opt => opt.MapFrom(src => src.EnvironmentName)) // Set manually to ensure consistency
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description)) // Set manually to ensure consistency
+                .ForMember(dest => dest.ConfigurationId, opt => opt.MapFrom(src => src.ConfigurationId)) // Set manually to ensure consistency
+                .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
-                .ForMember(dest => dest.ConainerName, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore()) // Preserve existing
-                .ForMember(dest => dest.Timestamp, opt => opt.Ignore())
+                .ForMember(dest => dest.ConainerName, opt => opt.Ignore())
+                .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
+                .ForMember(dest => dest.Timestamp, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
 
-            // SelectedMetricsConfigurationDto to SelectedMetricsConfiguration (bidirectional)
+            CreateMap<MetricsConfigurationTableEntity, UpdateMetricsConfigurationRequestDto>().ReverseMap();
+
             CreateMap<SelectedMetricsConfigurationDto, SelectedMetricsConfiguration>()
                 .ReverseMap();
 
-            // MetricsConfigurationTableEntity to MetricsConfigurationMetadataDto (optimized)
             CreateMap<MetricsConfigurationTableEntity, MetricsConfigurationMetadataDto>()
+                .ForMember(dest => dest.ConfigurationName, opt => opt.MapFrom(src => src.ConfigurationName))
+                .ForMember(dest => dest.EnvironmentName, opt => opt.MapFrom(src => src.EnvironmentName))
+                .ForMember(dest => dest.AgentId, opt => opt.MapFrom(src => src.AgentId))
+                .ForMember(dest => dest.ConfigurationId, opt => opt.MapFrom(src => src.ConfigurationId))
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
                 .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))

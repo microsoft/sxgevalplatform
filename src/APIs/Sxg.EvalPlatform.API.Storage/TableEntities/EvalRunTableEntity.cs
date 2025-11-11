@@ -75,5 +75,6 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string Type { get; set; } = string.Empty;
         public string EnvironmentId { get; set; } = string.Empty;
         public string AgentSchemaName { get; set; } = string.Empty;
+        public string EvalRunName { get; set; } = string.Empty;
     }
 }

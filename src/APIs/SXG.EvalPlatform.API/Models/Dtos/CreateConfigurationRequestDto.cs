@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace SxgEvalPlatformApi.Models.Dtos
 {
     /// <summary>
-    /// Data transfer object for creating new metrics configuration (without ConfigurationId)
+    /// Data transfer object for creating new Metrics configuration (without ConfigurationId)
     /// </summary>
     public class CreateConfigurationRequestDto
     {

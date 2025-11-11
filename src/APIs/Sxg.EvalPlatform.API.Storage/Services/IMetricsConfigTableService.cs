@@ -8,7 +8,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
     public interface IMetricsConfigTableService
     {
         /// <summary>
-        /// Save or update metrics configuration in Azure Table
+        /// Save or update Metrics configuration in Azure Table
         /// </summary>
         /// <param name="entity">Metrics configuration entity</param>
         /// <returns>The saved entity</returns>
@@ -17,7 +17,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         //Task<MetricsConfigurationTableEntity> GetDefaultMetricsConfigurationAsync();
 
         /// <summary>
-        /// Get metrics configuration by Agent ID and Configuration Name
+        /// Get Metrics configuration by Agent ID and Configuration Name
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationName">Configuration name</param>
@@ -25,7 +25,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         //Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationAsync(string agentId, string configurationName);
 
         /// <summary>
-        /// Get metrics configuration by Agent ID, Configuration Name, and Environment
+        /// Get Metrics configuration by Agent ID, Configuration Name, and Environment
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationName">Configuration name</param>
@@ -34,23 +34,23 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         //Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationAsync(string agentId, string configurationName, string environmentName);
 
         /// <summary>
-        /// Get all metrics configurations for an agent
+        /// Get all Metrics configurations for an agent
         /// </summary>
         /// <param name="agentId">Agent ID</param>
-        /// <returns>List of metrics configuration entities</returns>
+        /// <returns>List of Metrics configuration entities</returns>
         //Task<List<MetricsConfigurationTableEntity>> GetAllMetricsConfigurationsByAgentIdAsync(string agentId);
 
         /// <summary>
-        /// Get all metrics configurations for an agent in a specific environment
+        /// Get all Metrics configurations for an agent in a specific environment
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="environmentName">Environment name</param>
-        /// <returns>List of metrics configuration entities</returns>
-        Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string environmentName);
-        Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string configurationName, string environmentName); 
+        /// <returns>List of Metrics configuration entities</returns>
+        Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string environmentName = "");
+        Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string configurationName, string environmentName);
 
         /// <summary>
-        /// Check if metrics configuration exists
+        /// Check if Metrics configuration exists
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationName">Configuration name</param>
@@ -58,7 +58,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         //Task<bool> MetricsConfigurationExistsAsync(string agentId, string configurationName);
 
         /// <summary>
-        /// Check if metrics configuration exists for specific environment
+        /// Check if Metrics configuration exists for specific environment
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationName">Configuration name</param>
@@ -67,7 +67,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         //Task<bool> MetricsConfigurationExistsAsync(string agentId, string configurationName, string environmentName);
 
         /// <summary>
-        /// Get metrics configuration by Agent ID and Configuration ID (UUID)
+        /// Get Metrics configuration by Agent ID and Configuration ID (UUID)
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationId">Configuration ID (UUID)</param>
@@ -75,7 +75,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationByConfigurationIdAsync(string configurationId);
 
         /// <summary>
-        /// Delete metrics configuration by Agent ID and Configuration ID
+        /// Delete Metrics configuration by Agent ID and Configuration ID
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationId">Configuration ID (UUID)</param>
@@ -83,7 +83,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId);
 
         /// <summary>
-        /// Delete metrics configuration
+        /// Delete Metrics configuration
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationName">Configuration name</param>

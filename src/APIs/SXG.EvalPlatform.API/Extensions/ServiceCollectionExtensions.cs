@@ -4,10 +4,12 @@ using OpenTelemetry.Trace;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
+using Sxg.EvalPlatform.API.Storage.Extensions;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using AutoMapper;
 
 namespace SxgEvalPlatformApi.Extensions;
 
@@ -31,10 +33,10 @@ public static class ServiceCollectionExtensions
                 .ConfigureResource(resource => resource
                 .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
                 .AddAttributes(new Dictionary<string, object>
-                 {
-                     ["deployment.environment"] = environment.EnvironmentName,
-                     ["service.instance.id"] = Environment.MachineName
-                 }))
+                {
+                    ["deployment.environment"] = environment.EnvironmentName,
+                    ["service.instance.id"] = Environment.MachineName
+                }))
                 .WithTracing(tracing =>
                   {
                       tracing
@@ -71,7 +73,7 @@ public static class ServiceCollectionExtensions
                 .AddSource("SXG.EvalPlatform.API")
                 .SetSampler(new TraceIdRatioBasedSampler(samplingRatio));
 
-                      // Add console exporter if enabled
+                      // Add console exporter if Enabled
                       if (enableConsoleExporter)
                       {
                           tracing.AddConsoleExporter();
@@ -93,7 +95,7 @@ public static class ServiceCollectionExtensions
                .AddHttpClientInstrumentation()
                .AddMeter("SXG.EvalPlatform.API");
 
-                // Add console exporter if enabled
+                // Add console exporter if Enabled
                 if (enableConsoleExporter)
                 {
                     metrics.AddConsoleExporter();
@@ -178,11 +180,22 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Configure AutoMapper services
+    /// Configure AutoMapper services manually 
     /// </summary>
     public static IServiceCollection AddAutoMapperServices(this IServiceCollection services)
     {
-        services.AddAutoMapper(typeof(MappingProfile));
+        // Try the correct way for AutoMapper 12.0.1
+        services.AddSingleton<IMapper>(serviceProvider =>
+        {
+            // Create the configuration expression first
+            var configExpression = new MapperConfigurationExpression();
+            configExpression.AddProfile<MappingProfile>();
+
+            // Pass the configuration expression to the constructor
+            var config = new MapperConfiguration(configExpression);
+            return new Mapper(config);
+        });
+
         return services;
     }
 
@@ -203,7 +216,7 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Configure business services (Storage, Request Handlers, etc.)
     /// </summary>
-    public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+    public static IServiceCollection AddBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
         // Storage services
         services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
@@ -224,6 +237,9 @@ public static class ServiceCollectionExtensions
 
         // Helper services
         services.AddScoped<IConfigHelper, ConfigHelper>();
+
+        // Cache services
+        services.AddCacheServices(configuration);
 
         return services;
     }

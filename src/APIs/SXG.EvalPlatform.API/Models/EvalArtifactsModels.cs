@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace SxgEvalPlatformApi.Models;
 
 /// <summary>
-/// Response model containing both metrics configuration and dataset content for an evaluation run
+/// Response model containing both Metrics configuration and dataset content for an evaluation run
 /// </summary>
 public class EvalArtifactsDto
 {
@@ -16,7 +16,7 @@ public class EvalArtifactsDto
 }
 
 /// <summary>
-/// Response model containing only metrics configuration for an evaluation run
+/// Response model containing only Metrics configuration for an evaluation run
 /// </summary>
 public class MetricsConfigurationArtifactDto
 {

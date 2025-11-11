@@ -30,7 +30,7 @@ builder.Services.AddSwaggerServices();
 builder.Services.AddCorsServices();
 builder.Services.AddAutoMapperServices();
 builder.Services.AddHttpClientServices();
-builder.Services.AddBusinessServices();
+builder.Services.AddBusinessServices(builder.Configuration);
 
 var app = builder.Build();
 

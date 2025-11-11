@@ -39,6 +39,7 @@ public class EvalRunDto
 {
     public Guid EvalRunId { get; set; } = Guid.Empty;
     public string MetricsConfigurationId { get; set; } = string.Empty;
+    
     public string DataSetId { get; set; } = string.Empty;
     public string AgentId { get; set; } = string.Empty;
     public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
@@ -46,6 +47,22 @@ public class EvalRunDto
     public DateTime? LastUpdatedOn { get; set; }
     public DateTime? StartedDatetime { get; set; }
     public DateTime? CompletedDatetime { get; set; }
+    
+    /// <summary>
+    /// Name of the evaluation run
+    /// </summary>
+    public string EvalRunName { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Name of the dataset used in this evaluation run
+    /// </summary>
+    public string DataSetName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Name of the metrics configuration used in this evaluation run
+    /// </summary>
+    public string MetricsConfigurationName { get; set; } = string.Empty;
+
     // Note: BlobFilePath and ContainerName are internal details and not exposed to API consumers
 }
 
@@ -96,6 +113,10 @@ public class CreateEvalRunDto
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string AgentSchemaName { get; set; } = string.Empty;
+
+    [StringLength(200)]
+    public string EvalRunName { get; set; } = string.Empty;
+
 }
 
 /// <summary>

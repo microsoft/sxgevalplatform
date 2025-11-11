@@ -4,7 +4,7 @@ using Azure.Data.Tables;
 namespace Sxg.EvalPlatform.API.Storage.TableEntities
 {
     /// <summary>
-    /// Entity class for storing metrics configuration in Azure Table Storage
+    /// Entity class for storing Metrics configuration in Azure Table Storage
     /// Uses AgentId as PartitionKey for efficient querying by agent
     /// Uses UUID as RowKey for guaranteed uniqueness
     /// </summary>

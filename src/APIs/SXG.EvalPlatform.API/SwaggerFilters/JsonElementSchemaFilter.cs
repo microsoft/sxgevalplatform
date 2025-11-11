@@ -26,7 +26,7 @@ public class JsonElementSchemaFilter : ISchemaFilter
                         ["question"] = new OpenApiString("What is the release year of Inception?"),
                         ["actualAnswer"] = new OpenApiString("The release year of the movie Inception is 2010."),
                         ["expectedAnswer"] = new OpenApiString("The release year of the movie Inception is 2010."),
-                        ["metrics"] = new OpenApiObject
+                        ["Metrics"] = new OpenApiObject
                         {
                             ["similarity"] = new OpenApiObject
                             {

@@ -166,5 +166,28 @@ namespace Sxg.EvalPlatform.API.Storage
             }
             return scope;
         }
+
+        // Cache configuration methods
+        public string GetCacheProvider()
+        {
+            var provider = _configuration["Cache:Provider"] ?? "Memory";
+            return provider;
+        }
+
+        public string? GetRedisCacheEndpoint()
+        {
+            return _configuration["Cache:Redis:Endpoint"];
+        }
+
+        public TimeSpan GetDefaultCacheExpiration()
+        {
+            var expirationMinutes = _configuration.GetValue<int>("Cache:DefaultExpirationMinutes", 30);
+            return TimeSpan.FromMinutes(expirationMinutes);
+        }
+
+        public bool IsDistributedCacheEnabled()
+        {
+            return string.Equals(GetCacheProvider(), "Redis", StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

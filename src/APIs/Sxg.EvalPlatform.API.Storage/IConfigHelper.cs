@@ -17,6 +17,12 @@
         string GetDatasetEnrichmentRequestsQueueName();
         string GetEvalProcessingRequestsQueueName();
         string GetDatasetEnrichmentRequestAPIEndPoint();
-        string GetDataVerseAPIScope(); 
+        string GetDataVerseAPIScope();
+        
+        // Cache configuration methods
+        string GetCacheProvider();
+        string? GetRedisCacheEndpoint();
+        TimeSpan GetDefaultCacheExpiration();
+        bool IsDistributedCacheEnabled();
     }
 }

@@ -94,7 +94,7 @@ public class EvalProcessingResponse
     public string? ResultsBlobPath { get; set; }
 
     /// <summary>
-    /// Processing results or metrics data
+    /// Processing results or Metrics data
     /// </summary>
     public Dictionary<string, object>? Results { get; set; }
 }

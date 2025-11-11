@@ -9,14 +9,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
     public interface IEvalArtifactsRequestHandler
     {
         /// <summary>
-        /// Get both metrics configuration and dataset content for an evaluation run
+        /// Get both Metrics configuration and dataset content for an evaluation run
         /// </summary>
         /// <param name="evalRunId">Evaluation run ID</param>
         /// <returns>Combined artifacts or null if not found</returns>
         Task<EvalArtifactsDto?> GetEvalArtifactsAsync(Guid evalRunId);
 
         /// <summary>
-        /// Get only metrics configuration for an evaluation run
+        /// Get only Metrics configuration for an evaluation run
         /// </summary>
         /// <param name="evalRunId">Evaluation run ID</param>
         /// <returns>Metrics configuration artifact or null if not found</returns>

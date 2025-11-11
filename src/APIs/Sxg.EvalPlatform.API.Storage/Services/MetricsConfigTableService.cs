@@ -80,7 +80,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Saving metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
+                _logger.LogInformation("Saving Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
                     entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
 
                 // Update timestamp
@@ -89,108 +89,26 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
 
-                _logger.LogInformation("Successfully saved metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
+                _logger.LogInformation("Successfully saved Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
                     entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
 
                 return entity;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to save metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
+                _logger.LogError(ex, "Failed to save Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
                     entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
                 throw;
             }
         }
 
-        //public async Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationAsync(string agentId, string configurationName)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Retrieving metrics configuration for Agent: {AgentId}, Config: {ConfigName}",
-        //            agentId, configurationName);
+        
 
-        //        // Query all configurations for the agent and filter by configuration name
-        //        var filter = $"PartitionKey eq '{agentId}' and ConfigurationName eq '{configurationName}'";
-
-        //        await foreach (var entity in TableClient.QueryAsync<MetricsConfigurationTableEntity>(filter))
-        //        {
-        //            _logger.LogInformation("Found metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //                agentId, configurationName, entity.EnvironmentName);
-        //            return entity;
-        //        }
-
-        //        _logger.LogInformation("Metrics configuration not found for Agent: {AgentId}, Config: {ConfigName}",
-        //            agentId, configurationName);
-        //        return null;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to retrieve metrics configuration for Agent: {AgentId}, Config: {ConfigName}",
-        //            agentId, configurationName);
-        //        throw;
-        //    }
-        //}
-
-        //public async Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationAsync(string agentId, string configurationName, string environmentName)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Retrieving metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //            agentId, configurationName, environmentName);
-
-        //        // Since we're using UUID as RowKey, we need to search by filter instead of direct lookup
-        //        var filter = $"PartitionKey eq '{agentId}' and ConfigurationName eq '{configurationName}' and EnvironmentName eq '{environmentName}'";
-
-        //        await foreach (var entity in TableClient.QueryAsync<MetricsConfigurationTableEntity>(filter))
-        //        {
-        //            _logger.LogInformation("Found metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //                agentId, configurationName, environmentName);
-        //            return entity;
-        //        }
-
-        //        _logger.LogInformation("Metrics configuration not found for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //            agentId, configurationName, environmentName);
-        //        return null;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to retrieve metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //            agentId, configurationName, environmentName);
-        //        throw;
-        //    }
-        //}
-
-        //public async Task<List<MetricsConfigurationTableEntity>> GetAllMetricsConfigurationsByAgentIdAsync(string agentId)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Retrieving all metrics configurations for Agent: {AgentId}", agentId);
-
-        //        var entities = new List<MetricsConfigurationTableEntity>();
-        //        var filter = $"PartitionKey eq '{agentId}'";
-
-        //        await foreach (var entity in TableClient.QueryAsync<MetricsConfigurationTableEntity>(filter))
-        //        {
-        //            entities.Add(entity);
-        //        }
-
-        //        _logger.LogInformation("Retrieved {Count} metrics configurations for Agent: {AgentId}",
-        //            entities.Count, agentId);
-
-        //        return entities;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to retrieve metrics configurations for Agent: {AgentId}", agentId);
-        //        throw;
-        //    }
-        //}
-
-        public async Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string environmentName)
+        public async Task<IList<MetricsConfigurationTableEntity>> GetAllMetricsConfigurations(string agentId, string environmentName = "")
         {
             try
             {
-                _logger.LogInformation("Retrieving all metrics configurations for Agent: {AgentId}, Environment: {Environment}",
+                _logger.LogInformation("Retrieving all Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
                     agentId, environmentName);
 
                 var entities = new List<MetricsConfigurationTableEntity>();
@@ -212,14 +130,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation("Retrieved {Count} metrics configurations for Agent: {AgentId}, Environment: {Environment}",
+                _logger.LogInformation("Retrieved {Count} Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
                     entities.Count, agentId, environmentName);
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve metrics configurations for Agent: {AgentId}, Environment: {Environment}",
+                _logger.LogError(ex, "Failed to retrieve Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
                     agentId, environmentName);
                 throw;
             }
@@ -229,7 +147,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Retrieving all metrics configurations for Agent: {AgentId}, Environment: {Environment}",
+                _logger.LogInformation("Retrieving all Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
                     agentId, environmentName);
 
                 var entities = new List<MetricsConfigurationTableEntity>();
@@ -242,13 +160,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation($"Retrieved {entities.Count} metrics configurations for Agent: {agentId}, Environment: {environmentName}, ConfigurationName: {configurationName}");
+                _logger.LogInformation($"Retrieved {entities.Count} Metrics configurations for Agent: {agentId}, Environment: {environmentName}, ConfigurationName: {configurationName}");
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve metrics configurations for Agent: {agentId}, Environment: {environmentName}"); 
+                _logger.LogError(ex, $"Failed to retrieve Metrics configurations for Agent: {agentId}, Environment: {environmentName}"); 
                 throw;
             }
         }
@@ -257,7 +175,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation($"Retrieving all metrics configurations by ConfiguarationId: {configurationId}");
+                _logger.LogInformation($"Retrieving all Metrics configurations by ConfiguarationId: {configurationId}");
 
                 var entities = new List<MetricsConfigurationTableEntity>();
                 string filter = $"RowKey eq '{configurationId}'"; 
@@ -267,62 +185,28 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation($"Retrieved metrics configurations by ConfigurationId: {configurationId}");
+                _logger.LogInformation($"Retrieved Metrics configurations by ConfigurationId: {configurationId}");
 
                 return entities.FirstOrDefault();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve metrics configurations by ConfigurationId: {configurationId}");
+                _logger.LogError(ex, $"Failed to retrieve Metrics configurations by ConfigurationId: {configurationId}");
                 throw;
             }
         }
-               
-
-
-        //public async Task<bool> MetricsConfigurationExistsAsync(string agentId, string configurationName)
-        //{
-        //    var entity = await GetMetricsConfigurationAsync(agentId, configurationName);
-        //    return entity != null;
-        //}
-
-
-
-        //public async Task<MetricsConfigurationTableEntity?> GetMetricsConfigurationByIdAsync(string agentId, string configurationId)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Retrieving metrics configuration by ID for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-        //            agentId, configurationId);
-
-        //        var response = await TableClient.GetEntityAsync<MetricsConfigurationTableEntity>(agentId, configurationId);
-        //        _logger.LogInformation("Found metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-        //            agentId, configurationId);
-        //        return response.Value;
-        //    }
-        //    catch (Azure.RequestFailedException ex) when (ex.Status == 404)
-        //    {
-        //        _logger.LogInformation("Metrics configuration not found for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-        //            agentId, configurationId);
-        //        return null;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to retrieve metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-        //            agentId, configurationId);
-        //        throw;
-        //    }
-        //}
+  
+        
 
         public async Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId)
         {
             try
             {
-                _logger.LogInformation("Deleting metrics configuration by ID for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
+                _logger.LogInformation("Deleting Metrics configuration by ID for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
                     agentId, configurationId);
 
                 await TableClient.DeleteEntityAsync(agentId, configurationId);
-                _logger.LogInformation("Successfully deleted metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
+                _logger.LogInformation("Successfully deleted Metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
                     agentId, configurationId);
                 return true;
             }
@@ -334,7 +218,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
+                _logger.LogError(ex, "Failed to delete Metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
                     agentId, configurationId);
                 throw;
             }
@@ -349,32 +233,5 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             throw new NotImplementedException();
         }
 
-        //public async Task<bool> DeleteMetricsConfigurationAsync(string agentId, string configurationName, string environmentName)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Deleting metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //            agentId, configurationName, environmentName);
-
-        //        // First find the entity to get its UUID RowKey
-        //        var entityToDelete = await GetMetricsConfigurationAsync(agentId, configurationName, environmentName);
-
-        //        if (entityToDelete == null)
-        //        {
-        //            _logger.LogInformation("Metrics configuration not found for deletion - Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //                agentId, configurationName, environmentName);
-        //            return false;
-        //        }
-
-        //        // Use the direct delete by ID method
-        //        return await DeleteMetricsConfigurationByIdAsync(agentId, entityToDelete.ConfigurationId);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Failed to delete metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        //            agentId, configurationName, environmentName);
-        //        throw;
-        //    }
-        //}
     }
 }

@@ -398,7 +398,7 @@ public class EvalRunsController : BaseController
 
 
     /// <summary>
-    /// Validates that referenced entities (dataset, metrics configuration) exist and belong to the specified agent
+    /// Validates that referenced entities (dataset, Metrics configuration) exist and belong to the specified agent
     /// </summary>
     /// <param name="createDto">The evaluation run creation DTO</param>
     private async Task ValidateReferencedEntitiesAsync(CreateEvalRunDto createDto)
@@ -438,10 +438,10 @@ public class EvalRunsController : BaseController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating metrics configuration ID: {MetricsConfigurationId}", 
+            _logger.LogError(ex, "Error validating Metrics configuration ID: {MetricsConfigurationId}", 
                 createDto.MetricsConfigurationId);
             ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
-                "Unable to validate metrics configuration. Please check the configuration ID.");
+                "Unable to validate Metrics configuration. Please check the configuration ID.");
         }
     }
 

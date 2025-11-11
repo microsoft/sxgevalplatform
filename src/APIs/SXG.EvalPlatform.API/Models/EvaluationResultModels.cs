@@ -9,13 +9,11 @@ namespace SxgEvalPlatformApi.Models;
 /// </summary>
 public class SaveEvaluationResultDto
 {
-    //[Required(ErrorMessage = "EvalRunId is required")]
-    //public Guid EvalRunId { get; set; } = Guid.Empty;
     
     /// <summary>
     /// Flexible JSON structure containing evaluation results. 
     /// Can be an array of objects, a single object, or any valid JSON format.
-    /// Example: [{"id": 1, "question": "...", "actualAnswer": "...", "metrics": {...}}]
+    /// Example: [{"id": 1, "question": "...", "actualAnswer": "...", "Metrics": {...}}]
     /// </summary>
     [Required(ErrorMessage = "EvaluationResults is required")]
     public JsonElement EvaluationResults { get; set; }
