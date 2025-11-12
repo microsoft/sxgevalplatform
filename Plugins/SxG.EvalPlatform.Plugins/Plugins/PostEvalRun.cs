@@ -7,13 +7,12 @@
     using SxG.EvalPlatform.Plugins.Models.Requests;
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
+    using SxG.EvalPlatform.Plugins.Services;
 
     public class PostEvalRun : PluginBase
     {
         public PostEvalRun(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
-            // TODO: Implement your custom configuration handling
-            // https://docs.microsoft.com/powerapps/developer/common-data-service/register-plug-in#set-configuration-data
         }
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localContext)
@@ -24,85 +23,101 @@
             }
 
             var context = localContext.PluginExecutionContext;
-            var tracingService = localContext.TracingService;
-            var environmentVariableService = localContext.EnvironmentVariableService;
-            var managedIdentityService = localContext.ManagedIdentityService;
+            var loggingService = localContext.LoggingService;
             var organizationService = localContext.OrganizationService;
 
             try
             {
-                tracingService.Trace($"{nameof(PostEvalRun)}: Starting execution");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Starting execution");
 
                 // Extract request parameters from input parameters
-                var request = ExtractRequestFromContext(context, tracingService);
+                var request = ExtractRequestFromContext(context, loggingService);
 
                 // Validate request
                 if (!request.IsValid())
                 {
                     string validationError = request.GetValidationError();
-                    tracingService.Trace($"{nameof(PostEvalRun)}: Validation failed - {validationError}");
+                    loggingService.Trace($"{nameof(PostEvalRun)}: Validation failed - {validationError}", TraceSeverity.Warning);
 
                     var errorResponse = PostEvalRunResponse.CreateError(validationError);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
-                tracingService.Trace($"{nameof(PostEvalRun)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
 
                 // Parse the provided GUID
                 if (!Guid.TryParse(request.EvalRunId, out Guid evalRunGuid))
                 {
                     var errorResponse = PostEvalRunResponse.CreateError("Invalid EvalRunId format");
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
-                // Create eval run entity with provided data
-                var evalRunEntity = new EvalRunEntity
+                // Create late-bound entity to avoid serialization issues with Elastic tables
+                var evalRunEntity = new Entity("cr890_evalrun", evalRunGuid);
+
+                // Set required fields
+                evalRunEntity["cr890_id"] = evalRunGuid.ToString();  // Required: Primary name field
+                evalRunEntity["cr890_status"] = new OptionSetValue(0);  // Required: Status = New
+                evalRunEntity["ownerid"] = new EntityReference("systemuser", context.InitiatingUserId);  // Required: Owner
+
+                // Only set optional fields if they have values
+                if (!string.IsNullOrWhiteSpace(request.DatasetId))
+                    evalRunEntity["cr890_datasetid"] = request.DatasetId;
+
+                if (!string.IsNullOrWhiteSpace(request.AgentId))
+                    evalRunEntity["cr890_agentid"] = request.AgentId;
+
+                if (!string.IsNullOrWhiteSpace(request.EnvironmentId))
+                    evalRunEntity["cr890_environmentid"] = request.EnvironmentId;
+
+                if (!string.IsNullOrWhiteSpace(request.AgentSchemaName))
+                    evalRunEntity["cr890_agentschemaname"] = request.AgentSchemaName;
+
+                Guid createdId = organizationService.Create(evalRunEntity);
+
+                loggingService.Trace($"{nameof(PostEvalRun)}: Successfully created eval run record with ID: {createdId}");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Owner: {context.InitiatingUserId}, DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Status set to: New (0)");
+
+                // Log event
+                loggingService.LogEvent("PostEvalRunSuccess", new System.Collections.Generic.Dictionary<string, string>
                 {
-                    EvalRunId = evalRunGuid,
-                    Id = evalRunGuid.ToString(), // Same value as EvalRunId stored as string
-                    DatasetId = request.DatasetId, // Store DatasetId from request
-                    AgentId = request.AgentId, // Set from request
-                    EnvironmentId = request.EnvironmentId, // Set from request
-                    AgentSchemaName = request.AgentSchemaName, // Set from request
-                    Status = EvalRunEntity.StatusValues.New // Default status as integer
+                    { "EvalRunId", createdId.ToString() },
+                    { "AgentId", request.AgentId },
+                    { "DatasetId", request.DatasetId }
+                });
+
+                // Create success response  
+                var response = new PostEvalRunResponse
+                {
+                    Success = true,
+                    Message = "Eval run created successfully",
+                    Timestamp = DateTime.UtcNow
                 };
+                SetResponseParameters(context, response, loggingService);
 
-                // Convert to Dataverse entity and create record
-                Entity entity = evalRunEntity.ToEntity();
-                Guid createdId = organizationService.Create(entity);
-
-                tracingService.Trace($"{nameof(PostEvalRun)}: Successfully created eval run record with ID: {createdId}");
-                tracingService.Trace($"{nameof(PostEvalRun)}: DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
-                tracingService.Trace($"{nameof(PostEvalRun)}: Status set to: {evalRunEntity.GetStatusName()} (value: {evalRunEntity.Status})");
-
-                // Create success response
-                var response = PostEvalRunResponse.CreateSuccess(evalRunEntity);
-                SetResponseParameters(context, response, tracingService);
-
-                tracingService.Trace($"{nameof(PostEvalRun)}: Execution completed successfully using Dataverse Managed Identity.");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Execution completed successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PostEvalRun)}: Exception occurred - " + ex.Message);
-                tracingService.Trace($"{nameof(PostEvalRun)}: Stack trace - " + ex.StackTrace);
+                loggingService.LogException(ex, $"{nameof(PostEvalRun)}: Exception occurred");
 
                 // Create error response
                 var errorResponse = PostEvalRunResponse.CreateError($"Internal server error: {ex.Message}");
-                SetResponseParameters(context, errorResponse, tracingService);
+                SetResponseParameters(context, errorResponse, loggingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(PostEvalRun)} :: Error :: " + ex.Message, ex);
             }
+            finally
+            {
+                // Flush telemetry
+                loggingService.Flush();
+            }
         }
 
-        /// <summary>
-        /// Extracts request parameters from plugin execution context
-        /// </summary>
-        /// <param name="context">Plugin execution context</param>
-        /// <param name="tracingService">Tracing service</param>
-        /// <returns>PostEvalRunRequest object</returns>
-        private PostEvalRunRequest ExtractRequestFromContext(IPluginExecutionContext context, ITracingService tracingService)
+        private PostEvalRunRequest ExtractRequestFromContext(IPluginExecutionContext context, IPluginLoggingService loggingService)
         {
             var request = new PostEvalRunRequest();
 
@@ -122,19 +137,13 @@
             if (context.InputParameters.Contains(CustomApiConfig.PostEvalRun.RequestParameters.AgentSchemaName))
                 request.AgentSchemaName = context.InputParameters[CustomApiConfig.PostEvalRun.RequestParameters.AgentSchemaName]?.ToString();
 
-            tracingService.Trace($"{nameof(PostEvalRun)}: Extracted request parameters from context");
-            tracingService.Trace($"{nameof(PostEvalRun)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
+            loggingService.Trace($"{nameof(PostEvalRun)}: Extracted request parameters from context");
+            loggingService.Trace($"{nameof(PostEvalRun)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}, AgentId: {request.AgentId}, EnvironmentId: {request.EnvironmentId}, AgentSchemaName: {request.AgentSchemaName}");
 
             return request;
         }
 
-        /// <summary>
-        /// Sets response parameters in the plugin execution context
-        /// </summary>
-        /// <param name="context">Plugin execution context</param>
-        /// <param name="response">Response object</param>
-        /// <param name="tracingService">Tracing service</param>
-        private void SetResponseParameters(IPluginExecutionContext context, PostEvalRunResponse response, ITracingService tracingService)
+        private void SetResponseParameters(IPluginExecutionContext context, PostEvalRunResponse response, IPluginLoggingService loggingService)
         {
             try
             {
@@ -142,12 +151,11 @@
                 context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Message] = response.Message;
                 context.OutputParameters[CustomApiConfig.PostEvalRun.ResponseProperties.Timestamp] = response.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-                tracingService.Trace($"{nameof(PostEvalRun)}: Response parameters set successfully");
+                loggingService.Trace($"{nameof(PostEvalRun)}: Response parameters set successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PostEvalRun)}: Error setting response parameters - {ex.Message}");
-                // Continue execution - response setting failure shouldn't break the plugin
+                loggingService.LogException(ex, $"{nameof(PostEvalRun)}: Error setting response parameters");
             }
         }
     }

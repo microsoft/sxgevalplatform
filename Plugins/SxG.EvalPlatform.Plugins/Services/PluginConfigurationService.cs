@@ -1,0 +1,160 @@
+namespace SxG.EvalPlatform.Plugins.Services
+{
+    using System;
+    using SxG.EvalPlatform.Plugins.Common.Interfaces;
+
+    /// <summary>
+    /// Service for accessing plugin configuration from environment variables
+    /// </summary>
+    public class PluginConfigurationService : IPluginConfigurationService
+    {
+        private readonly IEnvironmentVariableService _environmentVariableService;
+
+        // Environment variable schema names
+        private const string EvalApiBaseUrlKey = "cr890_EvalApiBaseUrl";
+        private const string ApiTimeoutSecondsKey = "cr890_ApiTimeoutSeconds";
+        private const string EnableAppInsightsLoggingKey = "cr890_EnableAppInsightsLogging";
+        private const string EnableAuditLoggingKey = "cr890_EnableAuditLogging";
+        private const string AppInsightsConnectionStringKey = "cr890_AppInsightsConnectionString";
+
+        // Default values
+        private const string DefaultEvalApiBaseUrl = "https://sxgevalapidev.azurewebsites.net";
+        private const int DefaultApiTimeoutSeconds = 30;
+
+        public PluginConfigurationService(IEnvironmentVariableService environmentVariableService)
+        {
+            _environmentVariableService = environmentVariableService ?? throw new ArgumentNullException(nameof(environmentVariableService));
+        }
+
+        /// <summary>
+        /// Gets the base URL for the Eval API
+        /// </summary>
+        /// <returns>Base URL (e.g., https://sxgevalapidev.azurewebsites.net)</returns>
+        public string GetEvalApiBaseUrl()
+        {
+            try
+            {
+                string baseUrl = _environmentVariableService.GetString(EvalApiBaseUrlKey);
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                {
+                    return DefaultEvalApiBaseUrl;
+                }
+                // Remove trailing slash if present
+                return baseUrl.TrimEnd('/');
+            }
+            catch
+            {
+                // Return default if environment variable not found
+                return DefaultEvalApiBaseUrl;
+            }
+        }
+
+        /// <summary>
+        /// Gets the full URL for datasets API
+        /// </summary>
+        /// <param name="datasetId">Optional dataset ID to append</param>
+        /// <returns>Full dataset API URL</returns>
+        public string GetDatasetsApiUrl(string datasetId = null)
+        {
+            string baseUrl = GetEvalApiBaseUrl();
+            if (string.IsNullOrWhiteSpace(datasetId))
+            {
+                return $"{baseUrl}/api/v1/eval/datasets";
+            }
+            return $"{baseUrl}/api/v1/eval/datasets/{datasetId}";
+        }
+
+        /// <summary>
+        /// Gets the full URL for eval runs API
+        /// </summary>
+        /// <param name="evalRunId">Optional eval run ID to append</param>
+        /// <returns>Full eval runs API URL</returns>
+        public string GetEvalRunsApiUrl(string evalRunId = null)
+        {
+            string baseUrl = GetEvalApiBaseUrl();
+            if (string.IsNullOrWhiteSpace(evalRunId))
+            {
+                return $"{baseUrl}/api/v1/eval/runs";
+            }
+            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}";
+        }
+
+        /// <summary>
+        /// Gets the full URL for enriched dataset publish API
+        /// </summary>
+        /// <param name="evalRunId">Eval run ID</param>
+        /// <returns>Full enriched dataset API URL</returns>
+        public string GetEnrichedDatasetApiUrl(string evalRunId)
+        {
+            string baseUrl = GetEvalApiBaseUrl();
+            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}/enriched-dataset";
+        }
+
+        /// <summary>
+        /// Gets the API timeout in seconds
+        /// </summary>
+        /// <returns>Timeout in seconds (default: 30)</returns>
+        public int GetApiTimeoutSeconds()
+        {
+            try
+            {
+                decimal timeout = _environmentVariableService.GetDecimal(ApiTimeoutSecondsKey);
+                return (int)timeout;
+            }
+            catch
+            {
+                return DefaultApiTimeoutSeconds;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether Application Insights logging is enabled
+        /// </summary>
+        /// <returns>True if enabled, false otherwise</returns>
+        public bool IsAppInsightsLoggingEnabled()
+        {
+            try
+            {
+                return _environmentVariableService.GetBool(EnableAppInsightsLoggingKey);
+            }
+            catch
+            {
+                // Default to disabled if not configured
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether Dataverse audit logging is enabled
+        /// </summary>
+        /// <returns>True if enabled, false otherwise</returns>
+        public bool IsAuditLoggingEnabled()
+        {
+            try
+            {
+                return _environmentVariableService.GetBool(EnableAuditLoggingKey);
+            }
+            catch
+            {
+                // Default to enabled for backward compatibility
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Gets the Application Insights connection string
+        /// </summary>
+        /// <returns>Connection string for Application Insights</returns>
+        public string GetAppInsightsConnectionString()
+        {
+            try
+            {
+                return _environmentVariableService.GetString(AppInsightsConnectionStringKey);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+}

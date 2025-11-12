@@ -3,6 +3,7 @@
     using System;
     using Microsoft.Xrm.Sdk;
     using SxG.EvalPlatform.Plugins.Common.Implementation;
+    using SxG.EvalPlatform.Plugins.Services;
     using IEnvironmentVariableService = Interfaces.IEnvironmentVariableService;
 
     public class LocalPluginContext : ILocalPluginContext
@@ -78,6 +79,42 @@
             }
         }
 
+        /// <summary>
+        /// Provides access to plugin configuration from environment variables
+        /// </summary>
+        private IPluginConfigurationService _configurationService = null;
+
+        public IPluginConfigurationService ConfigurationService
+        {
+            get
+            {
+                if (_configurationService == null)
+                {
+                    _configurationService = new PluginConfigurationService(EnvironmentVariableService);
+                }
+
+                return _configurationService;
+            }
+        }
+
+        /// <summary>
+        /// Provides logging to both Dataverse audit logs and Application Insights
+        /// </summary>
+        private IPluginLoggingService _loggingService = null;
+
+        public IPluginLoggingService LoggingService
+        {
+            get
+            {
+                if (_loggingService == null)
+                {
+                    _loggingService = new PluginLoggingService(TracingService, PluginExecutionContext, ConfigurationService);
+                }
+
+                return _loggingService;
+            }
+        }
+
         private LocalPluginContext()
         {
         }
@@ -135,10 +172,10 @@
             else
             {
                 TracingService.Trace(
-                    "{0}, Correlation Id: {1}, Initiating User: {2}",
-                    message,
-                    PluginExecutionContext.CorrelationId,
-                    PluginExecutionContext.InitiatingUserId);
+ "{0}, Correlation Id: {1}, Initiating User: {2}",
+          message,
+     PluginExecutionContext.CorrelationId,
+           PluginExecutionContext.InitiatingUserId);
             }
         }
     }

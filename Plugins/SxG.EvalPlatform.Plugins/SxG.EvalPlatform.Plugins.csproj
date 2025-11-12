@@ -78,7 +78,9 @@
     <Compile Include="Framework\LocalPluginContext.cs" />
     <Compile Include="Framework\LocalPluginContextManager.cs" />
     <Compile Include="Models\CacheItem.cs" />
-    <Compile Include="Models\EvalRunEntity.cs" />
+    <Compile Include="Models\EvalRun.cs" />
+    <Compile Include="Models\EntityOptionSetEnum.cs" />
+    <Compile Include="Models\DTO\EvalRunDto.cs" />
     <Compile Include="Models\Requests\EvalRunRequests.cs" />
     <Compile Include="Models\Responses\EvalRunResponses.cs" />
     <Compile Include="Plugins\GetEvalRun.cs" />
@@ -87,6 +89,10 @@
     <Compile Include="Plugins\UpdateDataset.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Framework\PluginBase.cs" />
+    <Compile Include="Services\IPluginConfigurationService.cs" />
+    <Compile Include="Services\IPluginLoggingService.cs" />
+    <Compile Include="Services\PluginConfigurationService.cs" />
+    <Compile Include="Services\PluginLoggingService.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />

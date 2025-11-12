@@ -49,7 +49,7 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
         {
             if (string.IsNullOrWhiteSpace(EvalRunId))
                 return "EvalRunId is required";
-            
+
             if (!IsValidGuid(EvalRunId))
                 return "EvalRunId must be a valid GUID";
 

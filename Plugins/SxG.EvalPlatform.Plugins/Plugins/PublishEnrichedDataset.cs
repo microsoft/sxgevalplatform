@@ -11,18 +11,15 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.Models.Requests;
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
+    using SxG.EvalPlatform.Plugins.Services;
 
     /// <summary>
     /// Plugin for publishing enriched dataset by retrieving stored dataset and calling external API
     /// </summary>
     public class PublishEnrichedDataset : PluginBase
     {
-        private const string ExternalApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs/{0}/enriched-dataset";
-
         public PublishEnrichedDataset(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
-            // TODO: Implement your custom configuration handling
-            // https://docs.Microsoft.com/powerapps/developer/common-data-service/register-plug-in#set-configuration-data
         }
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localContext)
@@ -33,66 +30,78 @@ namespace SxG.EvalPlatform.Plugins
             }
 
             var context = localContext.PluginExecutionContext;
-            var tracingService = localContext.TracingService;
+            var loggingService = localContext.LoggingService;
+            var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
 
             try
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Starting execution");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Starting execution");
 
                 // Extract request parameters from input parameters
-                var request = ExtractRequestFromContext(context, tracingService);
+                var request = ExtractRequestFromContext(context, loggingService);
 
                 // Validate request
                 if (!request.IsValid())
                 {
                     string validationError = request.GetValidationError();
-                    tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Validation failed - {validationError}");
-                    
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Validation failed - {validationError}", TraceSeverity.Warning);
+
                     var errorResponse = PublishEnrichedDatasetResponse.CreateError(validationError, request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}");
 
                 // Retrieve dataset from the evaluation run record
-                string dataset = RetrieveDatasetFromEvalRun(request.EvalRunId, organizationService, tracingService);
+                string dataset = RetrieveDatasetFromEvalRun(request.EvalRunId, organizationService, loggingService);
                 if (string.IsNullOrEmpty(dataset))
                 {
                     var errorResponse = PublishEnrichedDatasetResponse.CreateError("No dataset found in eval run record or failed to retrieve dataset", request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
                 // Call external API to publish enriched dataset
-                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, tracingService);
+                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, loggingService, configService);
                 if (!publishSuccess)
                 {
                     var errorResponse = PublishEnrichedDatasetResponse.CreateError("Failed to publish enriched dataset to external API", request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
-                // Update status to Completed
-                UpdateEvalRunStatus(request.EvalRunId, EvalRunEntity.StatusValues.Completed, organizationService, tracingService);
+                // Update status to Completed (value: 3)
+                UpdateEvalRunStatus(request.EvalRunId, 3, organizationService, loggingService);
+
+                // Log event to Application Insights
+                loggingService.LogEvent("PublishEnrichedDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
+  {
+        { "EvalRunId", request.EvalRunId },
+     { "DatasetSize", dataset?.Length.ToString() ?? "0" }
+                });
 
                 // Create success response
                 var response = PublishEnrichedDatasetResponse.CreateSuccess();
-                SetResponseParameters(context, response, tracingService);
+                SetResponseParameters(context, response, loggingService);
 
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Execution completed successfully");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Execution completed successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Exception occurred - " + ex.Message);
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Stack trace - " + ex.StackTrace);
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception occurred");
 
                 // Create error response
                 var errorResponse = PublishEnrichedDatasetResponse.CreateError($"Internal server error: {ex.Message}");
-                SetResponseParameters(context, errorResponse, tracingService);
+                SetResponseParameters(context, errorResponse, loggingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(PublishEnrichedDataset)} :: Error :: " + ex.Message, ex);
+            }
+            finally
+            {
+                // Flush telemetry
+                loggingService.Flush();
             }
         }
 
@@ -100,9 +109,9 @@ namespace SxG.EvalPlatform.Plugins
         /// Extracts request parameters from plugin execution context
         /// </summary>
         /// <param name="context">Plugin execution context</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
         /// <returns>PublishEnrichedDatasetRequest object</returns>
-        private PublishEnrichedDatasetRequest ExtractRequestFromContext(IPluginExecutionContext context, ITracingService tracingService)
+        private PublishEnrichedDatasetRequest ExtractRequestFromContext(IPluginExecutionContext context, IPluginLoggingService loggingService)
         {
             var request = new PublishEnrichedDatasetRequest();
 
@@ -110,8 +119,8 @@ namespace SxG.EvalPlatform.Plugins
             if (context.InputParameters.Contains(CustomApiConfig.PublishEnrichedDataset.RequestParameters.EvalRunId))
                 request.EvalRunId = context.InputParameters[CustomApiConfig.PublishEnrichedDataset.RequestParameters.EvalRunId]?.ToString();
 
-            tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Extracted request parameters from context");
-            tracingService.Trace($"{nameof(PublishEnrichedDataset)}: EvalRunId: {request.EvalRunId}");
+            loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Extracted request parameters from context");
+            loggingService.Trace($"{nameof(PublishEnrichedDataset)}: EvalRunId: {request.EvalRunId}");
 
             return request;
         }
@@ -121,34 +130,30 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="organizationService">Organization service</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
         /// <returns>Dataset JSON string or null if not found</returns>
-        private string RetrieveDatasetFromEvalRun(string evalRunId, IOrganizationService organizationService, ITracingService tracingService)
+        private string RetrieveDatasetFromEvalRun(string evalRunId, IOrganizationService organizationService, IPluginLoggingService loggingService)
         {
             try
             {
                 // Parse the EvalRunId GUID for direct query using Primary Key
                 if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
                 {
-                    tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format: {evalRunId}");
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format: {evalRunId}", TraceSeverity.Error);
                     return null;
                 }
 
-                // Retrieve the record directly using EvalRunId (Primary Key) for faster performance
-                Entity evalRunRecord = organizationService.Retrieve(
-                    EvalRunEntity.EntityLogicalName,
-                    evalRunGuid,
-                    new ColumnSet(EvalRunEntity.Fields.Dataset)
-                );
+                // Retrieve using early-bound entity
+                var evalRunRecord = organizationService.Retrieve(EvalRun.EntityLogicalName, evalRunGuid, new ColumnSet("cr890_dataset")).ToEntity<EvalRun>();
 
-                string dataset = evalRunRecord.GetAttributeValue<string>(EvalRunEntity.Fields.Dataset);
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from eval run record");
-                
+                string dataset = evalRunRecord.cr890_Dataset;
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from eval run record");
+
                 return dataset;
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Exception retrieving dataset from eval run record - {ex.Message}");
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception retrieving dataset from eval run record");
                 return null;
             }
         }
@@ -159,36 +164,29 @@ namespace SxG.EvalPlatform.Plugins
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="statusValue">New status integer value</param>
         /// <param name="organizationService">Organization service</param>
-        /// <param name="tracingService">Tracing service</param>
-        private void UpdateEvalRunStatus(string evalRunId, int statusValue, IOrganizationService organizationService, ITracingService tracingService)
+        /// <param name="loggingService">Logging service</param>
+        private void UpdateEvalRunStatus(string evalRunId, int statusValue, IOrganizationService organizationService, IPluginLoggingService loggingService)
         {
             try
             {
                 // Parse the EvalRunId GUID for direct update using Primary Key
                 if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
                 {
-                    tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format for status update: {evalRunId}");
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format for status update: {evalRunId}", TraceSeverity.Error);
                     return;
                 }
 
-                // Update the record directly using EvalRunId (Primary Key) for faster performance
-                Entity updateEntity = new Entity(EvalRunEntity.EntityLogicalName)
-                {
-                    Id = evalRunGuid
-                };
-
-                updateEntity[EvalRunEntity.Fields.Status] = new OptionSetValue(statusValue);
+                // Update using late-bound entity to avoid serialization issues with Elastic tables
+                var updateEntity = new Entity("cr890_evalrun", evalRunGuid);
+                updateEntity["cr890_status"] = new OptionSetValue(statusValue);
 
                 organizationService.Update(updateEntity);
 
-                // Get status name for logging
-                var tempEntity = new EvalRunEntity { Status = statusValue };
-                string statusName = tempEntity.GetStatusName();
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully updated eval run status to {statusName} (value: {statusValue})");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully updated eval run status to {statusValue}");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Exception updating eval run status - {ex.Message}");
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception updating eval run status");
             }
         }
 
@@ -197,26 +195,28 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="dataset">Dataset JSON string to publish</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
         /// <returns>True if publish successful</returns>
-        private bool CallExternalPublishApi(string evalRunId, string dataset, ITracingService tracingService)
+        private bool CallExternalPublishApi(string evalRunId, string dataset, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
+            var startTime = DateTimeOffset.UtcNow;
             try
             {
-                string url = string.Format(ExternalApiUrl, evalRunId);
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Calling external API: {url}");
+                string url = configService.GetEnrichedDatasetApiUrl(evalRunId);
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Calling external API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
                 httpWebRequest.Method = "POST";
                 httpWebRequest.ContentType = "application/json";
-                httpWebRequest.Timeout = 30000; // 30 seconds
+                httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
 
                 // Prepare request body with enrichedDataset property
                 string requestBody = CreatePublishRequestBody(dataset);
                 byte[] data = Encoding.UTF8.GetBytes(requestBody);
                 httpWebRequest.ContentLength = data.Length;
 
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Request body: {requestBody}");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Request body length: {requestBody.Length} characters");
 
                 using (Stream stream = httpWebRequest.GetRequestStream())
                 {
@@ -225,26 +225,35 @@ namespace SxG.EvalPlatform.Plugins
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {
-                    if (httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.Created)
+                    var duration = DateTimeOffset.UtcNow - startTime;
+                    bool success = httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.Created;
+
+                    loggingService.LogDependency("EvalAPI", url, startTime, duration, success);
+
+                    if (success)
                     {
-                        tracingService.Trace($"{nameof(PublishEnrichedDataset)}: External API call successful");
+                        loggingService.Trace($"{nameof(PublishEnrichedDataset)}: External API call successful");
                         return true;
                     }
                     else
                     {
-                        tracingService.Trace($"{nameof(PublishEnrichedDataset)}: External API returned status: {httpWebResponse.StatusCode}");
+                        loggingService.Trace($"{nameof(PublishEnrichedDataset)}: External API returned status: {httpWebResponse.StatusCode}", TraceSeverity.Warning);
                         return false;
                     }
                 }
             }
             catch (WebException webEx)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: WebException occurred - {webEx.Message}");
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", $"PublishEnrichedDataset/{evalRunId}", startTime, duration, false);
+                loggingService.LogException(webEx, $"{nameof(PublishEnrichedDataset)}: WebException occurred");
                 return false;
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Exception in CallExternalPublishApi - {ex.Message}");
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", $"PublishEnrichedDataset/{evalRunId}", startTime, duration, false);
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception in CallExternalPublishApi");
                 return false;
             }
         }
@@ -266,8 +275,8 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="context">Plugin execution context</param>
         /// <param name="response">Response object</param>
-        /// <param name="tracingService">Tracing service</param>
-        private void SetResponseParameters(IPluginExecutionContext context, PublishEnrichedDatasetResponse response, ITracingService tracingService)
+        /// <param name="loggingService">Logging service</param>
+        private void SetResponseParameters(IPluginExecutionContext context, PublishEnrichedDatasetResponse response, IPluginLoggingService loggingService)
         {
             try
             {
@@ -275,12 +284,11 @@ namespace SxG.EvalPlatform.Plugins
                 context.OutputParameters[CustomApiConfig.PublishEnrichedDataset.ResponseProperties.Message] = response.Message;
                 context.OutputParameters[CustomApiConfig.PublishEnrichedDataset.ResponseProperties.Timestamp] = response.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Response parameters set successfully");
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Response parameters set successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(PublishEnrichedDataset)}: Error setting response parameters - {ex.Message}");
-                // Continue execution - response setting failure shouldn't break the plugin
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Error setting response parameters");
             }
         }
     }

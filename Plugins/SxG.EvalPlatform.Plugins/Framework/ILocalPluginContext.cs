@@ -4,6 +4,7 @@ namespace SxG.EvalPlatform.Plugins.Common.Framework
 {
     using System;
     using Microsoft.Xrm.Sdk;
+    using SxG.EvalPlatform.Plugins.Services;
     using IEnvironmentVariableService = IEnvironmentVariableService;
 
     public interface ILocalPluginContext
@@ -49,6 +50,16 @@ namespace SxG.EvalPlatform.Plugins.Common.Framework
         /// The environment variable service
         /// </summary>
         IEnvironmentVariableService EnvironmentVariableService { get; }
+
+        /// <summary>
+        /// Provides access to plugin configuration from environment variables
+        /// </summary>
+        IPluginConfigurationService ConfigurationService { get; }
+
+        /// <summary>
+        /// Provides logging to both Dataverse audit logs and Application Insights
+        /// </summary>
+        IPluginLoggingService LoggingService { get; }
 
         /// <summary>
         /// Writes a trace message to the CRM trace log.

@@ -3,6 +3,7 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
     using System;
     using System.Collections.Generic;
     using Newtonsoft.Json;
+    using SxG.EvalPlatform.Plugins.Models.DTO;
 
     /// <summary>
     /// Model for individual dataset items
@@ -53,9 +54,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         /// <summary>
         /// Creates a successful response
         /// </summary>
-        /// <param name="evalRun">The created eval run entity</param>
+        /// <param name="evalRun">The created eval run DTO</param>
         /// <returns>Success response</returns>
-        public static PostEvalRunResponse CreateSuccess(EvalRunEntity evalRun)
+        public static PostEvalRunResponse CreateSuccess()
         {
             return new PostEvalRunResponse
             {
@@ -129,9 +130,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         /// <summary>
         /// Creates a successful response
         /// </summary>
-        /// <param name="evalRun">The eval run record</param>
+        /// <param name="evalRun">The eval run DTO</param>
         /// <returns>Success response</returns>
-        public static GetEvalRunResponse CreateSuccess(EvalRunEntity evalRun)
+        public static GetEvalRunResponse CreateSuccess(EvalRunDto evalRun)
         {
             if (evalRun != null)
             {

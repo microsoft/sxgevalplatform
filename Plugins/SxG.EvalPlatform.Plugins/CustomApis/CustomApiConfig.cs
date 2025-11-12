@@ -18,7 +18,7 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
             public const bool AllowedCustomProcessing = true;
             public const bool IsFunction = false; // POST operation
             public const bool IsPrivate = false;
-            
+
             /// <summary>
             /// Request parameters for PostEvalRun API
             /// </summary>

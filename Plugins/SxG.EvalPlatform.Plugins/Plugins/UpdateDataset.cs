@@ -10,19 +10,15 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.Models.Requests;
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
+    using SxG.EvalPlatform.Plugins.Services;
 
     /// <summary>
     /// Plugin for updating dataset from external eval datasets API and updating eval run records
     /// </summary>
     public class UpdateDataset : PluginBase
     {
-        private const string ExternalDatasetApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/datasets";
-        private const string ExternalStatusApiUrl = "https://sxgevalapidev.azurewebsites.net/api/v1/eval/runs";
-
         public UpdateDataset(string unsecureConfig, string secureConfig) : base(unsecureConfig, secureConfig)
         {
-            // TODO: Implement your custom configuration handling
-            // https://docs.Microsoft.com/powerapps/developer/common-data-service/register-plug-in#set-configuration-data
         }
 
         protected override void ExecuteCrmPlugin(LocalPluginContext localContext)
@@ -33,80 +29,93 @@ namespace SxG.EvalPlatform.Plugins
             }
 
             var context = localContext.PluginExecutionContext;
-            var tracingService = localContext.TracingService;
+            var loggingService = localContext.LoggingService;
+            var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
 
             try
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Starting execution");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Starting execution");
 
                 // Extract request parameters from input parameters
-                var request = ExtractRequestFromContext(context, tracingService);
+                var request = ExtractRequestFromContext(context, loggingService);
 
                 // Validate request
                 if (!request.IsValid())
                 {
                     string validationError = request.GetValidationError();
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Validation failed - {validationError}");
-                    
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Validation failed - {validationError}", TraceSeverity.Warning);
+
                     var errorResponse = UpdateDatasetResponse.CreateError(validationError, request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
                 // Validate datasetId is provided
                 if (string.IsNullOrWhiteSpace(request.DatasetId))
                 {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Validation failed - DatasetId is required");
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Validation failed - DatasetId is required", TraceSeverity.Warning);
                     var errorResponse = UpdateDatasetResponse.CreateError("DatasetId is required", request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
                 // Update external status to "EnrichingDataset" before fetching dataset
-                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", tracingService);
+                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", loggingService, configService);
                 if (!statusUpdateSuccess)
                 {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch");
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch", TraceSeverity.Warning);
                     // Continue execution even if status update fails
                 }
 
                 // Call external dataset API to get dataset data using datasetId
-                var datasetJson = CallExternalDatasetApi(request.DatasetId, tracingService);
+                var datasetJson = CallExternalDatasetApi(request.DatasetId, loggingService, configService);
                 if (datasetJson == null)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
                 // Update the eval run record with retrieved dataset content
-                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, tracingService);
+                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, loggingService);
                 if (!updateSuccess)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to update eval run record", request.EvalRunId);
-                    SetResponseParameters(context, errorResponse, tracingService);
+                    SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
+                // Log event to Application Insights
+                loggingService.LogEvent("UpdateDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
+      {
+   { "EvalRunId", request.EvalRunId },
+          { "DatasetId", request.DatasetId },
+        { "DatasetSize", datasetJson?.Length.ToString() ?? "0" }
+       });
+
                 // Create success response
                 var response = UpdateDatasetResponse.CreateSuccess();
-                SetResponseParameters(context, response, tracingService);
+                SetResponseParameters(context, response, loggingService);
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Execution completed successfully");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Execution completed successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Exception occurred - " + ex.Message);
-                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - " + ex.StackTrace);
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception occurred");
 
                 // Create error response
                 var errorResponse = UpdateDatasetResponse.CreateError($"Internal server error: {ex.Message}");
-                SetResponseParameters(context, errorResponse, tracingService);
+                SetResponseParameters(context, errorResponse, loggingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(UpdateDataset)} :: Error :: " + ex.Message, ex);
+            }
+            finally
+            {
+                // Flush telemetry
+                loggingService.Flush();
             }
         }
 
@@ -114,9 +123,9 @@ namespace SxG.EvalPlatform.Plugins
         /// Extracts request parameters from plugin execution context
         /// </summary>
         /// <param name="context">Plugin execution context</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
         /// <returns>UpdateDatasetRequest object</returns>
-        private UpdateDatasetRequest ExtractRequestFromContext(IPluginExecutionContext context, ITracingService tracingService)
+        private UpdateDatasetRequest ExtractRequestFromContext(IPluginExecutionContext context, IPluginLoggingService loggingService)
         {
             var request = new UpdateDatasetRequest();
 
@@ -128,8 +137,8 @@ namespace SxG.EvalPlatform.Plugins
             if (context.InputParameters.Contains(CustomApiConfig.UpdateDataset.RequestParameters.DatasetId))
                 request.DatasetId = context.InputParameters[CustomApiConfig.UpdateDataset.RequestParameters.DatasetId]?.ToString();
 
-            tracingService.Trace($"{nameof(UpdateDataset)}: Extracted request parameters from context");
-            tracingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
+            loggingService.Trace($"{nameof(UpdateDataset)}: Extracted request parameters from context");
+            loggingService.Trace($"{nameof(UpdateDataset)}: EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
             return request;
         }
@@ -139,26 +148,28 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval Run ID</param>
         /// <param name="status">Status to set (e.g., "EnrichingDataset")</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
         /// <returns>True if update successful, false otherwise</returns>
-        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, ITracingService tracingService)
+        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
+            var startTime = DateTimeOffset.UtcNow;
             try
             {
-                string url = $"{ExternalStatusApiUrl}/{evalRunId}/status";
-                tracingService.Trace($"{nameof(UpdateDataset)}: Calling external status API: {url}");
+                string url = $"{configService.GetEvalRunsApiUrl(evalRunId)}/status";
+                loggingService.Trace($"{nameof(UpdateDataset)}: Calling external status API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
                 httpWebRequest.Method = "PUT";
                 httpWebRequest.ContentType = "application/json";
-                httpWebRequest.Timeout = 30000; // 30 seconds
+                httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
 
                 // Prepare request body
                 string requestBody = $"{{\"status\":\"{status}\"}}";
                 byte[] data = Encoding.UTF8.GetBytes(requestBody);
                 httpWebRequest.ContentLength = data.Length;
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Status update request body: {requestBody}");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Status update request body: {requestBody}");
 
                 using (Stream requestStream = httpWebRequest.GetRequestStream())
                 {
@@ -167,36 +178,35 @@ namespace SxG.EvalPlatform.Plugins
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {
-                    if (httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.NoContent)
+                    var duration = DateTimeOffset.UtcNow - startTime;
+                    bool success = httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.NoContent;
+
+                    loggingService.LogDependency("EvalAPI", url, startTime, duration, success);
+
+                    if (success)
                     {
-                        tracingService.Trace($"{nameof(UpdateDataset)}: Successfully updated external status to {status}");
+                        loggingService.Trace($"{nameof(UpdateDataset)}: Successfully updated external status to {status}");
                         return true;
                     }
                     else
                     {
-                        tracingService.Trace($"{nameof(UpdateDataset)}: External status API returned status: {httpWebResponse.StatusCode}");
+                        loggingService.Trace($"{nameof(UpdateDataset)}: External status API returned status: {httpWebResponse.StatusCode}", TraceSeverity.Warning);
                         return false;
                     }
                 }
             }
             catch (WebException webEx)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: WebException updating external status - {webEx.Message}");
-                if (webEx.Response != null)
-                {
-                    using (Stream responseStream = webEx.Response.GetResponseStream())
-                    using (StreamReader reader = new StreamReader(responseStream))
-                    {
-                        string errorResponse = reader.ReadToEnd();
-                        tracingService.Trace($"{nameof(UpdateDataset)}: Status update error response: {errorResponse}");
-                    }
-                }
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
+                loggingService.LogException(webEx, $"{nameof(UpdateDataset)}: WebException updating external status");
                 return false;
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Exception updating external status - {ex.Message}");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating external status");
                 return false;
             }
         }
@@ -205,59 +215,58 @@ namespace SxG.EvalPlatform.Plugins
         /// Calls external dataset API to retrieve dataset data
         /// </summary>
         /// <param name="datasetId">Dataset ID</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
         /// <returns>Dataset JSON string or null if failed</returns>
-        private string CallExternalDatasetApi(string datasetId, ITracingService tracingService)
+        private string CallExternalDatasetApi(string datasetId, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
+            var startTime = DateTimeOffset.UtcNow;
             try
             {
-                string url = $"{ExternalDatasetApiUrl}/{datasetId}";
-                tracingService.Trace($"{nameof(UpdateDataset)}: Calling external dataset API: {url}");
+                string url = configService.GetDatasetsApiUrl(datasetId);
+                loggingService.Trace($"{nameof(UpdateDataset)}: Calling external dataset API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
                 httpWebRequest.Method = "GET";
                 httpWebRequest.ContentType = "application/json";
-                httpWebRequest.Timeout = 30000; // 30 seconds
+                httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {
-                    if (httpWebResponse.StatusCode == HttpStatusCode.OK)
+                    var duration = DateTimeOffset.UtcNow - startTime;
+                    bool success = httpWebResponse.StatusCode == HttpStatusCode.OK;
+
+                    loggingService.LogDependency("EvalAPI", url, startTime, duration, success);
+
+                    if (success)
                     {
                         using (Stream responseStream = httpWebResponse.GetResponseStream())
                         using (StreamReader reader = new StreamReader(responseStream))
                         {
                             string responseBody = reader.ReadToEnd();
-                            tracingService.Trace($"{nameof(UpdateDataset)}: External dataset API response received: {responseBody}");
-
-                            // Return the raw JSON array string as-is for storage
+                            loggingService.Trace($"{nameof(UpdateDataset)}: External dataset API response received: {responseBody}");
                             return responseBody;
                         }
                     }
                     else
                     {
-                        tracingService.Trace($"{nameof(UpdateDataset)}: External dataset API returned status: {httpWebResponse.StatusCode}");
+                        loggingService.Trace($"{nameof(UpdateDataset)}: External dataset API returned status: {httpWebResponse.StatusCode}", TraceSeverity.Warning);
                         return null;
                     }
                 }
             }
             catch (WebException webEx)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: WebException occurred - {webEx.Message}");
-                if (webEx.Response != null)
-                {
-                    using (Stream responseStream = webEx.Response.GetResponseStream())
-                    using (StreamReader reader = new StreamReader(responseStream))
-                    {
-                        string errorResponse = reader.ReadToEnd();
-                        tracingService.Trace($"{nameof(UpdateDataset)}: Error response: {errorResponse}");
-                    }
-                }
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", $"GetDataset/{datasetId}", startTime, duration, false);
+                loggingService.LogException(webEx, $"{nameof(UpdateDataset)}: WebException occurred");
                 return null;
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Exception in CallExternalDatasetApi - {ex.Message}");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
+                var duration = DateTimeOffset.UtcNow - startTime;
+                loggingService.LogDependency("EvalAPI", $"GetDataset/{datasetId}", startTime, duration, false);
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception in CallExternalDatasetApi");
                 return null;
             }
         }
@@ -268,49 +277,33 @@ namespace SxG.EvalPlatform.Plugins
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="datasetJson">Retrieved dataset content as JSON string</param>
         /// <param name="organizationService">Organization service</param>
-        /// <param name="tracingService">Tracing service</param>
+        /// <param name="loggingService">Logging service</param>
         /// <returns>True if update successful</returns>
-        private bool UpdateEvalRunRecord(string evalRunId, string datasetJson, IOrganizationService organizationService, ITracingService tracingService)
+        private bool UpdateEvalRunRecord(string evalRunId, string datasetJson, IOrganizationService organizationService, IPluginLoggingService loggingService)
         {
             try
             {
                 // Parse the EvalRunId GUID for direct update using Primary Key
                 if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
                 {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Invalid EvalRunId format: {evalRunId}");
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Invalid EvalRunId format: {evalRunId}", TraceSeverity.Error);
                     return false;
                 }
 
-                // Update the record directly using EvalRunId (Primary Key) for faster performance
-                Entity updateEntity = new Entity(EvalRunEntity.EntityLogicalName)
-                {
-                    Id = evalRunGuid
-                };
-
-                // Set data from external dataset API
-                if (!string.IsNullOrEmpty(datasetJson))
-                {
-                    updateEntity[EvalRunEntity.Fields.Dataset] = datasetJson;
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Dataset content length: {datasetJson.Length} characters");
-                }
-                else
-                {
-                    tracingService.Trace($"{nameof(UpdateDataset)}: Warning - No dataset content to store");
-                }
-
-                // Set status as OptionSetValue for Choice field (Updated status)
-                updateEntity[EvalRunEntity.Fields.Status] = new OptionSetValue(EvalRunEntity.StatusValues.Updated);
+                // Update using late-bound entity to avoid serialization issues with Elastic tables
+                var updateEntity = new Entity("cr890_evalrun", evalRunGuid);
+                updateEntity["cr890_dataset"] = datasetJson;
+                updateEntity["cr890_status"] = new OptionSetValue(2);  // Status = Updated
 
                 organizationService.Update(updateEntity);
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Successfully updated eval run record");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Dataset content stored, Status set to Updated (value: {EvalRunEntity.StatusValues.Updated})");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Successfully updated eval run record");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Dataset content length: {datasetJson?.Length ?? 0} characters, Status set to Updated (2)");
                 return true;
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Exception updating eval run record - {ex.Message}");
-                tracingService.Trace($"{nameof(UpdateDataset)}: Stack trace - {ex.StackTrace}");
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating eval run record");
                 return false;
             }
         }
@@ -320,8 +313,8 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="context">Plugin execution context</param>
         /// <param name="response">Response object</param>
-        /// <param name="tracingService">Tracing service</param>
-        private void SetResponseParameters(IPluginExecutionContext context, UpdateDatasetResponse response, ITracingService tracingService)
+        /// <param name="loggingService">Logging service</param>
+        private void SetResponseParameters(IPluginExecutionContext context, UpdateDatasetResponse response, IPluginLoggingService loggingService)
         {
             try
             {
@@ -329,12 +322,11 @@ namespace SxG.EvalPlatform.Plugins
                 context.OutputParameters[CustomApiConfig.UpdateDataset.ResponseProperties.Message] = response.Message;
                 context.OutputParameters[CustomApiConfig.UpdateDataset.ResponseProperties.Timestamp] = response.Timestamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-                tracingService.Trace($"{nameof(UpdateDataset)}: Response parameters set successfully");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Response parameters set successfully");
             }
             catch (Exception ex)
             {
-                tracingService.Trace($"{nameof(UpdateDataset)}: Error setting response parameters - {ex.Message}");
-                // Continue execution - response setting failure shouldn't break the plugin
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Error setting response parameters");
             }
         }
     }
