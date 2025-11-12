@@ -189,5 +189,20 @@ namespace Sxg.EvalPlatform.API.Storage
         {
             return string.Equals(GetCacheProvider(), "Redis", StringComparison.OrdinalIgnoreCase);
         }
+
+        public string GetASPNetCoreEnvironment()
+        {
+            return _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        }
+
+        public string GetEvalRunTableName()
+        {
+            var tableName = _configuration["AzureStorage:EvalRunsTable"];
+            if (string.IsNullOrEmpty(tableName))
+            {
+                throw new InvalidOperationException("Azure Storage Eval Runs table name is not configured.");
+            }
+            return tableName;
+        }
     }
 }

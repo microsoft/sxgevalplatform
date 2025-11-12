@@ -51,3 +51,4 @@ TestResults.xml
 /src/APIs/Sxg.EvalPlatform.API.Storage.IntegrationTests/obj
 /src/APIs/Sxg.EvalPlatform.API.UnitTests/bin/Debug/net8.0
 /src/APIs/Sxg.EvalPlatform.API.UnitTests/obj
+/src/APIs/.vs

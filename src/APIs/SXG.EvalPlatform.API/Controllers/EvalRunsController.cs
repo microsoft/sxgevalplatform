@@ -24,7 +24,7 @@ public class EvalRunsController : BaseController
     private readonly IEvaluationResultRequestHandler _evaluationResultRequestHandler;
 
     public EvalRunsController(
-        IEvalRunRequestHandler evalRunRequestHandler, 
+        IEvalRunRequestHandler evalRunRequestHandler,
         IDataSetTableService dataSetTableService,
         IMetricsConfigTableService metricsConfigTableService,
         IEvalArtifactsRequestHandler evalArtifactsRequestHandler,
@@ -36,7 +36,7 @@ public class EvalRunsController : BaseController
         _dataSetTableService = dataSetTableService;
         _metricsConfigTableService = metricsConfigTableService;
         _evalArtifactsRequestHandler = evalArtifactsRequestHandler;
-        _evaluationResultRequestHandler = evaluationResultRequestHandler; 
+        _evaluationResultRequestHandler = evaluationResultRequestHandler;
     }
 
     #region Eval Run Endpoints
@@ -166,7 +166,7 @@ public class EvalRunsController : BaseController
     [ProducesResponseType(typeof(List<EvalRunDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<List<EvalRunDto>>> GetEvalRunsByAgent([FromQuery, Required]string agentId, [FromQuery, Optional] DateTime? startDateTime, [FromQuery, Optional] DateTime? endDateTime)
+    public async Task<ActionResult<List<EvalRunDto>>> GetEvalRunsByAgent([FromQuery, Required] string agentId, [FromQuery, Optional] DateTime? startDateTime, [FromQuery, Optional] DateTime? endDateTime)
     {
         try
         {
@@ -205,7 +205,7 @@ public class EvalRunsController : BaseController
         }
     }
 
-       
+
 
     #endregion
 
@@ -409,15 +409,15 @@ public class EvalRunsController : BaseController
             var dataset = await _dataSetTableService.GetDataSetAsync(createDto.AgentId, createDto.DataSetId.ToString());
             if (dataset == null)
             {
-                ModelState.AddModelError(nameof(createDto.DataSetId), 
+                ModelState.AddModelError(nameof(createDto.DataSetId),
                     $"Dataset with ID '{createDto.DataSetId}' not found for agent '{createDto.AgentId}'");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating dataset ID: {DataSetId} for agent: {AgentId}", 
+            _logger.LogError(ex, "Error validating dataset ID: {DataSetId} for agent: {AgentId}",
                 createDto.DataSetId, createDto.AgentId);
-            ModelState.AddModelError(nameof(createDto.DataSetId), 
+            ModelState.AddModelError(nameof(createDto.DataSetId),
                 "Unable to validate dataset. Please check the dataset ID.");
         }
 
@@ -427,20 +427,20 @@ public class EvalRunsController : BaseController
             var metricsConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
             if (metricsConfig == null)
             {
-                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId),
                     $"Metrics configuration with ID '{createDto.MetricsConfigurationId}' not found");
             }
             else if (metricsConfig.PartitionKey != createDto.AgentId)
             {
-                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+                ModelState.AddModelError(nameof(createDto.MetricsConfigurationId),
                     $"Metrics configuration '{createDto.MetricsConfigurationId}' does not belong to agent '{createDto.AgentId}'");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating Metrics configuration ID: {MetricsConfigurationId}", 
+            _logger.LogError(ex, "Error validating Metrics configuration ID: {MetricsConfigurationId}",
                 createDto.MetricsConfigurationId);
-            ModelState.AddModelError(nameof(createDto.MetricsConfigurationId), 
+            ModelState.AddModelError(nameof(createDto.MetricsConfigurationId),
                 "Unable to validate Metrics configuration. Please check the configuration ID.");
         }
     }
@@ -583,6 +583,69 @@ public class EvalRunsController : BaseController
     }
 
 
+    [HttpPost("{evalRunId}/enrichment-queue")]
+    public async Task<IActionResult> EnqueueDatasetEnrichment([FromRoute, Required] Guid evalRunId)
+    {
+        try
+        {
+            var evalRunIdValidation = ValidateEvalRunId(evalRunId);
+
+            if (evalRunIdValidation != null)
+            {
+                return evalRunIdValidation;
+            }
+
+            _logger.LogInformation("Enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+
+            var (isSuccessful, httpStatusCode, message) = await _evalRunRequestHandler.PlaceEnrichmentRequestToDataVerseAPI(evalRunId);
+
+            if (!isSuccessful)
+            {
+                if (httpStatusCode == "404")
+                {
+                    //return CreateValidationErrorResponse<EvalRunDto>();
+
+                    return NotFound($"Evaluation run with ID {evalRunId} not found");
+
+                }
+                else if (httpStatusCode == "400")
+                {
+                    //return CreateBadRequestResponse<EvalRunDto>("EvalRunId", message);
+                    return BadRequest(message);
+                }
+                else
+                {
+                    return CreateErrorResponse(message, StatusCodes.Status500InternalServerError);
+                }
+            }
+
+
+            return Accepted();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+            return CreateErrorResponse(ex.Message, StatusCodes.Status400BadRequest);
+        }
+        //catch (RequestFailedException ex)
+        //{
+        //    _logger.LogError(ex, "Azure error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+        //    //return HandleAzureException(ex, "Failed to enqueue dataset enrichment");
+        //    return HandleAzureException(ex, "Failed to enqueue dataset enrichment");
+        //}
+        catch (Exception ex)
+        {
+            if (IsAuthorizationError(ex))
+            {
+                _logger.LogWarning(ex, "Authorization error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+                return CreateErrorResponse("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+            }
+
+            _logger.LogError(ex, "Error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+            return CreateErrorResponse("Failed to enqueue dataset enrichment", StatusCodes.Status500InternalServerError);
+        }
+    }
+
     #endregion
 
     #region Evaluation Results Endpoints
@@ -689,7 +752,7 @@ public class EvalRunsController : BaseController
                 {
                     return NotFound("Evaluation results not available. Results are only available for completed evaluations.");
                 }
-                
+
                 // Use generic error messages to prevent information disclosure
                 if (result.Message.Contains("not found") && result.Message.Contains("EvalRunId"))
                 {

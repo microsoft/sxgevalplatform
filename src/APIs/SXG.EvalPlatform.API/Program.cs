@@ -69,3 +69,6 @@ logger.LogInformation("SXG Evaluation Platform API starting up - Environment: {E
     app.Environment.EnvironmentName);
 
 app.Run();
+
+// Make the implicit Program class public for integration testing
+public partial class Program { }

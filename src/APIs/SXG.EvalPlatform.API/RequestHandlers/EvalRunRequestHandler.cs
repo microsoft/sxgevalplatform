@@ -68,7 +68,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 // Store container name and blob path separately for better blob storage handling
                 var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
-                var blobFilePath = $"{_configHelper.EvalResultsFolderName}/{evalRunId}/"; // Create folder structure for multiple output files
+                var blobFilePath = $"{_configHelper.EvalResultsFolderName()}"; // Create folder structure for multiple output files
 
                 var entity = new EvalRunTableEntity
                 {
@@ -101,11 +101,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 evalRunDto.MetricsConfigurationName = metricsConfigEntity.ConfigurationName;
 
                 // Cache the newly created evaluation run
-                var cacheKeyById = string.Format(EVAL_RUN_CACHE_KEY, evalRunId);
+                //var cacheKeyById = string.Format(EVAL_RUN_CACHE_KEY, evalRunId);
                 //var cacheKeyByAgent = string.Format(EVAL_RUN_AGENT_CACHE_KEY, createDto.AgentId, evalRunId);
                 //var entityCacheKey = string.Format(EVAL_RUN_ENTITY_CACHE_KEY, evalRunId);
 
-                await _cacheManager.SetAsync(cacheKeyById, evalRunDto, TimeSpan.FromMinutes(240));
+                //await _cacheManager.SetAsync(cacheKeyById, evalRunDto, TimeSpan.FromMinutes(240));
                 //await _cacheManager.SetAsync(cacheKeyByAgent, evalRunDto, TimeSpan.FromMinutes(60));
                 //await _cacheManager.SetAsync(entityCacheKey, createdEntity, TimeSpan.FromMinutes(60));
 
@@ -167,16 +167,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var evalRunDto = await MapEntityToDtoAsync(updatedEntity);
 
                 // Update all relevant cache entries
-                var cacheKeyById = string.Format(EVAL_RUN_CACHE_KEY, updateDto.EvalRunId);
-                var cacheKeyByAgent = string.Format(EVAL_RUN_AGENT_CACHE_KEY, updateDto.AgentId, updateDto.EvalRunId);
-                var entityCacheKey = string.Format(EVAL_RUN_ENTITY_CACHE_KEY, updateDto.EvalRunId);
+                //var cacheKeyById = string.Format(EVAL_RUN_CACHE_KEY, updateDto.EvalRunId);
+                //var cacheKeyByAgent = string.Format(EVAL_RUN_AGENT_CACHE_KEY, updateDto.AgentId, updateDto.EvalRunId);
+                //var entityCacheKey = string.Format(EVAL_RUN_ENTITY_CACHE_KEY, updateDto.EvalRunId);
 
-                await _cacheManager.SetAsync(cacheKeyById, evalRunDto, TimeSpan.FromMinutes(60));
-                await _cacheManager.SetAsync(cacheKeyByAgent, evalRunDto, TimeSpan.FromMinutes(60));
-                await _cacheManager.SetAsync(entityCacheKey, updatedEntity, TimeSpan.FromMinutes(60));
+                //await _cacheManager.SetAsync(cacheKeyById, evalRunDto, TimeSpan.FromMinutes(60));
+                //await _cacheManager.SetAsync(cacheKeyByAgent, evalRunDto, TimeSpan.FromMinutes(60));
+                //await _cacheManager.SetAsync(entityCacheKey, updatedEntity, TimeSpan.FromMinutes(60));
 
-                // Invalidate agent-based list caches since status changed
-                await InvalidateAgentCaches(updateDto.AgentId);
+                //// Invalidate agent-based list caches since status changed
+                //await InvalidateAgentCaches(updateDto.AgentId);
 
                 _logger.LogInformation("Updated evaluation run status to {Status} for ID: {EvalRunId} and updated cache",
     normalizedStatus, updateDto.EvalRunId);
@@ -239,14 +239,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 // Check cache first
-                var cacheKey = string.Format(EVAL_RUN_CACHE_KEY, evalRunId);
-                var cachedResult = await _cacheManager.GetAsync<EvalRunDto>(cacheKey);
+                //var cacheKey = string.Format(EVAL_RUN_CACHE_KEY, evalRunId);
+                //var cachedResult = await _cacheManager.GetAsync<EvalRunDto>(cacheKey);
 
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached evaluation run for EvalRunId: {EvalRunId}", evalRunId);
-                    return cachedResult;
-                }
+                //if (cachedResult != null)
+                //{
+                //    _logger.LogDebug("Returning cached evaluation run for EvalRunId: {EvalRunId}", evalRunId);
+                //    return cachedResult;
+                //}
 
                 // If not in cache, fetch from storage
                 var entity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
@@ -260,8 +260,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var result = await MapEntityToDtoAsync(entity);
 
                 // Cache the result
-                await _cacheManager.SetAsync(cacheKey, result, TimeSpan.FromMinutes(60));
-                _logger.LogDebug("Cached evaluation run for EvalRunId: {EvalRunId}", evalRunId);
+                //await _cacheManager.SetAsync(cacheKey, result, TimeSpan.FromMinutes(60));
+                //_logger.LogDebug("Cached evaluation run for EvalRunId: {EvalRunId}", evalRunId);
 
                 return result;
             }
@@ -285,12 +285,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var cacheKey = string.Format(EVAL_RUNS_BY_AGENT_CACHE_KEY, agentId, startDateStr, endDateStr);
 
                 // Check cache first
-                var cachedResult = await _cacheManager.GetAsync<IList<EvalRunDto>>(cacheKey);
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached evaluation runs for AgentId: {AgentId}", agentId);
-                    return cachedResult;
-                }
+                //var cachedResult = await _cacheManager.GetAsync<IList<EvalRunDto>>(cacheKey);
+                //if (cachedResult != null)
+                //{
+                //    _logger.LogDebug("Returning cached evaluation runs for AgentId: {AgentId}", agentId);
+                //    return cachedResult;
+                //}
 
                 // If not in cache, fetch from storage
                 var entities = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
@@ -298,8 +298,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var results = entities.Select(MapEntityToDto).ToList();
 
                 // Cache the result (cache for 30 minutes for list queries)
-                await _cacheManager.SetAsync(cacheKey, results, TimeSpan.FromMinutes(30));
-                _logger.LogDebug("Cached evaluation runs for AgentId: {AgentId}", agentId);
+                //await _cacheManager.SetAsync(cacheKey, results, TimeSpan.FromMinutes(30));
+                //_logger.LogDebug("Cached evaluation runs for AgentId: {AgentId}", agentId);
 
                 _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId}",
                   results.Count, agentId);
@@ -351,29 +351,36 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 throw;
             }
         }
+              
 
-        /// <summary>
-        /// Invalidate agent-based caches when data is modified
-        /// </summary>
-        private async Task InvalidateAgentCaches(string agentId)
+        public async Task<(bool IsSuccessfull, string HttpStatusCode, string Message)> PlaceEnrichmentRequestToDataVerseAPI(Guid evalRunId)
         {
             try
             {
-                // Log the cache invalidation
-                _logger.LogDebug("Invalidating agent-based caches for AgentId: {AgentId}", agentId);
-
-                // In a production system, you might want to implement cache tagging or use a more sophisticated cache invalidation strategy
-                // For now, we just log this since wildcard cache removal isn't easily supported across all cache providers
-
-                var statistics = await _cacheManager.GetStatisticsAsync();
-                _logger.LogDebug("Cache statistics after potential invalidation - Type: {CacheType}, Items: {ItemCount}",
-                                statistics.CacheType, statistics.ItemCount);
+                var evalRunEntity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
+                if (evalRunEntity == null)
+                {
+                    _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+                    return (false, StatusCodes.Status404NotFound.ToString(), "Evaluation run not found");
+                }
+                var createDto = new CreateEvalRunDto
+                {
+                    AgentId = evalRunEntity.AgentId,
+                    EnvironmentId = evalRunEntity.EnvironmentId,
+                    AgentSchemaName = evalRunEntity.AgentSchemaName,
+                    DataSetId = Guid.Parse(evalRunEntity.DataSetId),
+                    EvalRunName = evalRunEntity.EvalRunName,
+                    MetricsConfigurationId = Guid.Parse(evalRunEntity.MetricsConfigurationId),
+                    Type = evalRunEntity.Type 
+                };
+                return await SendDatasetEnrichmentToDataVerseAsync(evalRunId, createDto);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error invalidating agent caches for AgentId: {AgentId}", agentId);
-                // Don't throw - cache invalidation failure shouldn't break the main operation
+                _logger.LogError(ex, "Error placing enrichment request to DataVerse API for EvalRunId: {EvalRunId}", evalRunId);
+                return (false, StatusCodes.Status500InternalServerError.ToString(), "Internal server error");
             }
+
         }
 
         /// <summary>
@@ -381,7 +388,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         /// <param name="evalRunId">Evaluation run ID</param>
         /// <param name="createDto">Original create DTO with all evaluation run details</param>
-        private async Task SendDatasetEnrichmentToDataVerseAsync(Guid evalRunId, CreateEvalRunDto createDto)
+        private async Task<(bool IsSuccessfull, string HttpStatusCode, string Message)> SendDatasetEnrichmentToDataVerseAsync(Guid evalRunId, CreateEvalRunDto createDto)
         {
             try
             {
@@ -405,11 +412,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     _logger.LogInformation("Successfully posted evaluation run request to DataVerse API for EvalRunId: {EvalRunId}. Status: {StatusCode}",
                            evalRunId, dataVerseResponse.StatusCode);
+                    return (true, dataVerseResponse.StatusCode.ToString(), "Success");
                 }
                 else
                 {
                     _logger.LogWarning("Failed to post evaluation run request to DataVerse API for EvalRunId: {EvalRunId}. Status: {StatusCode}, Message: {Message}",
-                 evalRunId, dataVerseResponse.StatusCode, dataVerseResponse.Message);
+                    evalRunId, dataVerseResponse.StatusCode, dataVerseResponse.Message);
+                    return (false, dataVerseResponse.StatusCode.ToString(), dataVerseResponse.Message);
                 }
             }
             catch (Exception ex)
@@ -418,6 +427,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // The enrichment can be retried or handled separately
                 _logger.LogError(ex, "Error sending dataset enrichment request to DataVerse API for EvalRunId: {EvalRunId}, DatasetId: {DatasetId}",
                    evalRunId, createDto.DataSetId);
+                return (false, StatusCodes.Status500InternalServerError.ToString(), "Internal server error");
 
                 // Don't throw here to prevent failing the evaluation run creation
                 // The DataVerse integration is supplementary to the core functionality

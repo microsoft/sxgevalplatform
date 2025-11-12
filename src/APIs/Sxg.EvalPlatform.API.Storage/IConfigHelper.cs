@@ -24,5 +24,7 @@
         string? GetRedisCacheEndpoint();
         TimeSpan GetDefaultCacheExpiration();
         bool IsDistributedCacheEnabled();
+        string GetASPNetCoreEnvironment();
+        string GetEvalRunTableName();
     }
 }

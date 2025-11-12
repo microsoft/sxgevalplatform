@@ -229,43 +229,71 @@ namespace SxgEvalPlatformApi.Controllers
 
             try
             {
-                _logger.LogInformation("Request to create new configuration: {ConfigName} for agent: {AgentId}",
-                          createConfigDto.ConfigurationName, createConfigDto.AgentId);
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid model state for configuration creation");
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.message", "Invalid model state");
+                    return CreateValidationErrorResponse<ConfigurationSaveResponseDto>();
+                }
+
+                _logger.LogInformation("Request to create configuration: {ConfigName} for agent: {AgentId}, environment: {Environment}",
+     createConfigDto.ConfigurationName, createConfigDto.AgentId, createConfigDto.EnvironmentName);
 
                 activity?.SetTag("operation", "CreateConfiguration");
                 activity?.SetTag("agent_id", createConfigDto.AgentId);
                 activity?.SetTag("configuration_name", createConfigDto.ConfigurationName);
                 activity?.SetTag("environment_name", createConfigDto.EnvironmentName ?? "");
-                return await CreateOrUpdateMetricsConfiguration(createConfigDto, activity);
+
+                var result = await _metricsConfigurationRequestHandler.CreateConfigurationAsync(createConfigDto);
+
+                if (result.Status == "error")
+                {
+                    _logger.LogError("Configuration creation failed: {Message}", result.Message);
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.message", result.Message);
+                    return StatusCode(500, result);
+                }
+
+                success = true;
+                activity?.SetTag("success", true);
+                activity?.SetTag("configuration_id", result.ConfigurationId);
+
+                _logger.LogInformation("Configuration created/updated successfully with ID: {ConfigId}", result.ConfigurationId);
+
+                return CreatedAtAction(nameof(GetConfigurationsByMetricsConfigurationId),
+                                   new { configurationId = result.ConfigurationId },
+                                   result);
             }
-            catch (ValidationException vex)
+            catch (SXG.EvalPlatform.Common.Exceptions.DataValidationException vex)
             {
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", vex.Message);
                 activity?.SetTag("error.type", vex.GetType().Name);
-                _logger.LogError(vex, $"Data Validation error occurred while creating configuration for agent: {createConfigDto.AgentId}, configuration: {createConfigDto.ConfigurationName}");
-                return CreateErrorResponse<ConfigurationSaveResponseDto>(
-                   vex.Message, 400);
+                _logger.LogWarning(vex, "Validation error while creating configuration for agent: {AgentId}", createConfigDto?.AgentId);
+                return BadRequest(new ConfigurationSaveResponseDto
+                {
+                    ConfigurationId = string.Empty,
+                    Status = "error",
+                    Message = vex.Message
+                });
             }
             catch (Exception ex)
             {
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", ex.Message);
                 activity?.SetTag("error.type", ex.GetType().Name);
-
-                _logger.LogError(ex, $"Error occurred while creating configuration for agent: {createConfigDto.AgentId}, configuration: {createConfigDto.ConfigurationName}");
-                return CreateErrorResponse<ConfigurationSaveResponseDto>(
-                   "Failed to create evaluation configuration", 500);
+                _logger.LogError(ex, "Error creating configuration for agent: {AgentId}, configuration: {ConfigName}",
+                      createConfigDto?.AgentId, createConfigDto?.ConfigurationName);
+                return CreateErrorResponse<ConfigurationSaveResponseDto>("Failed to create configuration", 500);
             }
             finally
             {
                 stopwatch.Stop();
-                _telemetryService.TrackMetricsConfigOperation("CreateConfiguration", createConfigDto.ConfigurationName, success, stopwatch.Elapsed);
-                activity.Stop();
+                _telemetryService.TrackMetricsConfigOperation("CreateConfiguration",
+                createConfigDto?.ConfigurationName ?? "unknown", success, stopwatch.Elapsed);
             }
         }
-
-       
 
         #endregion
 
@@ -286,61 +314,90 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ConfigurationSaveResponseDto>> UpdateConfiguration([FromRoute, Required] Guid configurationId,
-                                                                                          [FromBody, Required] CreateConfigurationRequestDto updateConfigDto)
+        public async Task<ActionResult<ConfigurationSaveResponseDto>> UpdateConfiguration(
+       [FromRoute, Required] Guid configurationId,
+ [FromBody, Required] CreateConfigurationRequestDto updateConfigDto)
         {
-
             using var activity = _telemetryService.StartActivity("EvalConfigs.UpdateConfiguration");
             var stopwatch = Stopwatch.StartNew();
             bool success = false;
 
             try
             {
-                _logger.LogInformation("Request to update configuration: {ConfigId}",
-               configurationId);
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid model state for configuration update");
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.message", "Invalid model state");
+                    return CreateValidationErrorResponse<ConfigurationSaveResponseDto>();
+                }
+
+                _logger.LogInformation("Request to update configuration: {ConfigId}", configurationId);
 
                 activity?.SetTag("operation", "UpdateConfiguration");
                 activity?.SetTag("configuration_id", configurationId.ToString());
+                activity?.SetTag("agent_id", updateConfigDto.AgentId);
+                activity?.SetTag("configuration_name", updateConfigDto.ConfigurationName);
 
-                var getEntity = await _metricsConfigurationRequestHandler.GetMetricsConfigurationByConfigurationIdAsync(configurationId.ToString());
+                var result = await _metricsConfigurationRequestHandler.UpdateConfigurationAsync(
+                     configurationId.ToString(),
+                     updateConfigDto);
 
-                if(getEntity == null || !getEntity.Any())
+                if (result.Status == "not_found")
                 {
                     _logger.LogWarning("Configuration not found for update: {ConfigId}", configurationId);
                     activity?.SetTag("success", false);
                     activity?.SetTag("found", false);
-                    return NotFound($"Configuration with ID '{configurationId}' not found");
+                    return NotFound(new ErrorResponseDto
+                    {
+                        Title = "Configuration Not Found",
+                        Status = 404,
+                        Detail = result.Message
+                    });
                 }
 
+                if (result.Status == "error")
+                {
+                    _logger.LogError("Configuration update failed: {Message}", result.Message);
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.message", result.Message);
+                    return StatusCode(500, result);
+                }
 
-                var updateMetricsConfigurationRequestDto = new UpdateMetricsConfigurationRequestDto
+                success = true;
+                activity?.SetTag("success", true);
+                activity?.SetTag("configuration_id", result.ConfigurationId);
+
+                _logger.LogInformation("Configuration updated successfully: {ConfigId}", result.ConfigurationId);
+
+                return Ok(result);
+            }
+            catch (SXG.EvalPlatform.Common.Exceptions.DataValidationException vex)
+            {
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.message", vex.Message);
+                activity?.SetTag("error.type", vex.GetType().Name);
+                _logger.LogWarning(vex, "Validation error while updating configuration: {ConfigId}", configurationId);
+                return BadRequest(new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = configurationId.ToString(),
-                    MetricsConfiguration = updateConfigDto.MetricsConfiguration,
-                    ConfigurationName = updateConfigDto.ConfigurationName,
-                    Description = updateConfigDto.Description,
-                    EnvironmentName = updateConfigDto.EnvironmentName,
-                    AgentId = updateConfigDto.AgentId
-                };
-
-                return await CreateOrUpdateMetricsConfiguration(updateMetricsConfigurationRequestDto, activity);
+                    Status = "error",
+                    Message = vex.Message
+                });
             }
             catch (Exception ex)
             {
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", ex.Message);
                 activity?.SetTag("error.type", ex.GetType().Name);
-
-                _logger.LogError(ex, "Error occurred while updating configuration: {ConfigId}", configurationId);
-                return CreateErrorResponse<ConfigurationSaveResponseDto>(
-                        "Failed to update evaluation configuration", 500);
+                _logger.LogError(ex, "Error updating configuration: {ConfigId}", configurationId);
+                return CreateErrorResponse<ConfigurationSaveResponseDto>("Failed to update configuration", 500);
             }
             finally
             {
                 stopwatch.Stop();
-                _telemetryService.TrackMetricsConfigOperation("UpdateConfiguration", configurationId.ToString(), success, stopwatch.Elapsed);
-                activity.Stop(); 
-
+                _telemetryService.TrackMetricsConfigOperation("UpdateConfiguration",
+           configurationId.ToString(), success, stopwatch.Elapsed);
             }
         }
 
@@ -407,41 +464,6 @@ namespace SxgEvalPlatformApi.Controllers
         }
 
         #endregion
-
-        private async Task<ActionResult<ConfigurationSaveResponseDto>> CreateOrUpdateMetricsConfiguration(CreateConfigurationRequestDto createConfigDto, Activity activity)
-        {
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("Invalid model state for configuration creation");
-                activity?.SetTag("success", false);
-                activity?.SetTag("error.message", "Invalid model state");
-                return CreateValidationErrorResponse<ConfigurationSaveResponseDto>();
-            }
-
-            var result = await _metricsConfigurationRequestHandler.CreateOrSaveConfigurationAsync(createConfigDto);
-
-            if (result.Status == "error")
-            {
-                _logger.LogError("Configuration creation failed: {Message}", result.Message);
-                activity?.SetTag("success", false);
-                activity?.SetTag("error.message", result.Message);
-
-                if (result.Message.Contains("already exists"))
-                {
-                    return Conflict(result);
-                }
-
-                return StatusCode(500, result);
-            }
-
-
-            activity?.SetTag("success", true);
-            activity?.SetTag("configuration_id", result.ConfigurationId);
-
-            return CreatedAtAction(nameof(GetConfigurationsByMetricsConfigurationId),
-                                   new { configurationId = result.ConfigurationId },
-                                   result);
-        }
 
     }
 }

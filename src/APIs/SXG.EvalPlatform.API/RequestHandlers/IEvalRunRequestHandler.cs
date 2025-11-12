@@ -52,5 +52,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="evalRunId">Evaluation run ID</param>
         /// <returns>Evaluation run table entity with blob storage details or null if not found</returns>
         Task<EvalRunTableEntity?> GetEvalRunEntityByIdAsync(Guid evalRunId);
+
+        Task<(bool IsSuccessfull, string HttpStatusCode, string Message)> PlaceEnrichmentRequestToDataVerseAPI(Guid evalRunId);
     }
 }

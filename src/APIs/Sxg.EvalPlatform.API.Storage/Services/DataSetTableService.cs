@@ -34,7 +34,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             // Initialize lazy TableClient
             _tableClient = new Lazy<TableClient>(InitializeTableClient);
 
-            _logger.LogInformation("DataSetTableService initialized (lazy) for table: {TableName}, account: {AccountName}",
+            _logger.LogInformation("DataSetTableService initialized (lazy) for table: {_storageTableName}, account: {AccountName}",
                 _tableName, _accountName);
         }
 
@@ -46,7 +46,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Initializing TableClient for table: {TableName}, account: {AccountName}",
+                _logger.LogInformation("Initializing TableClient for table: {_storageTableName}, account: {AccountName}",
                     _tableName, _accountName);
 
                 var tableUri = $"https://{_accountName}.table.core.windows.net";
@@ -59,13 +59,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Ensure table exists
                 tableClient.CreateIfNotExists();
 
-                _logger.LogInformation("TableClient successfully initialized for table: {TableName}", _tableName);
+                _logger.LogInformation("TableClient successfully initialized for table: {_storageTableName}", _tableName);
 
                 return tableClient;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize TableClient for table: {TableName}, account: {AccountName}",
+                _logger.LogError(ex, "Failed to initialize TableClient for table: {_storageTableName}, account: {AccountName}",
                     _tableName, _accountName);
                 throw;
             }

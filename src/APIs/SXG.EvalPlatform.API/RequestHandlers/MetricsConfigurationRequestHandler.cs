@@ -17,18 +17,22 @@ namespace SxgEvalPlatformApi.RequestHandlers
     {
         private readonly IMetricsConfigTableService _metricsConfigTableService;
         private readonly IAzureBlobStorageService _blobStorageService;
-        IConfigHelper _configHelper;
+        private readonly IConfigHelper _configHelper;
         private readonly ILogger<MetricsConfigurationRequestHandler> _logger;
         private readonly IMapper _mapper;
         private readonly ICacheManager _cacheManager;
 
         // Cache key patterns
-        private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}"; // metrics_config:metricConfigurationEntity
-        private const string METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY = "metrics_config_metadata:{0}"; // metrics_config_metadata:agentId:environmentName
+        private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
+        private const string METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY = "metrics_config_metadata:{0}";
         private const string DEFAULT_METRICS_CONFIG_CACHE_KEY = "default_metrics_config";
-        private const string METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY = "metrics_config_list:{0}"; // metrics_config_list:agentId
+        private const string METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY = "metrics_config_list:{0}";
 
-
+        // Cache expiration constants
+        private static readonly TimeSpan DefaultConfigCacheDuration = TimeSpan.FromHours(2);
+        private static readonly TimeSpan ConfigByIdCacheDuration = TimeSpan.FromMinutes(60);
+        private static readonly TimeSpan ConfigListCacheDuration = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan MetadataCacheDuration = TimeSpan.FromMinutes(30);
 
         public MetricsConfigurationRequestHandler(IMetricsConfigTableService metricsConfigTableService,
                                                   IAzureBlobStorageService blobStorageService,
@@ -52,26 +56,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                // Check cache first with FAST timeout
-                var cacheKey = DEFAULT_METRICS_CONFIG_CACHE_KEY;
-                _logger.LogDebug("Checking cache for key: {CacheKey}", cacheKey);
+                _logger.LogDebug("Retrieving default Metrics configuration");
 
-                DefaultMetricsConfiguration? cachedResult = null;
-
-                try
-                {
-                    // Cache should be FAST - 1 second timeout max!
-                    cachedResult = await _cacheManager.GetAsync<DefaultMetricsConfiguration>(cacheKey);
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogWarning("Cache timeout after 1s for key: {CacheKey} - proceeding without cache", cacheKey);
-                }
-                catch (Exception cacheEx)
-                {
-                    _logger.LogWarning(cacheEx, "Cache error for key: {CacheKey} - proceeding without cache", cacheKey);
-                }
-
+                var cachedResult = await TryGetFromCacheAsync<DefaultMetricsConfiguration>(DEFAULT_METRICS_CONFIG_CACHE_KEY);
                 if (cachedResult != null)
                 {
                     _logger.LogInformation("Cache HIT - returning cached Metrics config");
@@ -80,58 +67,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 _logger.LogDebug("Cache MISS - fetching from storage");
 
-                // If not in cache, fetch from storage
-                string containerName = _configHelper.GetPlatformConfigurationsContainer();
-                string blobFilePath = _configHelper.GetDefaultMetricsConfiguration();
-
-                var blobContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobFilePath);
-
-                if (blobContent == null)
-                {
-                    throw new Exception($"Default Metrics configuration blob not found: {containerName}/{blobFilePath}");
-                }
-
-                DefaultMetricsConfiguration metrics;
-
-                // Parse the JSON to handle the wrapper structure
-                using var document = JsonDocument.Parse(blobContent);
-                var root = document.RootElement;
-
-                // Check if the JSON has a "metricConfiguration" wrapper
-                if (root.TryGetProperty("metricConfiguration", out var metricsElement))
-                {
-                    metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
-                    if (metrics == null)
-                    {
-                        throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
-                    }
-                }
-                else
-                {
-                    // Try direct deserialization for backward compatibility
-                    metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
-                    if (metrics == null)
-                    {
-                        throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
-                    }
-                }
-
-                _logger.LogDebug("Successfully parsed metrics config with {Count} categories", metrics.Categories?.Count ?? 0);
-
-                // Try to cache the result with FAST timeout
-                try
-                {
-                    await _cacheManager.SetAsync(cacheKey, metrics, TimeSpan.FromHours(2));
-                    _logger.LogInformation("Successfully cached Metrics config");
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogWarning("Cache SET timeout after 1s - continuing without caching");
-                }
-                catch (Exception cacheEx)
-                {
-                    _logger.LogWarning(cacheEx, "Cache SET failed - continuing without caching");
-                }
+                var metrics = await FetchDefaultMetricsFromStorageAsync();
+                await TrySetCacheAsync(DEFAULT_METRICS_CONFIG_CACHE_KEY, metrics, DefaultConfigCacheDuration);
 
                 return metrics;
             }
@@ -149,31 +86,34 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation($"Retrieving all configurations for Agent: {agentId} and EnvironmentName: {environmentName}");
+                _logger.LogInformation("Retrieving all configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
+                       agentId, environmentName);
 
-                // Check cache first
                 var cacheKey = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
-                var cachedResult = await _cacheManager.GetAsync<IList<MetricsConfigurationMetadataDto>>(cacheKey);
+                var cachedResult = await TryGetFromCacheAsync<IList<MetricsConfigurationMetadataDto>>(cacheKey);
+
+                IList<MetricsConfigurationMetadataDto> configurations;
 
                 if (cachedResult != null)
                 {
-                    _logger.LogDebug("Returning cached Metrics configurations for Agent: {AgentId}, Environment: {EnvironmentName}", agentId, environmentName);
-                    return cachedResult.Where(p=> string.IsNullOrEmpty(environmentName) || p.EnvironmentName == environmentName).ToList();
+                    _logger.LogDebug("Returning cached Metrics configurations for Agent: {AgentId}", agentId);
+                    configurations = cachedResult;
+                }
+                else
+                {
+                    var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
+                    configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
+
+                    await TrySetCacheAsync(cacheKey, configurations, ConfigListCacheDuration);
+                    _logger.LogDebug("Cached Metrics configurations for Agent: {AgentId}", agentId);
                 }
 
-                // If not in cache, fetch from storage
-                var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
+                var filteredConfigurations = FilterByEnvironment(configurations, environmentName);
 
-                var configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
+                _logger.LogInformation("Retrieved {Count} configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
+            filteredConfigurations.Count, agentId, environmentName);
 
-                // Cache the result (cache for 30 minutes for list queries)
-                await _cacheManager.SetAsync(cacheKey, configurations, TimeSpan.FromMinutes(30));
-                _logger.LogDebug("Cached Metrics configurations for Agent: {AgentId}, Environment: {EnvironmentName}", agentId, environmentName);
-
-                _logger.LogInformation($"Retrieved {configurations.Count} configurations for Agent: {agentId} and EnvironmentName: {environmentName}",
-           configurations.Count, agentId);
-
-                return configurations.Where(p=> string.IsNullOrEmpty(environmentName) || p.EnvironmentName == environmentName).ToList();
+                return filteredConfigurations;
             }
             catch (Exception ex)
             {
@@ -191,9 +131,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}", configurationId);
 
-                // Check cache first
                 var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
-                var cachedResult = await _cacheManager.GetAsync<IList<SelectedMetricsConfiguration>>(cacheKey);
+                var cachedResult = await TryGetFromCacheAsync<IList<SelectedMetricsConfiguration>>(cacheKey);
 
                 if (cachedResult != null)
                 {
@@ -201,7 +140,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return cachedResult;
                 }
 
-                // If not in cache, fetch from storage
                 var entity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
                 if (entity == null)
                 {
@@ -209,56 +147,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                var blobPath = entity.BlobFilePath;
-                var blobContainer = entity.ConainerName;
+                var metrics = await FetchMetricsFromBlobAsync(entity.ConainerName, entity.BlobFilePath, configurationId);
 
-                var blobContent = await _blobStorageService.ReadBlobContentAsync(blobContainer, blobPath);
-
-                if (string.IsNullOrEmpty(blobContent))
-                {
-                    throw new Exception($"Metrics configuration blob not found: {blobContainer}/{blobPath}");
-                }
-
-                IList<SelectedMetricsConfiguration>? metrics = null;
-
-                // Handle both old array format and new object format
-                try
-                {
-                    var jsonDocument = JsonDocument.Parse(blobContent);
-                    var rootElement = jsonDocument.RootElement;
-
-                    if (rootElement.ValueKind == JsonValueKind.Array)
-                    {
-                        // Old format: direct array
-                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(blobContent);
-                    }
-                    else if (rootElement.ValueKind == JsonValueKind.Object && rootElement.TryGetProperty("metricsConfiguration", out var metricsConfigElement))
-                    {
-                        // New format: object with metricsConfiguration property
-                        var metricsConfigJson = metricsConfigElement.GetRawText();
-                        metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(metricsConfigJson);
-                    }
-                    else
-                    {
-                        throw new Exception("Blob content does not contain Metrics configuration in expected format");
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", configurationId);
-                    throw new Exception("Invalid JSON format in Metrics configuration blob", ex);
-                }
-
-                if (metrics == null)
-                {
-                    throw new Exception("Failed to deserialize Metrics configuration from blob content.");
-                }
-
-                // Cache the result (cache for 60 minutes)
-                await _cacheManager.SetAsync(cacheKey, metrics, TimeSpan.FromMinutes(60));
+                await TrySetCacheAsync(cacheKey, metrics, ConfigByIdCacheDuration);
                 _logger.LogDebug("Cached Metrics configuration for ConfigId: {ConfigId}", configurationId);
-
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", configurationId);
+
                 return metrics;
             }
             catch (Exception ex)
@@ -268,130 +162,111 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
         }
 
-        private void ValidateConfigurationAsync(CreateConfigurationRequestDto createConfigDto)
-        {
-            if (string.IsNullOrWhiteSpace(createConfigDto.AgentId))
-                throw new DataValidationException("AgentId is required");
-
-            if (string.IsNullOrWhiteSpace(createConfigDto.ConfigurationName))
-                throw new DataValidationException("ConfigurationName is required");
-
-            if (createConfigDto.MetricsConfiguration == null || !createConfigDto.MetricsConfiguration.Any())
-                throw new DataValidationException("MetricsConfiguration cannot be empty");
-        }
-
-        public async Task<ConfigurationSaveResponseDto> CreateOrSaveConfigurationAsync(CreateConfigurationRequestDto createConfigDto)
+        /// <summary>
+        /// Create or update a metrics configuration based on AgentId, ConfigurationName, and EnvironmentName
+        /// </summary>
+        public async Task<ConfigurationSaveResponseDto> CreateConfigurationAsync(CreateConfigurationRequestDto createConfigDto)
         {
             try
             {
-                _logger.LogInformation("Creating/saving configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-                    createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
+                _logger.LogInformation("Creating configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
+                        createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
 
                 ValidateConfigurationAsync(createConfigDto);
 
-                string configurationId = Guid.NewGuid().ToString();
+                var (isExistingConfig, configurationId, entity) = await DetermineConfigurationStateAsync(createConfigDto);
+                var (blobContainer, blobFilePath) = GetOrCreateBlobPaths(entity, createConfigDto, configurationId, isExistingConfig);
 
-                bool isExistingConfig = false;
-                MetricsConfigurationTableEntity metricsConfigTableEntityInstance = new();
-                string blobContainer = string.Empty;
-                string blobFileName = string.Empty;
-                string blobFilePath = string.Empty;
-
-                if (createConfigDto is UpdateMetricsConfigurationRequestDto)
-                {
-                    isExistingConfig = true;
-                    configurationId = (createConfigDto as UpdateMetricsConfigurationRequestDto)!.ConfigurationId;
-                    var result = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
-                    if (result != null)
-                    {
-                        metricsConfigTableEntityInstance = result;
-                        blobContainer = metricsConfigTableEntityInstance.ConainerName;
-                        blobFilePath = metricsConfigTableEntityInstance.BlobFilePath;
-                    }
-                }
-                else
-                {
-                    // Check if configuration already exists
-                    var existingConfig = await _metricsConfigTableService.GetAllMetricsConfigurations(
-                        createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
-
-                    if (existingConfig != null && existingConfig.Count > 0)
-                    {
-                        isExistingConfig = true;
-                        metricsConfigTableEntityInstance = existingConfig.First();
-                        blobContainer = metricsConfigTableEntityInstance.ConainerName;
-                        blobFilePath = metricsConfigTableEntityInstance.BlobFilePath;
-
-                    }
-
-                }
+                entity.ConfigurationId = configurationId;
+                entity.LastUpdatedOn = DateTime.UtcNow;
+                entity.BlobFilePath = blobFilePath;
+                entity.ConainerName = blobContainer;
 
                 if (!isExistingConfig)
                 {
-                    blobContainer = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
-
-                    blobFileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
-                    blobFilePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{blobFileName}";
-
-                    _mapper.Map(createConfigDto, metricsConfigTableEntityInstance);
-                    metricsConfigTableEntityInstance.BlobFilePath = blobFilePath;
-                    metricsConfigTableEntityInstance.ConainerName = blobContainer;
-                    metricsConfigTableEntityInstance.ConfigurationId = configurationId;
+                    _mapper.Map(createConfigDto, entity);
                 }
 
-                metricsConfigTableEntityInstance.LastUpdatedOn = DateTime.UtcNow;
-                var blobWriteResult = await _blobStorageService.WriteBlobContentAsync(blobContainer,
-                                                                                      blobFilePath,
-                                                                                      JsonSerializer.Serialize(createConfigDto.MetricsConfiguration));
+                await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, JsonSerializer.Serialize(createConfigDto.MetricsConfiguration));
 
-                // Save to storage
-                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(metricsConfigTableEntityInstance);
+                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity);
 
-
-                // Update Cache
-                var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
-                await _cacheManager.SetAsync(cacheKey, createConfigDto.MetricsConfiguration, TimeSpan.FromMinutes(60));
-
-                cacheKey = string.Format(METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
-                var metadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
-                await _cacheManager.SetAsync(cacheKey, metadataDto, TimeSpan.FromMinutes(30));
-
-                var response = new ConfigurationSaveResponseDto
-                {
-                    ConfigurationId = savedEntity.ConfigurationId,
-                    Status = "success",
-                    Message = isExistingConfig ? "Configuration updated successfully" : "Configuration created successfully."
-                };
-
-                await InvalidateAgentConfigurationCaches(savedEntity.AgentId);
+                await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
 
                 _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId}",
-                    isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId);
+                   isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId);
 
-                return response;
-
+                return CreateSuccessResponse(savedEntity, isExistingConfig);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create/save configuration for Agent: {AgentId}",
-                    createConfigDto.AgentId);
-
-                return new ConfigurationSaveResponseDto
-                {
-                    ConfigurationId = string.Empty,
-                    Status = "error",
-                    Message = $"Failed to save configuration: {ex.Message}"
-                };
+                _logger.LogError(ex, "Failed to create configuration for Agent: {AgentId}", createConfigDto.AgentId);
+                return CreateErrorResponse(ex);
             }
         }
 
-        private async Task InvalidateAgentConfigurationCaches(string agentId)
+        /// <summary>
+        /// Update an existing metrics configuration by ConfigurationId
+        /// </summary>
+        public async Task<ConfigurationSaveResponseDto> UpdateConfigurationAsync(string configurationId, CreateConfigurationRequestDto updateConfigDto)
         {
-            var cacheKeyPattern = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
-            await _cacheManager.RemoveAsync(cacheKeyPattern);
+            try
+            {
+                _logger.LogInformation("Updating configuration with ID: {ConfigId}", configurationId);
 
+                ValidateConfigurationAsync(updateConfigDto);
+
+                // Verify the configuration exists
+                var existingEntity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
+                if (existingEntity == null)
+                {
+                    return new ConfigurationSaveResponseDto
+                    {
+                        ConfigurationId = configurationId,
+                        Status = "not_found",
+                        Message = $"Configuration with ID '{configurationId}' not found"
+                    };
+                }
+
+                // Update the entity
+                existingEntity.LastUpdatedOn = DateTime.UtcNow;
+
+                // Update blob storage
+                await _blobStorageService.WriteBlobContentAsync(
+                     existingEntity.ConainerName,
+                    existingEntity.BlobFilePath,
+ JsonSerializer.Serialize(updateConfigDto.MetricsConfiguration));
+
+                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity);
+
+                await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
+
+                _logger.LogInformation("Successfully updated configuration with ID: {ConfigId}", savedEntity.ConfigurationId);
+
+                return CreateSuccessResponse(savedEntity, true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update configuration with ID: {ConfigId}", configurationId);
+                return CreateErrorResponse(ex);
+            }
         }
 
+        /// <summary>
+        /// Create or update a metrics configuration (legacy method for backward compatibility)
+        /// </summary>
+        [Obsolete("Use CreateConfigurationAsync or UpdateConfigurationAsync instead")]
+        public async Task<ConfigurationSaveResponseDto> CreateOrSaveConfigurationAsync(CreateConfigurationRequestDto createConfigDto)
+        {
+            // Check if this is an update request
+            if (createConfigDto is UpdateMetricsConfigurationRequestDto updateDto)
+            {
+                return await UpdateConfigurationAsync(updateDto.ConfigurationId, createConfigDto);
+            }
+
+            // Otherwise, it's a create request
+            return await CreateConfigurationAsync(createConfigDto);
+        }
 
         /// <summary>
         /// Delete configuration and update cache
@@ -402,7 +277,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Deleting configuration with ID: {ConfigurationId}", configurationId);
 
-                // First get the configuration to get the AgentId for cache invalidation
                 var existingConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
 
                 if (existingConfig == null)
@@ -411,39 +285,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return false;
                 }
 
-                // Delete from storage first
-                bool deleted = await _metricsConfigTableService.DeleteMetricsConfigurationByIdAsync(existingConfig.AgentId, configurationId);
+                bool deleted = await _metricsConfigTableService.DeleteMetricsConfigurationByIdAsync(
+        existingConfig.AgentId,
+                  configurationId);
 
                 if (deleted)
                 {
-                    // After successful deletion, remove from cache
-                    var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
-                    await _cacheManager.RemoveAsync(cacheKey);
+                    await RemoveConfigurationFromCacheAsync(configurationId, existingConfig.AgentId);
+                    await TryDeleteBlobAsync(existingConfig.ConainerName, existingConfig.BlobFilePath, configurationId);
 
-                    // Invalidate agent-based caches
-                    await InvalidateAgentConfigurationCaches(existingConfig.AgentId);
-
-                    _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully and removed from cache", configurationId);
-
-                    // Also delete the blob file if it exists
-                    try
-                    {
-                        var containerName = existingConfig.ConainerName;
-                        var blobPath = existingConfig.BlobFilePath;
-
-                        // Check if blob exists before attempting to delete
-                        bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
-                        if (blobExists)
-                        {
-                            await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
-                            _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
-                        }
-                    }
-                    catch (Exception blobEx)
-                    {
-                        _logger.LogWarning(blobEx, "Failed to delete blob file for configuration ID: {ConfigurationId}, but table record was deleted", configurationId);
-                        // Continue - table deletion was successful, blob deletion failure is not critical
-                    }
+                    _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
                 }
                 else
                 {
@@ -459,14 +310,328 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
         }
 
+        #region Private Helper Methods
+
+        /// <summary>
+        /// Try to get item from cache with timeout handling
+        /// </summary>
+        private async Task<T?> TryGetFromCacheAsync<T>(string cacheKey) where T : class
+        {
+            try
+            {
+                _logger.LogDebug("Checking cache for key: {CacheKey}", cacheKey);
+                return await _cacheManager.GetAsync<T>(cacheKey);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Cache timeout for key: {CacheKey} - proceeding without cache", cacheKey);
+                return null;
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Cache error for key: {CacheKey} - proceeding without cache", cacheKey);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Try to set item in cache with timeout handling
+        /// </summary>
+        private async Task TrySetCacheAsync<T>(string cacheKey, T value, TimeSpan expiration) where T : class
+        {
+            try
+            {
+                await _cacheManager.SetAsync(cacheKey, value, expiration);
+                _logger.LogInformation("Successfully cached item with key: {CacheKey}", cacheKey);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Cache SET timeout for key: {CacheKey} - continuing without caching", cacheKey);
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Cache SET failed for key: {CacheKey} - continuing without caching", cacheKey);
+            }
+        }
+
+        /// <summary>
+        /// Fetch default metrics configuration from blob storage
+        /// </summary>
+        private async Task<DefaultMetricsConfiguration> FetchDefaultMetricsFromStorageAsync()
+        {
+            string containerName = _configHelper.GetPlatformConfigurationsContainer();
+            string blobFilePath = _configHelper.GetDefaultMetricsConfiguration();
+
+            var blobContent = await _blobStorageService.ReadBlobContentAsync(containerName, blobFilePath);
+
+            if (blobContent == null)
+            {
+                throw new Exception($"Default Metrics configuration blob not found: {containerName}/{blobFilePath}");
+            }
+
+            var metrics = DeserializeDefaultMetricsConfiguration(blobContent);
+            _logger.LogDebug("Successfully parsed metrics config with {Count} categories", metrics.Categories?.Count ?? 0);
+
+            return metrics;
+        }
+
+        /// <summary>
+        /// Deserialize default metrics configuration handling both wrapped and unwrapped JSON formats
+        /// </summary>
+        private DefaultMetricsConfiguration DeserializeDefaultMetricsConfiguration(string blobContent)
+        {
+            using var document = JsonDocument.Parse(blobContent);
+            var root = document.RootElement;
+
+            // Check if the JSON has a "metricConfiguration" wrapper
+            if (root.TryGetProperty("metricConfiguration", out var metricsElement))
+            {
+                var metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
+                if (metrics == null)
+                {
+                    throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
+                }
+                return metrics;
+            }
+
+            // Try direct deserialization for backward compatibility
+            var directMetrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
+            if (directMetrics == null)
+            {
+                throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
+            }
+
+            return directMetrics;
+        }
+
+        /// <summary>
+        /// Fetch metrics configuration from blob storage
+        /// </summary>
+        private async Task<IList<SelectedMetricsConfiguration>> FetchMetricsFromBlobAsync(string blobContainer,
+                                                                                          string blobPath,  
+                                                                                          string configurationId)
+        {
+            var blobContent = await _blobStorageService.ReadBlobContentAsync(blobContainer, blobPath);
+
+            if (string.IsNullOrEmpty(blobContent))
+            {
+                throw new Exception($"Metrics configuration blob not found: {blobContainer}/{blobPath}");
+            }
+
+            return DeserializeMetricsConfiguration(blobContent, configurationId);
+        }
+
+        /// <summary>
+        /// Deserialize metrics configuration handling both array and object formats
+        /// </summary>
+        private IList<SelectedMetricsConfiguration> DeserializeMetricsConfiguration(string blobContent, string configurationId)
+        {
+            try
+            {
+                var jsonDocument = JsonDocument.Parse(blobContent);
+                var rootElement = jsonDocument.RootElement;
+
+                IList<SelectedMetricsConfiguration>? metrics = null;
+
+                if (rootElement.ValueKind == JsonValueKind.Array)
+                {
+                    // Old format: direct array
+                    metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(blobContent);
+                }
+                else if (rootElement.ValueKind == JsonValueKind.Object && rootElement.TryGetProperty("metricsConfiguration", out var metricsConfigElement))
+                {
+                    // New format: object with metricsConfiguration property
+                    var metricsConfigJson = metricsConfigElement.GetRawText();
+                    metrics = JsonSerializer.Deserialize<IList<SelectedMetricsConfiguration>>(metricsConfigJson);
+                }
+                else
+                {
+                    throw new Exception("Blob content does not contain Metrics configuration in expected format");
+                }
+
+                if (metrics == null)
+                {
+                    throw new Exception("Failed to deserialize Metrics configuration from blob content.");
+                }
+
+                return metrics;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", configurationId);
+                throw new Exception("Invalid JSON format in Metrics configuration blob", ex);
+            }
+        }
+
+        /// <summary>
+        /// Filter configurations by environment name
+        /// </summary>
+        private IList<MetricsConfigurationMetadataDto> FilterByEnvironment(IList<MetricsConfigurationMetadataDto> configurations, string environmentName)
+        {
+            if (string.IsNullOrEmpty(environmentName))
+            {
+                return configurations;
+            }
+
+            return configurations.Where(p => p.EnvironmentName == environmentName).ToList();
+        }
+
+        /// <summary>
+        /// Validate configuration request DTO
+        /// </summary>
+        private void ValidateConfigurationAsync(CreateConfigurationRequestDto createConfigDto)
+        {
+            if (string.IsNullOrWhiteSpace(createConfigDto.AgentId))
+                throw new DataValidationException("AgentId is required");
+
+            if (string.IsNullOrWhiteSpace(createConfigDto.ConfigurationName))
+                throw new DataValidationException("ConfigurationName is required");
+
+            if (createConfigDto.MetricsConfiguration == null || !createConfigDto.MetricsConfiguration.Any())
+                throw new DataValidationException("MetricsConfiguration cannot be empty");
+        }
+
+        /// <summary>
+        /// Determine if this is a new or existing configuration
+        /// </summary>
+        private async Task<(bool isExisting, string configId, MetricsConfigurationTableEntity entity)> DetermineConfigurationStateAsync(CreateConfigurationRequestDto createConfigDto)
+        {
+            if (createConfigDto is UpdateMetricsConfigurationRequestDto updateDto)
+            {
+                var configId = updateDto.ConfigurationId;
+                var result = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configId);
+
+                if (result != null)
+                {
+                    return (true, configId, result);
+                }
+            }
+
+            // Check if configuration already exists
+            var existingConfigs = await _metricsConfigTableService.GetAllMetricsConfigurations(createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
+
+            if (existingConfigs != null && existingConfigs.Count > 0)
+            {
+                var existingEntity = existingConfigs.First();
+                return (true, existingEntity.ConfigurationId, existingEntity);
+            }
+
+            return (false, Guid.NewGuid().ToString(), new MetricsConfigurationTableEntity());
+        }
+
+        /// <summary>
+        /// Get or create blob storage paths
+        /// </summary>
+        private (string container, string filePath) GetOrCreateBlobPaths(MetricsConfigurationTableEntity entity, CreateConfigurationRequestDto createConfigDto, string configurationId, bool isExisting)
+        {
+            if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath))
+            {
+                return (entity.ConainerName, entity.BlobFilePath);
+            }
+
+            var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
+            var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
+            var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+
+            return (container, filePath);
+        }
+
+        /// <summary>
+        /// Update all relevant caches after saving configuration
+        /// </summary>
+        private async Task UpdateCachesAfterSave(MetricsConfigurationTableEntity savedEntity, IList<SelectedMetricsConfigurationDto> metricsConfiguration)
+        {
+            // Cache the configuration itself
+            var configCacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
+            await TrySetCacheAsync(configCacheKey, metricsConfiguration, ConfigByIdCacheDuration);
+
+            // Cache the metadata
+            var metadataCacheKey = string.Format(METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
+            var metadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
+            await TrySetCacheAsync(metadataCacheKey, metadataDto, MetadataCacheDuration);
+
+            // Invalidate agent configuration list cache
+            await InvalidateAgentConfigurationCaches(savedEntity.AgentId);
+        }
+
+        /// <summary>
+        /// Remove configuration from all caches
+        /// </summary>
+        private async Task RemoveConfigurationFromCacheAsync(string configurationId, string agentId)
+        {
+            var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
+            await _cacheManager.RemoveAsync(cacheKey);
+            await InvalidateAgentConfigurationCaches(agentId);
+        }
+
+        /// <summary>
+        /// Invalidate agent-level configuration caches
+        /// </summary>
+        private async Task InvalidateAgentConfigurationCaches(string agentId)
+        {
+            var cacheKeyPattern = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
+            await _cacheManager.RemoveAsync(cacheKeyPattern);
+        }
+
+        /// <summary>
+        /// Try to delete blob file with error handling
+        /// </summary>
+        private async Task TryDeleteBlobAsync(string containerName, string blobPath, string configurationId)
+        {
+            try
+            {
+                bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobPath);
+                if (blobExists)
+                {
+                    await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
+                    _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                }
+            }
+            catch (Exception blobEx)
+            {
+                _logger.LogWarning(blobEx,
+                    "Failed to delete blob file for configuration ID: {ConfigurationId}, but table record was deleted",
+                configurationId);
+                // Continue - table deletion was successful, blob deletion failure is not critical
+            }
+        }
+
+        /// <summary>
+        /// Create success response DTO
+        /// </summary>
+        private ConfigurationSaveResponseDto CreateSuccessResponse(
+            MetricsConfigurationTableEntity savedEntity,
+           bool isExisting)
+        {
+            return new ConfigurationSaveResponseDto
+            {
+                ConfigurationId = savedEntity.ConfigurationId,
+                Status = "success",
+                Message = isExisting ? "Configuration updated successfully" : "Configuration created successfully."
+            };
+        }
+
+        /// <summary>
+        /// Create error response DTO
+        /// </summary>
+        private ConfigurationSaveResponseDto CreateErrorResponse(Exception ex)
+        {
+            return new ConfigurationSaveResponseDto
+            {
+                ConfigurationId = string.Empty,
+                Status = "error",
+                Message = $"Failed to save configuration: {ex.Message}"
+            };
+        }
+
+        /// <summary>
+        /// Map entity to metadata DTO
+        /// </summary>
         private MetricsConfigurationMetadataDto ToMetricsConfigurationMetadataDto(MetricsConfigurationTableEntity entity)
         {
             return _mapper.Map<MetricsConfigurationMetadataDto>(entity);
         }
-        //private MetricsConfigurationTableEntity ToMetricsConfigurationTableEntity(CreateMetricsConfigurationDto dto)
-        //{
-        //    return _mapper.Map<MetricsConfigurationTableEntity>(dto);
-        //}
 
+        #endregion
     }
 }

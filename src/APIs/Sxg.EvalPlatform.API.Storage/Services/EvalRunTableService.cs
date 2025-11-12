@@ -1,7 +1,5 @@
 using Azure;
 using Azure.Data.Tables;
-using Azure.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
@@ -15,25 +13,31 @@ public class EvalRunTableService : IEvalRunTableService
 {
     private readonly TableClient _tableClient;
     private readonly ILogger<EvalRunTableService> _logger;
-    private const string TableName = "EvalRun";
+    private string _storageTableName = "EvalRun";
+    private readonly IConfigHelper _configHelper; 
 
-    public EvalRunTableService(IConfiguration configuration, ILogger<EvalRunTableService> logger)
+    public EvalRunTableService(IConfigHelper configHelper, ILogger<EvalRunTableService> logger)
     {
         _logger = logger;
+        _configHelper = configHelper;
         
-        var accountName = configuration["AzureStorage:AccountName"];
-        
+        var accountName = _configHelper.GetAzureStorageAccountName();
+
+        _storageTableName = _configHelper.GetEvalRunTableName();
+
         if (string.IsNullOrEmpty(accountName))
         {
             throw new ArgumentException("Azure Storage account name is not configured");
         }
 
         var tableUri = $"https://{accountName}.table.core.windows.net";
-        var environment = configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        
+        var environment = _configHelper.GetASPNetCoreEnvironment();
+
         var tokenCredential = CommonUtils.GetTokenCredential(environment);
 
         var serviceClient = new TableServiceClient(new Uri(tableUri), tokenCredential);
-        _tableClient = serviceClient.GetTableClient(TableName);
+        _tableClient = serviceClient.GetTableClient(_storageTableName);
 
 
         // Ensure table exists
@@ -43,7 +47,7 @@ public class EvalRunTableService : IEvalRunTableService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create or access table {TableName}", TableName);
+            _logger.LogError(ex, "Failed to create or access table {_storageTableName}", _storageTableName);
             throw;
         }
     }
@@ -146,7 +150,7 @@ public class EvalRunTableService : IEvalRunTableService
         {
             // Query across all partitions to find the entity by EvalRunId
             var query = _tableClient.QueryAsync<EvalRunTableEntity>(
-                filter: $"EvalRunId eq guid'{evalRunId}'");
+                filter: $"EvalRunId eq guid'{evalRunId.ToString()}'");
             
             await foreach (var entity in query)
             {
