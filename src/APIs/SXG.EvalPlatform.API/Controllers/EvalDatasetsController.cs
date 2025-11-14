@@ -1,7 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Any;
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
+using SxgEvalPlatformApi.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Text.Json;
 
 
 namespace SxgEvalPlatformApi.Controllers
@@ -10,20 +16,16 @@ namespace SxgEvalPlatformApi.Controllers
     public class EvalDatasetsController : BaseController
     {
         private readonly IDataSetRequestHandler _dataSetRequestHandler;
-        private readonly IConfiguration _configuration;
-        private readonly IEvalArtifactsRequestHandler _evalArtifactsRequestHandler;
+                
+        public EvalDatasetsController(IDataSetRequestHandler dataSetRequestHandler,
+                                     
+                                      
+                                      ILogger<EvalDatasetsController> logger,
+                                      IOpenTelemetryService telemetryService) : base(logger, telemetryService)
 
-        public EvalDatasetsController(
-            IDataSetRequestHandler dataSetRequestHandler,
-            IConfiguration configuration,
-            IEvalArtifactsRequestHandler evalArtifactsRequestHandler,
-            ILogger<EvalDatasetsController> logger)
-            : base(logger)
         {
             _dataSetRequestHandler = dataSetRequestHandler;
-            _configuration = configuration;
-            _evalArtifactsRequestHandler = evalArtifactsRequestHandler;
-
+            
             // Log controller initialization for debugging
             _logger.LogInformation("EvalDatasetController initialized");
         }
@@ -42,16 +44,31 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(IList<DatasetMetadataDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery] string agentId)
+        public async Task<ActionResult<IList<DatasetMetadataDto>>> GetDatasetsByAgentId([FromQuery, Required] string agentId)
         {
+            using var activity = _telemetryService?.StartActivity("EvalDatasetsController.GetDatasetsByAgentId");
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+                // Add telemetry tags
+                activity?.SetTag("agentId", agentId);
+                activity?.SetTag("operation", "GetDatasetsByAgentId");
+
                 _logger.LogInformation("Request to retrieve all datasets for agent: {AgentId}", agentId);
 
-                ValidateAndAddToModelState(agentId, "agentId", "agentid");
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Invalid or missing agent ID");
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "ValidationFailed");
+                    activity?.SetTag("validation.errorCount", ModelState.ErrorCount);
+                    activity?.SetTag("http.status_code", 400);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogWarning("Invalid or missing agent ID - AgentId: {AgentId}, Duration: {Duration}ms",
+                      agentId, stopwatch.ElapsedMilliseconds);
+
                     return CreateValidationErrorResponse<IList<DatasetMetadataDto>>();
                 }
 
@@ -59,20 +76,44 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (!datasets.Any())
                 {
-                    _logger.LogInformation("No datasets found for agent: {AgentId}", agentId);
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "NotFound");
+                    activity?.SetTag("http.status_code", 404);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogInformation("No datasets found for agent: {AgentId}, Duration: {Duration}ms",
+                       agentId, stopwatch.ElapsedMilliseconds);
+
                     return NotFound($"No datasets found for agent: {agentId}");
                 }
 
-                _logger.LogInformation("Retrieved {Count} datasets for agent: {AgentId}",
-                    datasets.Count, agentId);
+                // Success telemetry
+                stopwatch.Stop();
+                activity?.SetTag("success", true);
+                activity?.SetTag("http.status_code", 200);
+                activity?.SetTag("dataset.count", datasets.Count);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogInformation("Retrieved {Count} datasets for agent: {AgentId}, Duration: {Duration}ms",
+               datasets.Count, agentId, stopwatch.ElapsedMilliseconds);
 
                 return Ok(datasets);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while retrieving datasets for agent: {AgentId}", agentId);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", ex.GetType().Name);
+                activity?.SetTag("error.message", ex.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex, "Error occurred while retrieving datasets for agent: {AgentId}, Duration: {Duration}ms",
+               agentId, stopwatch.ElapsedMilliseconds);
+
                 return CreateErrorResponse<IList<DatasetMetadataDto>>(
-                    $"Failed to retrieve datasets for agent: {agentId}", 500);
+                           $"Failed to retrieve datasets for agent: {agentId}", 500);
             }
         }
 
@@ -88,43 +129,93 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(List<EvalDataset>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetDatasetById(Guid datasetId)
+        public async Task<ActionResult<IList<EvalDataset>>> GetDatasetById([FromRoute, Required] Guid datasetId)
         {
+            using var activity = _telemetryService?.StartActivity("EvalDatasetsController.GetDatasetById");
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+                // Add telemetry tags
+                activity?.SetTag("datasetId", datasetId.ToString());
+                activity?.SetTag("operation", "GetDatasetById");
+
                 _logger.LogInformation("Request to retrieve dataset content for dataset: {DatasetId}", datasetId);
 
-                var datasetJson = await _dataSetRequestHandler.GetDatasetByIdAsync(datasetId.ToString());
-
-                if (string.IsNullOrEmpty(datasetJson))
+                if (!ModelState.IsValid)
                 {
-                    _logger.LogInformation("Dataset not found: {DatasetId}", datasetId);
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "ValidationFailed");
+                    activity?.SetTag("validation.errorCount", ModelState.ErrorCount);
+                    activity?.SetTag("http.status_code", 400);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogWarning($"Invalid or missing datasetId - Duration: {stopwatch.ElapsedMilliseconds}ms");
+                    return CreateValidationErrorResponse<IList<EvalDataset>>();
+
+                }
+
+                // Request handler now handles deserialization
+                var datasetContent = await _dataSetRequestHandler.GetDatasetByIdAsync(datasetId.ToString());
+
+                if (datasetContent == null)
+                {
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "NotFound");
+                    activity?.SetTag("http.status_code", 404);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogInformation("Dataset not found: {DatasetId}, Duration: {Duration}ms",
+                  datasetId, stopwatch.ElapsedMilliseconds);
+
                     return NotFound($"Dataset not found: {datasetId}");
                 }
 
-                // Parse JSON to return as typed object
-                var datasetContent = System.Text.Json.JsonSerializer.Deserialize<List<EvalDataset>>(datasetJson,
-                    new System.Text.Json.JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                    });
+                // Success telemetry
+                stopwatch.Stop();
+                activity?.SetTag("success", true);
+                activity?.SetTag("http.status_code", 200);
+                activity?.SetTag("dataset.recordCount", datasetContent.Count);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogInformation("Successfully retrieved dataset content for dataset: {DatasetId}", datasetId);
+                _logger.LogInformation("Successfully retrieved dataset content for dataset: {DatasetId}, Records: {RecordCount}, Duration: {Duration}ms",
+                    datasetId, datasetContent.Count, stopwatch.ElapsedMilliseconds);
+
                 return Ok(datasetContent);
             }
-            catch (System.Text.Json.JsonException jsonEx)
+            catch (InvalidOperationException invalidOpEx) when (invalidOpEx.InnerException is JsonException)
             {
-                _logger.LogError(jsonEx, "Invalid JSON format in dataset: {DatasetId}", datasetId);
-                return CreateErrorResponse("Dataset contains invalid JSON format", 500);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", "JsonDeserializationError");
+                activity?.SetTag("error.message", invalidOpEx.InnerException.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(invalidOpEx, "Invalid JSON format in dataset: {DatasetId}, Duration: {Duration}ms",
+                 datasetId, stopwatch.ElapsedMilliseconds);
+
+                return CreateErrorResponse<IList<EvalDataset>>("Dataset contains invalid JSON format", 500);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while retrieving dataset: {DatasetId}", datasetId);
-                return CreateErrorResponse($"Failed to retrieve dataset: {datasetId}", 500);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", ex.GetType().Name);
+                activity?.SetTag("error.message", ex.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex, "Error occurred while retrieving dataset: {DatasetId}, Duration: {Duration}ms",
+         datasetId, stopwatch.ElapsedMilliseconds);
+
+                return CreateErrorResponse<IList<EvalDataset>>($"Failed to retrieve dataset: {datasetId}", 500);
             }
         }
 
-        
+
         #endregion
 
         #region POST Methods
@@ -143,16 +234,35 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(DatasetSaveResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<DatasetSaveResponseDto>> SaveDataset([FromBody] SaveDatasetDto saveDatasetDto)
+        public async Task<ActionResult<DatasetSaveResponseDto>> SaveDataset([FromBody, Required] SaveDatasetDto saveDatasetDto)
         {
+            using var activity = _telemetryService?.StartActivity("EvalDatasetsController.SaveDataset");
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+                // Add telemetry tags
+                activity?.SetTag("agentId", saveDatasetDto.AgentId);
+                activity?.SetTag("dataset.name", saveDatasetDto.DatasetName);
+                activity?.SetTag("dataset.type", saveDatasetDto.DatasetType);
+                activity?.SetTag("dataset.recordCount", saveDatasetDto.DatasetRecords?.Count ?? 0);
+                activity?.SetTag("operation", "SaveDataset");
+
                 _logger.LogInformation("Request to save dataset: {DatasetName} for agent: {AgentId}, type: {DatasetType}",
-                    saveDatasetDto.DatasetName, saveDatasetDto.AgentId, saveDatasetDto.DatasetType);
+      saveDatasetDto.DatasetName, saveDatasetDto.AgentId, saveDatasetDto.DatasetType);
 
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Invalid model state for dataset save request");
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "ValidationFailed");
+                    activity?.SetTag("validation.errorCount", ModelState.ErrorCount);
+                    activity?.SetTag("http.status_code", 400);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogWarning("Invalid model state for dataset save request - Dataset: {DatasetName}, Agent: {AgentId}, Duration: {Duration}ms",
+                          saveDatasetDto.DatasetName, saveDatasetDto.AgentId, stopwatch.ElapsedMilliseconds);
+
                     return CreateValidationErrorResponse<DatasetSaveResponseDto>();
                 }
 
@@ -160,20 +270,37 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (result.Status == "error")
                 {
-                    _logger.LogError("Dataset save failed: {Message}", result.Message);
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "SaveFailed");
+                    activity?.SetTag("error.message", result.Message);
+                    activity?.SetTag("http.status_code", 500);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogError("Dataset save failed: {Message}, Dataset: {DatasetName}, Agent: {AgentId}, Duration: {Duration}ms",
+            result.Message, saveDatasetDto.DatasetName, saveDatasetDto.AgentId, stopwatch.ElapsedMilliseconds);
+
                     return CreateErrorResponse<DatasetSaveResponseDto>(
-                        "Failed to save dataset", StatusCodes.Status500InternalServerError);
+                       "Failed to save dataset", StatusCodes.Status500InternalServerError);
                 }
 
-                _logger.LogInformation("Dataset processed successfully: {DatasetId}, Status: {Status}",
-                    result.DatasetId, result.Status);
+                // Success telemetry
+                stopwatch.Stop();
+                activity?.SetTag("success", true);
+                activity?.SetTag("dataset.id", result.DatasetId);
+                activity?.SetTag("dataset.status", result.Status);
+                activity?.SetTag("http.status_code", result.Status == "created" ? 201 : 200);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogInformation("Dataset processed successfully: {DatasetId}, Status: {Status}, Dataset: {DatasetName}, Agent: {AgentId}, Duration: {Duration}ms",
+                     result.DatasetId, result.Status, saveDatasetDto.DatasetName, saveDatasetDto.AgentId, stopwatch.ElapsedMilliseconds);
 
                 if (result.Status == "created")
                 {
                     return CreatedAtAction(
-                        nameof(GetDatasetById),
-                        new { datasetId = result.DatasetId },
-                        result);
+                   nameof(GetDatasetById),
+                         new { datasetId = result.DatasetId },
+               result);
                 }
                 else if (result.Status == "updated")
                 {
@@ -186,10 +313,18 @@ namespace SxgEvalPlatformApi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while saving dataset for agent: {AgentId}",
-                    saveDatasetDto.AgentId);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", ex.GetType().Name);
+                activity?.SetTag("error.message", ex.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex, "Error occurred while saving dataset for agent: {AgentId}, Dataset: {DatasetName}, Duration: {Duration}ms",
+                              saveDatasetDto.AgentId, saveDatasetDto.DatasetName, stopwatch.ElapsedMilliseconds);
+
                 return CreateErrorResponse<DatasetSaveResponseDto>(
-                    "Failed to save dataset", 500);
+                     "Failed to save dataset", 500);
             }
         }
 
@@ -208,18 +343,33 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<DatasetSaveResponseDto>> UpdateDataset(
-            [FromRoute] Guid datasetId,
-            [FromBody] UpdateDatasetDto updateDatasetDto)
+        public async Task<ActionResult<DatasetSaveResponseDto>> UpdateDataset([FromRoute, Required] Guid datasetId, [FromBody, Required] UpdateDatasetDto updateDatasetDto)
         {
+            using var activity = _telemetryService?.StartActivity("EvalDatasetsController.UpdateDataset");
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+                // Add telemetry tags
+                activity?.SetTag("datasetId", datasetId.ToString());
+                activity?.SetTag("dataset.recordCount", updateDatasetDto.DatasetRecords?.Count ?? 0);
+                activity?.SetTag("operation", "UpdateDataset");
+
                 _logger.LogInformation("Request to update dataset: {DatasetId}",
-                    datasetId);
+        datasetId);
 
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Invalid model state for dataset update");
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "ValidationFailed");
+                    activity?.SetTag("validation.errorCount", ModelState.ErrorCount);
+                    activity?.SetTag("http.status_code", 400);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogWarning("Invalid model state for dataset update - DatasetId: {DatasetId}, Duration: {Duration}ms",
+                  datasetId, stopwatch.ElapsedMilliseconds);
+
                     return CreateValidationErrorResponse<DatasetSaveResponseDto>();
                 }
 
@@ -227,22 +377,46 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (result.Status == "error")
                 {
-                    _logger.LogError("Dataset update failed: {Message}", result.Message);
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "UpdateFailed");
+                    activity?.SetTag("error.message", result.Message);
+                    activity?.SetTag("http.status_code", 500);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogError("Dataset update failed: {Message}, DatasetId: {DatasetId}, Duration: {Duration}ms",
+                         result.Message, datasetId, stopwatch.ElapsedMilliseconds);
+
                     return CreateErrorResponse<DatasetSaveResponseDto>(
                         result.Message, StatusCodes.Status500InternalServerError);
                 }
 
-                _logger.LogInformation("Dataset updated successfully: {DatasetId}", 
-                    result.DatasetId);
+                // Success telemetry
+                stopwatch.Stop();
+                activity?.SetTag("success", true);
+                activity?.SetTag("http.status_code", 200);
+                activity?.SetTag("dataset.status", result.Status);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogInformation("Dataset updated successfully: {DatasetId}, Status: {Status}, Duration: {Duration}ms",
+               result.DatasetId, result.Status, stopwatch.ElapsedMilliseconds);
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while updating dataset: {DatasetId}",
-                    datasetId);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", ex.GetType().Name);
+                activity?.SetTag("error.message", ex.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex, "Error occurred while updating dataset: {DatasetId}, Duration: {Duration}ms",
+                       datasetId, stopwatch.ElapsedMilliseconds);
+
                 return CreateErrorResponse<DatasetSaveResponseDto>(
-                    "Failed to update dataset", StatusCodes.Status500InternalServerError);
+                 "Failed to update dataset", StatusCodes.Status500InternalServerError);
             }
         }
 
@@ -262,33 +436,62 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteDataset([FromRoute] Guid datasetId)
+        public async Task<IActionResult> DeleteDataset([FromRoute, Required] Guid datasetId)
         {
+            using var activity = _telemetryService?.StartActivity("EvalDatasetsController.DeleteDataset");
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
+                // Add telemetry tags
+                activity?.SetTag("datasetId", datasetId.ToString());
+                activity?.SetTag("operation", "DeleteDataset");
+
                 _logger.LogInformation("Request to delete dataset: {DatasetId}", datasetId);
 
                 bool deleted = await _dataSetRequestHandler.DeleteDatasetAsync(datasetId.ToString());
 
                 if (!deleted)
                 {
-                    _logger.LogWarning("Dataset not found for deletion: {DatasetId}", datasetId);
+                    stopwatch.Stop();
+                    activity?.SetTag("success", false);
+                    activity?.SetTag("error.type", "NotFound");
+                    activity?.SetTag("http.status_code", 404);
+                    activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                    _logger.LogWarning("Dataset not found for deletion: {DatasetId}, Duration: {Duration}ms",
+                       datasetId, stopwatch.ElapsedMilliseconds);
+
                     return NotFound($"Dataset with ID '{datasetId}' not found");
                 }
 
-                _logger.LogInformation("Dataset deleted successfully: {DatasetId}", datasetId);
+                // Success telemetry
+                stopwatch.Stop();
+                activity?.SetTag("success", true);
+                activity?.SetTag("http.status_code", 200);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogInformation("Dataset deleted successfully: {DatasetId}, Duration: {Duration}ms",
+                     datasetId, stopwatch.ElapsedMilliseconds);
+
                 return Ok(new { message = $"Dataset '{datasetId}' deleted successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}", datasetId);
+                stopwatch.Stop();
+                activity?.SetTag("success", false);
+                activity?.SetTag("error.type", ex.GetType().Name);
+                activity?.SetTag("error.message", ex.Message);
+                activity?.SetTag("http.status_code", 500);
+                activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
+
+                _logger.LogError(ex, "Error occurred while deleting dataset: {DatasetId}, Duration: {Duration}ms",
+                  datasetId, stopwatch.ElapsedMilliseconds);
+
                 return StatusCode(500, new { message = "Failed to delete dataset", error = ex.Message });
             }
         }
 
         #endregion
-
-
-        
     }
 }

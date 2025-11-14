@@ -10,6 +10,8 @@ using SxgEvalPlatformApi.Services;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using AutoMapper;
+using Sxg.EvalPlatform.API.Storage.Validators;
+using Microsoft.ApplicationInsights.Extensibility;
 
 namespace SxgEvalPlatformApi.Extensions;
 
@@ -29,98 +31,116 @@ public static class ServiceCollectionExtensions
         var enableConsoleExporter = configuration.GetValue<bool>("OpenTelemetry:EnableConsoleExporter", false);
         var samplingRatio = configuration.GetValue<double>("OpenTelemetry:SamplingRatio", 1.0);
 
-        services.AddOpenTelemetry()
-                .ConfigureResource(resource => resource
-                .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
-                .AddAttributes(new Dictionary<string, object>
+        // ? UPDATED: Cloud role name includes environment for better filtering
+        var baseCloudRoleName = configuration["OpenTelemetry:CloudRoleName"] ?? serviceName;
+        var cloudRoleName = $"{baseCloudRoleName}-{environment.EnvironmentName}";
+
+      services.AddOpenTelemetry()
+  .ConfigureResource(resource => resource
+         .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+     .AddAttributes(new Dictionary<string, object>
                 {
-                    ["deployment.environment"] = environment.EnvironmentName,
-                    ["service.instance.id"] = Environment.MachineName
-                }))
-                .WithTracing(tracing =>
-                  {
-                      tracing
-                .AddAspNetCoreInstrumentation(options =>
-                     {
-                         options.RecordException = true;
-                         options.EnrichWithHttpRequest = (activity, httpRequest) =>
-                               {
-                                   activity.SetTag("http.request.body.size", httpRequest.ContentLength ?? 0);
-                                   activity.SetTag("http.request.user_agent", httpRequest.Headers.UserAgent.ToString());
-                               };
-                         options.EnrichWithHttpResponse = (activity, httpResponse) =>
-                      {
-                          activity.SetTag("http.response.body.size", httpResponse.ContentLength ?? 0);
-                      };
-                     })
-                .AddHttpClientInstrumentation(options =>
-                   {
-                       options.RecordException = true;
-                       options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
-                       {
-                           activity.SetTag("http.request.method", httpRequestMessage.Method.ToString());
-                       };
-                       options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
-                          {
-                              activity.SetTag("http.response.status_code", (int)httpResponseMessage.StatusCode);
-                          };
-                   })
-               .AddSqlClientInstrumentation(options =>
-                  {
-                      options.RecordException = true;
-                      options.SetDbStatementForText = true;
-                  })
-                .AddSource("SXG.EvalPlatform.API")
-                .SetSampler(new TraceIdRatioBasedSampler(samplingRatio));
-
-                      // Add console exporter if Enabled
-                      if (enableConsoleExporter)
-                      {
-                          tracing.AddConsoleExporter();
-                      }
-
-                      // Add Application Insights exporter
-                      if (!string.IsNullOrEmpty(appInsightsConnectionString))
-                      {
-                          tracing.AddAzureMonitorTraceExporter(options =>
-                        {
-                            options.ConnectionString = appInsightsConnectionString;
-                        });
-                      }
-                  })
-          .WithMetrics(metrics =>
+        ["deployment.environment"] = environment.EnvironmentName,
+                    ["service.instance.id"] = Environment.MachineName,
+            ["cloud.role"] = cloudRoleName,  // ? Now includes environment: "SXG-EvalPlatform-API-Development"
+     ["app.role"] = cloudRoleName     // ? Alternative tag name
+ }))
+        .WithTracing(tracing =>
+         {
+    tracing
+    .AddAspNetCoreInstrumentation(options =>
+   {
+          options.RecordException = true;
+          options.EnrichWithHttpRequest = (activity, httpRequest) =>
+     {
+   activity.SetTag("http.request.body.size", httpRequest.ContentLength ?? 0);
+          activity.SetTag("http.request.user_agent", httpRequest.Headers.UserAgent.ToString());
+      // ? UPDATED: Ensure cloud.role includes environment
+         activity.SetTag("cloud.role", cloudRoleName);
+  };
+       options.EnrichWithHttpResponse = (activity, httpResponse) =>
+      {
+    activity.SetTag("http.response.body.size", httpResponse.ContentLength ?? 0);
+           };
+  })
+           .AddHttpClientInstrumentation(options =>
             {
-                metrics
-                          .AddAspNetCoreInstrumentation()
-               .AddHttpClientInstrumentation()
-               .AddMeter("SXG.EvalPlatform.API");
+                  options.RecordException = true;
+              options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+   {
+       activity.SetTag("http.request.method", httpRequestMessage.Method.ToString());
+      // ? UPDATED: Ensure cloud.role includes environment
+      activity.SetTag("cloud.role", cloudRoleName);
+      };
+                options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
+    {
+              activity.SetTag("http.response.status_code", (int)httpResponseMessage.StatusCode);
+          };
+    })
+  .AddSqlClientInstrumentation(options =>
+          {
+  options.RecordException = true;
+                   options.SetDbStatementForText = true;
+    // ? UPDATED: Ensure cloud.role includes environment
+            options.Enrich = (activity, eventName, rawObject) =>
+     {
+           activity.SetTag("cloud.role", cloudRoleName);
+      };
+  })
+      .AddSource("SXG.EvalPlatform.API")
+          .SetSampler(new TraceIdRatioBasedSampler(samplingRatio));
 
-                // Add console exporter if Enabled
-                if (enableConsoleExporter)
-                {
-                    metrics.AddConsoleExporter();
-                }
+           // Add console exporter if Enabled
+      if (enableConsoleExporter)
+ {
+    tracing.AddConsoleExporter();
+       }
 
-                // Add Application Insights exporter
-                if (!string.IsNullOrEmpty(appInsightsConnectionString))
+            // Add Application Insights exporter
+        if (!string.IsNullOrEmpty(appInsightsConnectionString))
+    {
+     tracing.AddAzureMonitorTraceExporter(options =>
+                 {
+         options.ConnectionString = appInsightsConnectionString;
+   });
+  }
+       })
+          .WithMetrics(metrics =>
+       {
+    metrics
+           .AddAspNetCoreInstrumentation()
+    .AddHttpClientInstrumentation()
+   .AddMeter("SXG.EvalPlatform.API");
+
+       // Add console exporter if Enabled
+        if (enableConsoleExporter)
                 {
-                    metrics.AddAzureMonitorMetricExporter(options =>
-                       {
-                           options.ConnectionString = appInsightsConnectionString;
-                       });
-                }
-            });
+  metrics.AddConsoleExporter();
+  }
+
+     // Add Application Insights exporter
+          if (!string.IsNullOrEmpty(appInsightsConnectionString))
+                {
+      metrics.AddAzureMonitorMetricExporter(options =>
+              {
+options.ConnectionString = appInsightsConnectionString;
+      });
+      }
+ });
 
         // Add Application Insights (traditional integration)
-        if (!string.IsNullOrEmpty(appInsightsConnectionString))
-        {
+     if (!string.IsNullOrEmpty(appInsightsConnectionString))
+   {
             services.AddApplicationInsightsTelemetry(options =>
               {
-                  options.ConnectionString = appInsightsConnectionString;
-                  options.EnableAdaptiveSampling = true;
-                  options.EnableQuickPulseMetricStream = true;
-                  options.EnableHeartbeat = true;
+         options.ConnectionString = appInsightsConnectionString;
+          options.EnableAdaptiveSampling = true;
+            options.EnableQuickPulseMetricStream = true;
+              options.EnableHeartbeat = true;
               });
+
+       // ? UPDATED: Configure cloud role name with environment for Application Insights
+            services.AddSingleton<ITelemetryInitializer>(new CloudRoleNameTelemetryInitializer(cloudRoleName));
         }
 
         // Add OpenTelemetry service
@@ -237,6 +257,7 @@ public static class ServiceCollectionExtensions
 
         // Helper services
         services.AddScoped<IConfigHelper, ConfigHelper>();
+        services.AddScoped<IEntityValidators, EntityValidators>();
 
         // Cache services
         services.AddCacheServices(configuration);

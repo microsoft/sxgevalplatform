@@ -32,6 +32,11 @@ public class EvalRunEntity : ITableEntity
     public string AgentSchemaName { get; set; } = string.Empty;
 }
 
+
+public class CreateEvalRunResponseDto: EvalRunDto
+{
+    public string DatasetEnrichementRequestStatus { get; set; }
+}
 /// <summary>
 /// DTO for evaluation run data
 /// </summary>

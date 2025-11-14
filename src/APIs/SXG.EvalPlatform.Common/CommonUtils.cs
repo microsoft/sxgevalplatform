@@ -8,19 +8,16 @@ namespace SXG.EvalPlatform.Common
 
         public static TokenCredential GetTokenCredential(string environment)
         {
-            var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+            var isLocal = environment.Equals("Local", StringComparison.OrdinalIgnoreCase);
 
-            // Forcing CLI Credential instantiation in development environment to avoid Visual Studio Credentails
-            if (isDevelopment)
+            if (isLocal)
             {
-                return new AzureCliCredential(); 
+                return new AzureCliCredential();
             }
-
+                       
             return new DefaultAzureCredential();
-
-            
-
         }
+
         public static string TrimAndRemoveSpaces(string input)
         {
             if (string.IsNullOrWhiteSpace(input))

@@ -23,16 +23,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly ICacheManager _cacheManager;
 
         // Cache key patterns
-        private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
-        private const string METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY = "metrics_config_metadata:{0}";
-        private const string DEFAULT_METRICS_CONFIG_CACHE_KEY = "default_metrics_config";
-        private const string METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY = "metrics_config_list:{0}";
+        //private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
+        //private const string METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY = "metrics_config_metadata:{0}";
+        //private const string DEFAULT_METRICS_CONFIG_CACHE_KEY = "default_metrics_config";
+        //private const string METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY = "metrics_config_list:{0}";
 
         // Cache expiration constants
-        private static readonly TimeSpan DefaultConfigCacheDuration = TimeSpan.FromHours(2);
-        private static readonly TimeSpan ConfigByIdCacheDuration = TimeSpan.FromMinutes(60);
-        private static readonly TimeSpan ConfigListCacheDuration = TimeSpan.FromMinutes(30);
-        private static readonly TimeSpan MetadataCacheDuration = TimeSpan.FromMinutes(30);
+        //private static readonly TimeSpan DefaultConfigCacheDuration = TimeSpan.FromHours(2);
+        //private static readonly TimeSpan ConfigByIdCacheDuration = TimeSpan.FromMinutes(60);
+        //private static readonly TimeSpan ConfigListCacheDuration = TimeSpan.FromMinutes(30);
+        //private static readonly TimeSpan MetadataCacheDuration = TimeSpan.FromMinutes(30);
 
         public MetricsConfigurationRequestHandler(IMetricsConfigTableService metricsConfigTableService,
                                                   IAzureBlobStorageService blobStorageService,
@@ -58,18 +58,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogDebug("Retrieving default Metrics configuration");
 
-                var cachedResult = await TryGetFromCacheAsync<DefaultMetricsConfiguration>(DEFAULT_METRICS_CONFIG_CACHE_KEY);
-                if (cachedResult != null)
-                {
-                    _logger.LogInformation("Cache HIT - returning cached Metrics config");
-                    return cachedResult;
-                }
-
-                _logger.LogDebug("Cache MISS - fetching from storage");
-
                 var metrics = await FetchDefaultMetricsFromStorageAsync();
-                await TrySetCacheAsync(DEFAULT_METRICS_CONFIG_CACHE_KEY, metrics, DefaultConfigCacheDuration);
-
+                
                 return metrics;
             }
             catch (Exception ex)
@@ -89,29 +79,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Retrieving all configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
                        agentId, environmentName);
 
-                var cacheKey = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
-                var cachedResult = await TryGetFromCacheAsync<IList<MetricsConfigurationMetadataDto>>(cacheKey);
-
-                IList<MetricsConfigurationMetadataDto> configurations;
-
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached Metrics configurations for Agent: {AgentId}", agentId);
-                    configurations = cachedResult;
-                }
-                else
-                {
-                    var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
-                    configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
-
-                    await TrySetCacheAsync(cacheKey, configurations, ConfigListCacheDuration);
-                    _logger.LogDebug("Cached Metrics configurations for Agent: {AgentId}", agentId);
-                }
+                var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
+                IList<MetricsConfigurationMetadataDto>  configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
 
                 var filteredConfigurations = FilterByEnvironment(configurations, environmentName);
 
                 _logger.LogInformation("Retrieved {Count} configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
-            filteredConfigurations.Count, agentId, environmentName);
+                filteredConfigurations.Count, agentId, environmentName);
 
                 return filteredConfigurations;
             }
@@ -130,17 +104,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}", configurationId);
-
-                var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
-                var cachedResult = await TryGetFromCacheAsync<IList<SelectedMetricsConfiguration>>(cacheKey);
-
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached Metrics configuration for ConfigId: {ConfigId}", configurationId);
-                    return cachedResult;
-                }
+                                
 
                 var entity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
+
                 if (entity == null)
                 {
                     _logger.LogInformation("Configuration not found for ConfigId: {ConfigId}", configurationId);
@@ -148,9 +115,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 var metrics = await FetchMetricsFromBlobAsync(entity.ConainerName, entity.BlobFilePath, configurationId);
-
-                await TrySetCacheAsync(cacheKey, metrics, ConfigByIdCacheDuration);
-                _logger.LogDebug("Cached Metrics configuration for ConfigId: {ConfigId}", configurationId);
+                                
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", configurationId);
 
                 return metrics;
@@ -191,7 +156,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity);
 
-                await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
+                //await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
 
                 _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId}",
                    isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId);
@@ -239,7 +204,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity);
 
-                await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
+                //await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
 
                 _logger.LogInformation("Successfully updated configuration with ID: {ConfigId}", savedEntity.ConfigurationId);
 
@@ -291,7 +256,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (deleted)
                 {
-                    await RemoveConfigurationFromCacheAsync(configurationId, existingConfig.AgentId);
+                    //await RemoveConfigurationFromCacheAsync(configurationId, existingConfig.AgentId);
                     await TryDeleteBlobAsync(existingConfig.ConainerName, existingConfig.BlobFilePath, configurationId);
 
                     _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
@@ -337,22 +302,22 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Try to set item in cache with timeout handling
         /// </summary>
-        private async Task TrySetCacheAsync<T>(string cacheKey, T value, TimeSpan expiration) where T : class
-        {
-            try
-            {
-                await _cacheManager.SetAsync(cacheKey, value, expiration);
-                _logger.LogInformation("Successfully cached item with key: {CacheKey}", cacheKey);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogWarning("Cache SET timeout for key: {CacheKey} - continuing without caching", cacheKey);
-            }
-            catch (Exception cacheEx)
-            {
-                _logger.LogWarning(cacheEx, "Cache SET failed for key: {CacheKey} - continuing without caching", cacheKey);
-            }
-        }
+        //private async Task TrySetCacheAsync<T>(string cacheKey, T value, TimeSpan expiration) where T : class
+        //{
+        //    try
+        //    {
+        //        await _cacheManager.SetAsync(cacheKey, value, expiration);
+        //        _logger.LogInformation("Successfully cached item with key: {CacheKey}", cacheKey);
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        _logger.LogWarning("Cache SET timeout for key: {CacheKey} - continuing without caching", cacheKey);
+        //    }
+        //    catch (Exception cacheEx)
+        //    {
+        //        _logger.LogWarning(cacheEx, "Cache SET failed for key: {CacheKey} - continuing without caching", cacheKey);
+        //    }
+        //}
 
         /// <summary>
         /// Fetch default metrics configuration from blob storage
@@ -539,39 +504,39 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Update all relevant caches after saving configuration
         /// </summary>
-        private async Task UpdateCachesAfterSave(MetricsConfigurationTableEntity savedEntity, IList<SelectedMetricsConfigurationDto> metricsConfiguration)
-        {
-            // Cache the configuration itself
-            var configCacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
-            await TrySetCacheAsync(configCacheKey, metricsConfiguration, ConfigByIdCacheDuration);
+        //private async Task UpdateCachesAfterSave(MetricsConfigurationTableEntity savedEntity, IList<SelectedMetricsConfigurationDto> metricsConfiguration)
+        //{
+        //    // Cache the configuration itself
+        //    var configCacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
+        //    await TrySetCacheAsync(configCacheKey, metricsConfiguration, ConfigByIdCacheDuration);
 
-            // Cache the metadata
-            var metadataCacheKey = string.Format(METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
-            var metadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
-            await TrySetCacheAsync(metadataCacheKey, metadataDto, MetadataCacheDuration);
+        //    // Cache the metadata
+        //    var metadataCacheKey = string.Format(METRICS_CONFIG_METADATA_BY_ID_CACHE_KEY, savedEntity.ConfigurationId);
+        //    var metadataDto = ToMetricsConfigurationMetadataDto(savedEntity);
+        //    await TrySetCacheAsync(metadataCacheKey, metadataDto, MetadataCacheDuration);
 
-            // Invalidate agent configuration list cache
-            await InvalidateAgentConfigurationCaches(savedEntity.AgentId);
-        }
+        //    // Invalidate agent configuration list cache
+        //    await InvalidateAgentConfigurationCaches(savedEntity.AgentId);
+        //}
 
         /// <summary>
         /// Remove configuration from all caches
         /// </summary>
-        private async Task RemoveConfigurationFromCacheAsync(string configurationId, string agentId)
-        {
-            var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
-            await _cacheManager.RemoveAsync(cacheKey);
-            await InvalidateAgentConfigurationCaches(agentId);
-        }
+        //private async Task RemoveConfigurationFromCacheAsync(string configurationId, string agentId)
+        //{
+        //    var cacheKey = string.Format(METRICS_CONFIG_BY_ID_CACHE_KEY, configurationId);
+        //    await _cacheManager.RemoveAsync(cacheKey);
+        //    await InvalidateAgentConfigurationCaches(agentId);
+        //}
 
         /// <summary>
         /// Invalidate agent-level configuration caches
         /// </summary>
-        private async Task InvalidateAgentConfigurationCaches(string agentId)
-        {
-            var cacheKeyPattern = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
-            await _cacheManager.RemoveAsync(cacheKeyPattern);
-        }
+        //private async Task InvalidateAgentConfigurationCaches(string agentId)
+        //{
+        //    var cacheKeyPattern = string.Format(METRICS_CONFIG_LIST_BY_AGENT_ID_CACHE_KEY, agentId);
+        //    await _cacheManager.RemoveAsync(cacheKeyPattern);
+        //}
 
         /// <summary>
         /// Try to delete blob file with error handling

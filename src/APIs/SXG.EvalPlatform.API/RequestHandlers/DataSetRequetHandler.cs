@@ -8,54 +8,6 @@ using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
-    /// <summary>
-    /// Interface for DataSet request handler operations
-    /// </summary>
-    public interface IDataSetRequestHandler
-    {
-        /// <summary>
-        /// Save a dataset (create new or update existing)
-        /// </summary>
-        /// <param name="saveDatasetDto">Dataset save request</param>
-        /// <returns>Dataset save response</returns>
-        Task<DatasetSaveResponseDto> SaveDatasetAsync(SaveDatasetDto saveDatasetDto);
-
-        /// <summary>
-        /// Get all datasets for an agent
-        /// </summary>
-        /// <param name="agentId">Agent ID</param>
-        /// <returns>List of dataset metadata</returns>
-        Task<IList<DatasetMetadataDto>> GetDatasetsByAgentIdAsync(string agentId);
-
-        /// <summary>
-        /// Get dataset content by dataset ID
-        /// </summary>
-        /// <param name="datasetId">Dataset ID</param>
-        /// <returns>Dataset content as JSON string</returns>
-        Task<string?> GetDatasetByIdAsync(string datasetId);
-
-        /// <summary>
-        /// Get dataset metadata by dataset ID
-        /// </summary>
-        /// <param name="datasetId">Dataset ID</param>
-        /// <returns>Dataset metadata</returns>
-        Task<DatasetMetadataDto?> GetDatasetMetadataByIdAsync(string datasetId);
-
-        /// <summary>
-        /// Update an existing dataset
-        /// </summary>
-        /// <param name="datasetId">Dataset ID</param>
-        /// <param name="updateDatasetDto">Update dataset request</param>
-        /// <returns>Dataset save response</returns>
-        Task<DatasetSaveResponseDto> UpdateDatasetAsync(string datasetId, UpdateDatasetDto updateDatasetDto);
-
-        /// <summary>
-        /// Delete a dataset by dataset ID
-        /// </summary>
-        /// <param name="datasetId">Dataset ID</param>
-        /// <returns>True if deleted, false if not found</returns>
-        Task<bool> DeleteDatasetAsync(string datasetId);
-    }
 
     /// <summary>
     /// Request handler for dataset operations using the storage project services with caching support
@@ -67,17 +19,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<DataSetRequestHandler> _logger;
         private readonly IMapper _mapper;
-        private readonly ICacheManager _cacheManager;
-
-        // Cache key patterns
-        private const string DATASET_CONTENT_CACHE_KEY = "dataset_content:{0}"; // dataset_content:datasetId
-        private const string DATASET_METADATA_CACHE_KEY = "dataset_metadata:{0}"; // dataset_metadata:datasetId
-        private const string DATASETS_BY_AGENT_CACHE_KEY = "datasets_agent:{0}"; // datasets_agent:agentId
-
-        // Cache expiration constants
-        private static readonly TimeSpan DatasetContentCacheDuration = TimeSpan.FromHours(2);
-        private static readonly TimeSpan DatasetMetadataCacheDuration = TimeSpan.FromHours(2);
-        private static readonly TimeSpan DatasetListCacheDuration = TimeSpan.FromMinutes(30);
+                    
 
         public DataSetRequestHandler(
             IDataSetTableService dataSetTableService,
@@ -92,7 +34,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _mapper = mapper;
             _blobStorageService = blobStorageService;
             _configHelper = configHelper;
-            _cacheManager = cacheManager;
         }
 
         /// <summary>
@@ -137,22 +78,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}", agentId);
 
-                // Check cache first
-                var cacheKey = string.Format(DATASETS_BY_AGENT_CACHE_KEY, agentId);
-                var cachedResult = await _cacheManager.GetAsync<IList<DatasetMetadataDto>>(cacheKey);
-
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached datasets for Agent: {AgentId}", agentId);
-                    return cachedResult;
-                }
-
-                // If not in cache, fetch from storage
                 var entities = await _dataSetTableService.GetAllDataSetsByAgentIdAsync(agentId);
                 var datasets = entities.Select(ToDatasetMetadataDto).ToList();
 
-                // Cache the result (cache for 30 minutes for list queries)
-                await _cacheManager.SetAsync(cacheKey, datasets, DatasetListCacheDuration);
                 _logger.LogDebug("Cached datasets for Agent: {AgentId}", agentId);
 
                 _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}",
@@ -168,26 +96,69 @@ namespace SxgEvalPlatformApi.RequestHandlers
         }
 
         /// <summary>
-        /// Get dataset content by ID with caching support
+        /// Get dataset content by ID with caching support and deserialization
         /// </summary>
-        public async Task<string?> GetDatasetByIdAsync(string datasetId)
+        public async Task<List<EvalDataset>?> GetDatasetByIdAsync(string datasetId)
         {
             try
             {
                 _logger.LogInformation("Retrieving dataset content for DatasetId: {DatasetId}", datasetId);
 
-                // Check cache first
-                var cacheKey = string.Format(DATASET_CONTENT_CACHE_KEY, datasetId);
-                var cachedResult = await _cacheManager.GetAsync<string>(cacheKey);
+                var entity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
 
-                if (cachedResult != null)
+                if (entity == null)
                 {
-                    _logger.LogDebug("Returning cached dataset content for DatasetId: {DatasetId}", datasetId);
-                    return cachedResult;
+                    _logger.LogInformation("Dataset not found for DatasetId: {DatasetId}", datasetId);
+                    return null;
                 }
 
-                // If not in cache, fetch from storage
+                var blobContent = await _blobStorageService.ReadBlobContentAsync(entity.ContainerName, entity.BlobFilePath);
+
+                if (string.IsNullOrEmpty(blobContent))
+                {
+                    throw new Exception($"Dataset blob not found: {entity.ContainerName}/{entity.BlobFilePath}");
+                }
+                
+                // Deserialize JSON to List<EvalDataset>
+                var datasetContent = JsonSerializer.Deserialize<List<EvalDataset>>(blobContent, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (datasetContent == null)
+                {
+                    throw new JsonException($"Failed to deserialize dataset content for DatasetId: {datasetId}");
+                }
+
+                _logger.LogInformation("Retrieved and deserialized dataset content for DatasetId: {DatasetId}, Records: {RecordCount}",
+                    datasetId, datasetContent.Count);
+
+                return datasetContent;
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "Invalid JSON format in dataset blob for DatasetId: {DatasetId}", datasetId);
+                throw new InvalidOperationException($"Dataset contains invalid JSON format: {jsonEx.Message}", jsonEx);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve dataset content for DatasetId: {DatasetId}", datasetId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get dataset content as raw JSON string by ID (for backward compatibility or special cases)
+        /// </summary>
+        public async Task<string?> GetDatasetByIdAsJsonAsync(string datasetId)
+        {
+            try
+            {
+                _logger.LogInformation("Retrieving dataset content as JSON for DatasetId: {DatasetId}", datasetId);
+
                 var entity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+
                 if (entity == null)
                 {
                     _logger.LogInformation("Dataset not found for DatasetId: {DatasetId}", datasetId);
@@ -201,16 +172,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     throw new Exception($"Dataset blob not found: {entity.ContainerName}/{entity.BlobFilePath}");
                 }
 
-                // Cache the result (cache for 2 hours)
-                await _cacheManager.SetAsync(cacheKey, blobContent, DatasetContentCacheDuration);
-                _logger.LogDebug("Cached dataset content for DatasetId: {DatasetId}", datasetId);
-                _logger.LogInformation("Retrieved dataset content for DatasetId: {DatasetId}", datasetId);
+                _logger.LogInformation("Retrieved dataset content as JSON for DatasetId: {DatasetId}", datasetId);
 
                 return blobContent;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve dataset content for DatasetId: {DatasetId}", datasetId);
+                _logger.LogError(ex, "Failed to retrieve dataset content as JSON for DatasetId: {DatasetId}", datasetId);
                 throw;
             }
         }
@@ -224,18 +192,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 _logger.LogInformation("Retrieving dataset metadata for DatasetId: {DatasetId}", datasetId);
 
-                // Check cache first
-                var cacheKey = string.Format(DATASET_METADATA_CACHE_KEY, datasetId);
-                var cachedResult = await _cacheManager.GetAsync<DatasetMetadataDto>(cacheKey);
-
-                if (cachedResult != null)
-                {
-                    _logger.LogDebug("Returning cached dataset metadata for DatasetId: {DatasetId}", datasetId);
-                    return cachedResult;
-                }
-
-                // If not in cache, fetch from storage
                 var entity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+
                 if (entity == null)
                 {
                     _logger.LogInformation("Dataset metadata not found for DatasetId: {DatasetId}", datasetId);
@@ -243,10 +201,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 var metadata = ToDatasetMetadataDto(entity);
-
-                // Cache the result (cache for 2 hours)
-                await _cacheManager.SetAsync(cacheKey, metadata, DatasetMetadataCacheDuration);
-                _logger.LogDebug("Cached dataset metadata for DatasetId: {DatasetId}", datasetId);
+                
                 _logger.LogInformation("Retrieved dataset metadata for DatasetId: {DatasetId}", datasetId);
 
                 return metadata;
@@ -268,6 +223,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Updating dataset with ID: {DatasetId}", datasetId);
 
                 var existingEntity = await _dataSetTableService.GetDataSetByIdAsync(datasetId);
+
                 if (existingEntity == null)
                 {
                     _logger.LogWarning("Dataset not found with ID: {DatasetId}", datasetId);
@@ -306,10 +262,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 if (deleted)
                 {
-                    // After successful deletion, remove from cache
-                    await RemoveDatasetFromCacheAsync(datasetId, existingDataset.AgentId);
-                    await TryDeleteBlobAsync(existingDataset.ContainerName, existingDataset.BlobFilePath, datasetId);
-
                     _logger.LogInformation("Dataset with ID: {DatasetId} deleted successfully", datasetId);
                 }
                 else
@@ -368,9 +320,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
             // Save metadata to table storage
             var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity);
-
-            // Update caches
-            await UpdateCachesAfterSave(datasetId, saveDatasetDto.AgentId, datasetContent, savedEntity);
+                       
 
             _logger.LogInformation("Successfully created dataset with ID: {DatasetId}", savedEntity.DatasetId);
 
@@ -399,14 +349,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
             // Save updated metadata to table storage
             var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity);
-
-            // Update caches
-            await UpdateCachesAfterSave(
-                   existingEntity.DatasetId,
-                 existingEntity.AgentId,
-                     datasetContent,
-                           savedEntity);
-
+                        
             _logger.LogInformation("Successfully updated dataset with ID: {DatasetId}", savedEntity.DatasetId);
 
             return CreateSuccessResponse(savedEntity, "updated", "Dataset updated successfully");
@@ -436,90 +379,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
             });
         }
 
-        /// <summary>
-        /// Update all caches after save operation
-        /// </summary>
-        private async Task UpdateCachesAfterSave(
-       string datasetId,
-            string agentId,
-     string datasetContent,
-      DataSetTableEntity savedEntity)
-        {
-            var metadataDto = ToDatasetMetadataDto(savedEntity);
-
-            // Cache content and metadata
-            var contentCacheKey = string.Format(DATASET_CONTENT_CACHE_KEY, datasetId);
-            var metadataCacheKey = string.Format(DATASET_METADATA_CACHE_KEY, datasetId);
-
-            await _cacheManager.SetAsync(contentCacheKey, datasetContent, DatasetContentCacheDuration);
-            await _cacheManager.SetAsync(metadataCacheKey, metadataDto, DatasetMetadataCacheDuration);
-
-            // Invalidate agent-based list cache
-            await InvalidateAgentDatasetCaches(agentId);
-        }
-
-        /// <summary>
-        /// Remove dataset from all caches
-        /// </summary>
-        private async Task RemoveDatasetFromCacheAsync(string datasetId, string agentId)
-        {
-            var contentCacheKey = string.Format(DATASET_CONTENT_CACHE_KEY, datasetId);
-            var metadataCacheKey = string.Format(DATASET_METADATA_CACHE_KEY, datasetId);
-
-            await _cacheManager.RemoveAsync(contentCacheKey);
-            await _cacheManager.RemoveAsync(metadataCacheKey);
-
-            await InvalidateAgentDatasetCaches(agentId);
-        }
-
-        /// <summary>
-        /// Try to delete blob file with error handling
-        /// </summary>
-        private async Task TryDeleteBlobAsync(string containerName, string blobFilePath, string datasetId)
-        {
-            try
-            {
-                bool blobExists = await _blobStorageService.BlobExistsAsync(containerName, blobFilePath);
-                if (blobExists)
-                {
-                    await _blobStorageService.DeleteBlobAsync(containerName, blobFilePath);
-                    _logger.LogInformation("Dataset blob file deleted: {ContainerName}/{BlobPath}",
-                         containerName, blobFilePath);
-                }
-            }
-            catch (Exception blobEx)
-            {
-                _logger.LogWarning(blobEx,
-                    "Failed to delete blob file for dataset ID: {DatasetId}, but table record was deleted",
-                  datasetId);
-            }
-        }
-
-        /// <summary>
-        /// Invalidate agent-based dataset caches
-        /// </summary>
-        private async Task InvalidateAgentDatasetCaches(string agentId)
-        {
-            try
-            {
-                var cacheKey = string.Format(DATASETS_BY_AGENT_CACHE_KEY, agentId);
-                await _cacheManager.RemoveAsync(cacheKey);
-
-                _logger.LogDebug("Invalidated dataset caches for AgentId: {AgentId}", agentId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error invalidating dataset caches for AgentId: {AgentId}", agentId);
-            }
-        }
 
         /// <summary>
         /// Create success response DTO
         /// </summary>
-        private DatasetSaveResponseDto CreateSuccessResponse(
-       DataSetTableEntity savedEntity,
-      string status,
-            string message)
+        private DatasetSaveResponseDto CreateSuccessResponse(DataSetTableEntity savedEntity, string status, string message)
         {
             return new DatasetSaveResponseDto
             {

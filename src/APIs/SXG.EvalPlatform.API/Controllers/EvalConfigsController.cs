@@ -12,17 +12,15 @@ namespace SxgEvalPlatformApi.Controllers
     public class EvalConfigsController : BaseController
     {
         private readonly IMetricsConfigurationRequestHandler _metricsConfigurationRequestHandler;
-        private readonly IConfiguration _configuration;
         private readonly IOpenTelemetryService _telemetryService;
 
         public EvalConfigsController(IMetricsConfigurationRequestHandler metricsConfigurationRequestHandler,
-                                     IConfiguration configuration,
+                                     IConfiguration config,
                                      ILogger<EvalConfigsController> logger,
                                      IOpenTelemetryService telemetryService) : base(logger)
 
         {
             _metricsConfigurationRequestHandler = metricsConfigurationRequestHandler;
-            _configuration = configuration;
             _telemetryService = telemetryService;
             _logger.LogInformation("EvalConfigController initialized");
         }
@@ -81,7 +79,7 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(typeof(IList<SelectedMetricsConfiguration>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IList<SelectedMetricsConfiguration>>> GetConfigurationsByMetricsConfigurationId(Guid configurationId)
+        public async Task<ActionResult<IList<SelectedMetricsConfiguration>>> GetConfigurationsByMetricsConfigurationId([FromRoute, Required] Guid configurationId)
         {
             using var activity = _telemetryService.StartActivity("EvalConfigs.GetConfigurationsByMetricsConfigurationId");
             var stopwatch = Stopwatch.StartNew();
@@ -221,7 +219,7 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ConfigurationSaveResponseDto), StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ConfigurationSaveResponseDto>> CreateConfiguration([FromBody] CreateConfigurationRequestDto createConfigDto)
+        public async Task<ActionResult<ConfigurationSaveResponseDto>> CreateConfiguration([FromBody, Required] CreateConfigurationRequestDto createConfigDto)
         {
             using var activity = _telemetryService.StartActivity("EvalConfigs.CreateConfiguration");
             var stopwatch = Stopwatch.StartNew();
@@ -314,9 +312,7 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ConfigurationSaveResponseDto>> UpdateConfiguration(
-       [FromRoute, Required] Guid configurationId,
- [FromBody, Required] CreateConfigurationRequestDto updateConfigDto)
+        public async Task<ActionResult<ConfigurationSaveResponseDto>> UpdateConfiguration([FromRoute, Required] Guid configurationId, [FromBody, Required] CreateConfigurationRequestDto updateConfigDto)
         {
             using var activity = _telemetryService.StartActivity("EvalConfigs.UpdateConfiguration");
             var stopwatch = Stopwatch.StartNew();
@@ -417,7 +413,7 @@ namespace SxgEvalPlatformApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteConfiguration([FromRoute] Guid configurationId)
+        public async Task<IActionResult> DeleteConfiguration([FromRoute, Required] Guid configurationId)
         {
             using var activity = _telemetryService.StartActivity("EvalConfigs.DeleteConfiguration");
             var stopwatch = Stopwatch.StartNew();

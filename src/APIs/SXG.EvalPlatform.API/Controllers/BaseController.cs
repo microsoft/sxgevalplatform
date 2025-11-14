@@ -219,6 +219,22 @@ public abstract class BaseController : ControllerBase
         return BadRequest(response);
     }
 
+    protected ActionResult CreateValidationErrorResponse()
+    {
+        var errors = ModelState.ToDictionary(kvp => kvp.Key, kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>());
+
+        var response = new
+        {
+            title = ValidationErrorResponseTemplate.GetType().GetProperty("title")?.GetValue(ValidationErrorResponseTemplate),
+            status = ValidationErrorResponseTemplate.GetType().GetProperty("status")?.GetValue(ValidationErrorResponseTemplate),
+            type = ValidationErrorResponseTemplate.GetType().GetProperty("type")?.GetValue(ValidationErrorResponseTemplate),
+            errors,
+            timestamp = DateTimeOffset.UtcNow
+        };
+
+        return BadRequest(response);
+    }
+
     /// <summary>
     /// Creates a simple validation error response for IActionResult
     /// </summary>

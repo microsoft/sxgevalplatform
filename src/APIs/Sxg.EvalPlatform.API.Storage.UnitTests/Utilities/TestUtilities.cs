@@ -96,25 +96,68 @@ namespace Sxg.EvalPlatform.API.Storage.UnitTests.Utilities
         /// Creates a MetricsConfigTableService for testing
         /// </summary>
         public static MetricsConfigTableService CreateService(
-            IConfiguration? configuration = null,
-            ILogger<MetricsConfigTableService>? logger = null)
+            IConfigHelper? configHelper = null,
+ILogger<MetricsConfigTableService>? logger = null,
+            ICacheManager? cacheManager = null)
         {
-            var config = configuration ?? CreateMockConfiguration();
-            var log = logger ?? CreateMockLogger().Object;
-            return new MetricsConfigTableService(config, log);
+         var config = configHelper ?? CreateMockConfigHelper().Object;
+ var log = logger ?? CreateMockLogger().Object;
+          var cache = cacheManager ?? CreateMockCacheManager().Object;
+        return new MetricsConfigTableService(config, log, cache);
+   }
+
+     /// <summary>
+      /// Creates a service with capturing logger for testing
+        /// </summary>
+        public static (MetricsConfigTableService Service, List<string> LogMessages) CreateServiceWithCapturingLogger(
+      IConfigHelper? configHelper = null,
+     ICacheManager? cacheManager = null)
+   {
+  var config = configHelper ?? CreateMockConfigHelper().Object;
+            var (logger, messages) = CreateCapturingLogger();
+        var cache = cacheManager ?? CreateMockCacheManager().Object;
+            var service = new MetricsConfigTableService(config, logger.Object, cache);
+            return (service, messages);
         }
 
         /// <summary>
-        /// Creates a service with capturing logger for testing
+     /// Creates a mock IConfigHelper for testing
         /// </summary>
-        public static (MetricsConfigTableService Service, List<string> LogMessages) CreateServiceWithCapturingLogger(
-            IConfiguration? configuration = null)
+   public static Mock<IConfigHelper> CreateMockConfigHelper(
+         string accountName = "testaccount",
+       string tableName = "MetricsConfigurations",
+ string environment = "Test")
+      {
+    var mockConfigHelper = new Mock<IConfigHelper>();
+       mockConfigHelper.Setup(c => c.GetAzureStorageAccountName()).Returns(accountName);
+       mockConfigHelper.Setup(c => c.GetMetricsConfigurationsTable()).Returns(tableName);
+    mockConfigHelper.Setup(c => c.GetASPNetCoreEnvironment()).Returns(environment);
+         mockConfigHelper.Setup(c => c.GetDefaultCacheExpiration()).Returns(TimeSpan.FromMinutes(60));
+     return mockConfigHelper;
+   }
+
+        /// <summary>
+        /// Creates a mock ICacheManager for testing
+        /// </summary>
+        public static Mock<ICacheManager> CreateMockCacheManager()
         {
-            var config = configuration ?? CreateMockConfiguration();
-            var (logger, messages) = CreateCapturingLogger();
-            var service = new MetricsConfigTableService(config, logger.Object);
-            return (service, messages);
-        }
+         var mockCacheManager = new Mock<ICacheManager>();
+         
+     // Setup default behavior - always return null for cache misses
+            mockCacheManager.Setup(c => c.GetAsync<MetricsConfigurationTableEntity>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+     .ReturnsAsync((MetricsConfigurationTableEntity?)null);
+            
+    mockCacheManager.Setup(c => c.GetAsync<List<MetricsConfigurationTableEntity>>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        .ReturnsAsync((List<MetricsConfigurationTableEntity>?)null);
+            
+         mockCacheManager.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+           .Returns(Task.CompletedTask);
+
+            mockCacheManager.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+         .Returns(Task.CompletedTask);
+            
+       return mockCacheManager;
+    }
 
         #endregion
 

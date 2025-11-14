@@ -1,19 +1,19 @@
-# Azure Deployment Script for SXG Evaluation Platform API - PPE Environment
-# This script deploys the API to existing App Service "sxgevalapippe"
-# Includes all appsettings configuration from appsettings.json and appsettings.PPE.json
+# Azure Deployment Script for SXG Evaluation Platform API - Production Environment
+# This script deploys the API to existing App Service "sxgevalapiprod"
+# Includes all appsettings configuration from appsettings.json and appsettings.Production.json
 
 param(
     [Parameter(Mandatory=$false)]
     [string]$ResourceGroupName = "rg-sxg-agent-evaluation-platform",
     
-    [Parameter(Mandatory=$false)]
-    [string]$AppName = "sxgevalapippe",
+ [Parameter(Mandatory=$false)]
+    [string]$AppName = "sxgevalapiprod",
     
     [Parameter(Mandatory=$false)]
     [string]$Location = "eastus",
     
-  [Parameter(Mandatory=$false)]
-    [string]$StorageAccountName = "sxgagentevalppe",
+    [Parameter(Mandatory=$false)]
+    [string]$StorageAccountName = "sxgagentevalprod",
     
     [Parameter(Mandatory=$false)]
     [string]$SubscriptionId
@@ -24,12 +24,23 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "SXG Evaluation Platform API" -ForegroundColor Cyan
-Write-Host "PPE Environment Deployment" -ForegroundColor Cyan
+Write-Host "PRODUCTION Environment Deployment" -ForegroundColor Red
 Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "??  WARNING: PRODUCTION DEPLOYMENT ??" -ForegroundColor Red
 Write-Host ""
 Write-Host "Target App Service: $AppName" -ForegroundColor Green
 Write-Host "Resource Group: $ResourceGroupName" -ForegroundColor Green
 Write-Host "Storage Account: $StorageAccountName" -ForegroundColor Green
+Write-Host ""
+
+# Production deployment confirmation
+Write-Host "??  You are about to deploy to PRODUCTION!" -ForegroundColor Red
+$confirmation = Read-Host "Type 'PRODUCTION' to confirm deployment"
+if ($confirmation -ne "PRODUCTION") {
+    Write-Host "? Deployment cancelled." -ForegroundColor Yellow
+    exit 0
+}
 Write-Host ""
 
 # Login check
@@ -43,7 +54,7 @@ if (-not $loginCheck) {
 
 # Set subscription if provided
 if ($SubscriptionId) {
-    Write-Host "Setting subscription to: $SubscriptionId" -ForegroundColor Yellow
+  Write-Host "Setting subscription to: $SubscriptionId" -ForegroundColor Yellow
     az account set --subscription $SubscriptionId
 }
 
@@ -56,7 +67,7 @@ Write-Host "[2/8] Verifying resource group: $ResourceGroupName" -ForegroundColor
 $rgExists = az group show --name $ResourceGroupName --query "name" -o tsv 2>$null
 if (-not $rgExists) {
     Write-Host "? Resource group $ResourceGroupName does not exist." -ForegroundColor Red
-  exit 1
+    exit 1
 }
 Write-Host "? Resource group verified" -ForegroundColor Green
 Write-Host ""
@@ -66,7 +77,7 @@ Write-Host "[3/8] Verifying App Service: $AppName" -ForegroundColor Yellow
 $appExists = az webapp show --name $AppName --resource-group $ResourceGroupName --query "name" -o tsv 2>$null
 
 if (-not $appExists) {
-    Write-Host "? App Service $AppName does not exist in resource group $ResourceGroupName" -ForegroundColor Red
+Write-Host "? App Service $AppName does not exist in resource group $ResourceGroupName" -ForegroundColor Red
     Write-Host "Please create the App Service first or use the full deployment script." -ForegroundColor Yellow
     exit 1
 }
@@ -78,7 +89,7 @@ Write-Host "[4/8] Building application..." -ForegroundColor Yellow
 $projectPath = "../SXG.EvalPlatform.API.csproj"
 
 if (-not (Test-Path $projectPath)) {
-  Write-Host "? Project file not found: $projectPath" -ForegroundColor Red
+    Write-Host "? Project file not found: $projectPath" -ForegroundColor Red
     exit 1
 }
 
@@ -94,7 +105,7 @@ Write-Host ""
 
 # Step 4: Publish Application
 Write-Host "[5/8] Publishing application..." -ForegroundColor Yellow
-$publishPath = "./publish-ppe"
+$publishPath = "./publish-prod"
 if (Test-Path $publishPath) {
     Remove-Item $publishPath -Recurse -Force
 }
@@ -110,7 +121,7 @@ Write-Host ""
 
 # Step 5: Create Deployment Package
 Write-Host "[6/8] Creating deployment package..." -ForegroundColor Yellow
-$zipPath = ".\deploy-ppe.zip"
+$zipPath = ".\deploy-prod.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
@@ -125,7 +136,7 @@ Write-Host "[7/8] Deploying to Azure App Service..." -ForegroundColor Yellow
 Write-Host "This may take a few minutes..." -ForegroundColor Cyan
 
 az webapp deploy `
-    --name $AppName `
+ --name $AppName `
     --resource-group $ResourceGroupName `
     --src-path $zipPath `
     --type zip `
@@ -139,21 +150,21 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "? Application deployed successfully" -ForegroundColor Green
 Write-Host ""
 
-# Step 7: Configure App Settings for PPE
-Write-Host "[8/8] Configuring App Settings for PPE environment..." -ForegroundColor Yellow
+# Step 7: Configure App Settings for Production
+Write-Host "[8/8] Configuring App Settings for PRODUCTION environment..." -ForegroundColor Yellow
 
 $appSettings = @(
-    "ASPNETCORE_ENVIRONMENT=PPE",
+    "ASPNETCORE_ENVIRONMENT=Production",
     
     # API Settings
     "ApiSettings__Version=1.0.0",
-    "ApiSettings__Environment=PPE",
+    "ApiSettings__Environment=Production",
     
- # Azure Storage Settings
+    # Azure Storage Settings
     "AzureStorage__AccountName=$StorageAccountName",
     "AzureStorage__DataSetFolderName=datasets",
     "AzureStorage__DatasetsFolderName=datasets",
- "AzureStorage__EvalResultsFolderName=evaluation-results",
+    "AzureStorage__EvalResultsFolderName=evaluation-results",
     "AzureStorage__MetricsConfigurationsFolderName=metrics-configurations",
     "AzureStorage__PlatformConfigurationsContainer=platform-configurations",
     "AzureStorage__DefaultMetricsConfiguration=default-metric-configuration.json",
@@ -161,30 +172,30 @@ $appSettings = @(
     "AzureStorage__DataSetsTable=DataSetsTable",
     "AzureStorage__EvalRunsTable=EvalRunsTable",
     "AzureStorage__DatasetEnrichmentRequestsQueueName=dataset-enrichment-requests",
- "AzureStorage__EvalProcessingRequestsQueueName=eval-processing-requests",
- 
-    # Cache Settings - Redis (Active for PPE with Azure AD Managed Identity)
+  "AzureStorage__EvalProcessingRequestsQueueName=eval-processing-requests",
+    
+    # Cache Settings - Redis (Active for Production)
     "Cache__Provider=Redis",
     "Cache__DefaultExpirationMinutes=60",
     "Cache__Memory__SizeLimitMB=100",
     "Cache__Memory__CompactionPercentage=0.25",
     "Cache__Memory__ExpirationScanFrequencySeconds=60",
     
-    # Cache Settings - Redis Configuration for PPE (Shared Redis Cache with Managed Identity)
-    "Cache__Redis__Endpoint=sxgagenteval.redis.cache.windows.net:6380",
-    "Cache__Redis__InstanceName=evalplatformcacheppe",
-    "Cache__Redis__UseManagedIdentity=true",
+    # Cache Settings - Redis Configuration for Production
+    "Cache__Redis__Endpoint=evalplatformcacheprod.redis.cache.windows.net:6380",
+    "Cache__Redis__InstanceName=evalplatformcacheprod",
+ "Cache__Redis__UseManagedIdentity=true",
     "Cache__Redis__ConnectTimeoutSeconds=5",
     "Cache__Redis__CommandTimeoutSeconds=3",
     "Cache__Redis__UseSsl=true",
     "Cache__Redis__Retry__Enabled=true",
-    "Cache__Redis__Retry__MaxRetryAttempts=2",
+  "Cache__Redis__Retry__MaxRetryAttempts=2",
     "Cache__Redis__Retry__BaseDelayMs=500",
     "Cache__Redis__Retry__MaxDelayMs=2000",
     
-    # DataVerse API Settings - PPE Environment
-    "DataVerseAPI__DatasetEnrichmentRequestAPIEndPoint=https://sxg-eval-ppe.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun",
-    "DataVerseAPI__Scope=https://sxg-eval-ppe.crm.dynamics.com/.default",
+    # DataVerse API Settings - Production Environment
+    "DataVerseAPI__DatasetEnrichmentRequestAPIEndPoint=https://sxg-eval-prod.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun",
+    "DataVerseAPI__Scope=https://sxg-eval-prod.crm.dynamics.com/.default",
     
     # Telemetry Settings
     "Telemetry__AppInsightsConnectionString=InstrumentationKey=5632387c-6748-4260-b92a-93e829ba6d98;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=a1a5a468-0871-43e3-8c00-3d6fac0d9aca",
@@ -194,10 +205,10 @@ $appSettings = @(
     "OpenTelemetry__ServiceVersion=1.0.0",
     "OpenTelemetry__CloudRoleName=SXG-EvalPlatform-API",
     "OpenTelemetry__EnableConsoleExporter=false",
-    "OpenTelemetry__EnableApplicationInsights=true",
-    "OpenTelemetry__SamplingRatio=1.0",
+  "OpenTelemetry__EnableApplicationInsights=true",
+    "OpenTelemetry__SamplingRatio=0.1",
     "OpenTelemetry__MaxExportBatchSize=100",
- "OpenTelemetry__ExportTimeoutMilliseconds=30000",
+    "OpenTelemetry__ExportTimeoutMilliseconds=30000",
     
     # Logging Settings
     "Logging__LogLevel__Default=Information",
@@ -208,13 +219,13 @@ $appSettings = @(
 )
 
 az webapp config appsettings set `
- --name $AppName `
- --resource-group $ResourceGroupName `
-    --settings @appSettings `
+  --name $AppName `
+    --resource-group $ResourceGroupName `
+--settings @appSettings `
     --output none
 
 if ($LASTEXITCODE -ne 0) {
-Write-Host "? Failed to configure App Settings" -ForegroundColor Red
+    Write-Host "? Failed to configure App Settings" -ForegroundColor Red
   exit 1
 }
 Write-Host "? App Settings configured successfully" -ForegroundColor Green
@@ -230,16 +241,17 @@ Write-Host ""
 
 # Deployment Summary
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "? DEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
+Write-Host "? PRODUCTION DEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "?? Environment: PPE" -ForegroundColor Cyan
+Write-Host "?? Environment: PRODUCTION" -ForegroundColor Red
 Write-Host "?? Version: 1.0.0" -ForegroundColor Cyan
 Write-Host "?? API URL: https://$AppName.azurewebsites.net" -ForegroundColor Cyan
 Write-Host "?? Swagger UI: https://$AppName.azurewebsites.net/swagger" -ForegroundColor Cyan
 Write-Host "?? Storage: $StorageAccountName" -ForegroundColor Cyan
+Write-Host "?? Redis Cache: evalplatformcacheprod (ACTIVE)" -ForegroundColor Red
 Write-Host ""
-Write-Host "?? Verify Deployment:" -ForegroundColor Yellow
+Write-Host "? Verify Deployment:" -ForegroundColor Yellow
 Write-Host "   Health Check: https://$AppName.azurewebsites.net/api/v1/health" -ForegroundColor White
 Write-Host "   Default Config: https://$AppName.azurewebsites.net/api/v1/eval/configurations/defaultconfiguration" -ForegroundColor White
 Write-Host ""

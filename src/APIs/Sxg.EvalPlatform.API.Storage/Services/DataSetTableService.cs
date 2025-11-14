@@ -1,6 +1,5 @@
 ﻿using Azure.Core;
 using Azure.Data.Tables;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
@@ -8,23 +7,33 @@ using SXG.EvalPlatform.Common;
 namespace Sxg.EvalPlatform.API.Storage.Services
 {
     /// <summary>
-    /// Service for DataSet Azure Table Storage operations
+    /// Service for DataSet Azure Table Storage operations with caching support
     /// </summary>
     public class DataSetTableService : IDataSetTableService
     {
         private readonly Lazy<TableClient> _tableClient;
         private readonly ILogger<DataSetTableService> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly IConfigHelper _configHelper;
         private readonly string _tableName;
         private readonly string _accountName;
+        private readonly ICacheManager _cacheManager;
 
-        public DataSetTableService(IConfiguration configuration, ILogger<DataSetTableService> logger)
+        // Cache key constants
+        private const string GET_DATASET_BY_ID_CACHE_KEY = "DATASET_ID:{0}";
+        private const string GET_DATASET_CACHE_KEY = "DATASET:{0}:{1}"; // agentId:datasetId
+        private const string GET_ALL_DATASETS_BY_AGENT_CACHE_KEY = "DATASETS_AGENT:{0}";
+        private const string GET_DATASETS_BY_AGENT_TYPE_CACHE_KEY = "DATASETS_AGENT_TYPE:{0}:{1}"; // agentId:type
+        private const string GET_DATASETS_BY_NAME_CACHE_KEY = "DATASETS_NAME:{0}:{1}"; // agentId:name
+        private const string GET_DATASET_BY_NAME_TYPE_CACHE_KEY = "DATASET_NAME_TYPE:{0}:{1}:{2}"; // agentId:name:type
+
+        public DataSetTableService(IConfigHelper configHelper, ILogger<DataSetTableService> logger, ICacheManager cacheManager)
         {
             _logger = logger;
-            _configuration = configuration;
+            _configHelper = configHelper;
+            _cacheManager = cacheManager;
 
-            _accountName = configuration["AzureStorage:AccountName"];
-            _tableName = configuration["AzureStorage:DataSetsTable"] ?? "DataSets";
+            _accountName = configHelper.GetAzureStorageAccountName();
+            _tableName = configHelper.GetDataSetsTable();
 
             if (string.IsNullOrEmpty(_accountName))
             {
@@ -34,8 +43,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             // Initialize lazy TableClient
             _tableClient = new Lazy<TableClient>(InitializeTableClient);
 
-            _logger.LogInformation("DataSetTableService initialized (lazy) for table: {_storageTableName}, account: {AccountName}",
-                _tableName, _accountName);
+            _logger.LogInformation($"DataSetTableService initialized (lazy) for table: {_tableName}, account: {_accountName}");
         }
 
         /// <summary>
@@ -46,11 +54,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Initializing TableClient for table: {_storageTableName}, account: {AccountName}",
+                _logger.LogInformation("Initializing TableClient for table: {TableName}, account: {AccountName}",
                     _tableName, _accountName);
 
                 var tableUri = $"https://{_accountName}.table.core.windows.net";
-                var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+                var environment = _configHelper.GetASPNetCoreEnvironment() ?? "Production";
                 TokenCredential credential = CommonUtils.GetTokenCredential(environment);
 
                 var serviceClient = new TableServiceClient(new Uri(tableUri), credential);
@@ -59,14 +67,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Ensure table exists
                 tableClient.CreateIfNotExists();
 
-                _logger.LogInformation("TableClient successfully initialized for table: {_storageTableName}", _tableName);
+                _logger.LogInformation($"TableClient successfully initialized for table: {_tableName}" );
 
                 return tableClient;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize TableClient for table: {_storageTableName}, account: {AccountName}",
-                    _tableName, _accountName);
+                _logger.LogError(ex, $"Failed to initialize TableClient for table: {_tableName}, account: {_accountName}");
                 throw;
             }
         }
@@ -76,12 +83,74 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// </summary>
         private TableClient TableClient => _tableClient.Value;
 
+        /// <summary>
+        /// Invalidates all cache entries related to a specific dataset
+        /// </summary>
+        private async Task InvalidateDataSetCacheAsync(string agentId, string datasetId, DataSetTableEntity? entity = null)
+        {
+            try
+            {
+                var invalidationTasks = new List<Task>
+                {
+                    // Invalidate specific dataset caches
+                        _cacheManager.RemoveAsync(string.Format(GET_DATASET_BY_ID_CACHE_KEY, datasetId)),
+                            _cacheManager.RemoveAsync(string.Format(GET_DATASET_CACHE_KEY, agentId, datasetId)),
+        
+                // Invalidate list caches for the agent
+                        _cacheManager.RemoveAsync(string.Format(GET_ALL_DATASETS_BY_AGENT_CACHE_KEY, agentId))
+                };
+
+                // If we have the entity, invalidate more specific caches
+                if (entity != null)
+                {
+                    invalidationTasks.Add(_cacheManager.RemoveAsync(
+                            string.Format(GET_DATASETS_BY_AGENT_TYPE_CACHE_KEY, agentId, entity.DatasetType)));
+
+                    invalidationTasks.Add(_cacheManager.RemoveAsync(
+                      string.Format(GET_DATASETS_BY_NAME_CACHE_KEY, agentId, entity.DatasetName)));
+
+                    invalidationTasks.Add(_cacheManager.RemoveAsync(
+                    string.Format(GET_DATASET_BY_NAME_TYPE_CACHE_KEY, agentId, entity.DatasetName, entity.DatasetType)));
+                }
+
+                await Task.WhenAll(invalidationTasks);
+
+                _logger.LogDebug("Invalidated cache for dataset - Agent: {AgentId}, DatasetId: {DatasetId}",
+            agentId, datasetId);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw - cache invalidation failure shouldn't break the operation
+                _logger.LogWarning(ex, "Failed to invalidate cache for dataset - Agent: {AgentId}, DatasetId: {DatasetId}",
+                agentId, datasetId);
+            }
+        }
+
+        /// <summary>
+        /// Invalidates all cache entries for a specific agent
+        /// </summary>
+        private async Task InvalidateAgentCacheAsync(string agentId)
+        {
+            try
+            {
+                // Note: We can't easily invalidate all type/name variations without knowing them
+                // So we invalidate the most common cache keys
+                await _cacheManager.RemoveAsync(string.Format(GET_ALL_DATASETS_BY_AGENT_CACHE_KEY, agentId));
+
+                _logger.LogDebug("Invalidated agent-level cache for Agent: {AgentId}", agentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to invalidate agent cache for Agent: {AgentId}", agentId);
+            }
+        }
+
         public async Task<DataSetTableEntity> SaveDataSetAsync(DataSetTableEntity entity)
         {
             try
             {
                 _logger.LogInformation("Saving dataset for Agent: {AgentId}, DatasetId: {DatasetId}, Type: {DatasetType}",
-                    entity.AgentId, entity.DatasetId, entity.DatasetType);
+                         entity.AgentId, entity.DatasetId, entity.DatasetType);
 
                 // Update timestamp
                 entity.LastUpdatedOn = DateTime.UtcNow;
@@ -89,15 +158,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
 
-                _logger.LogInformation("Successfully saved dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    entity.AgentId, entity.DatasetId);
+                // Invalidate related caches
+                await InvalidateDataSetCacheAsync(entity.AgentId, entity.DatasetId, entity);
+
+                _logger.LogInformation($"Successfully saved dataset for Agent: {entity.AgentId}, DatasetId: {entity.DatasetId}");
 
                 return entity;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    entity.AgentId, entity.DatasetId);
+                 entity.AgentId, entity.DatasetId);
                 throw;
             }
         }
@@ -106,24 +177,37 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                var cacheKey = string.Format(GET_DATASET_CACHE_KEY, agentId, datasetId);
+                var cachedEntity = await _cacheManager.GetAsync<DataSetTableEntity>(cacheKey);
+
+                if (cachedEntity != null)
+                {
+                    _logger.LogDebug("Cache hit for dataset - Agent: {AgentId}, DatasetId: {DatasetId}",
+                                agentId, datasetId);
+                    return cachedEntity;
+                }
+
+                _logger.LogInformation($"Retrieving dataset for Agent: {agentId}, DatasetId: {datasetId}");
 
                 var response = await TableClient.GetEntityAsync<DataSetTableEntity>(agentId, datasetId);
+                var entity = response.Value;
+
+                // Cache the result
+                await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
+
                 _logger.LogInformation("Found dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
-                return response.Value;
+               agentId, datasetId);
+
+                return entity;
             }
             catch (Azure.RequestFailedException ex) when (ex.Status == 404)
             {
-                _logger.LogInformation("Dataset not found for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                _logger.LogInformation($"Dataset not found for Agent: {agentId}, DatasetId: {datasetId}");
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                _logger.LogError(ex, $"Failed to retrieve dataset for Agent: {agentId}, DatasetId: {datasetId}");
                 throw;
             }
         }
@@ -132,6 +216,15 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
+                var cacheKey = string.Format(GET_DATASET_BY_ID_CACHE_KEY, datasetId);
+                var cachedEntity = await _cacheManager.GetAsync<DataSetTableEntity>(cacheKey);
+
+                if (cachedEntity != null)
+                {
+                    _logger.LogDebug("Cache hit for dataset by ID: {DatasetId}", datasetId);
+                    return cachedEntity;
+                }
+
                 _logger.LogInformation("Searching for dataset by ID: {DatasetId}", datasetId);
 
                 // Since we don't know the partition key (AgentId), we need to search across all partitions
@@ -140,7 +233,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await foreach (var entity in TableClient.QueryAsync<DataSetTableEntity>(filter))
                 {
                     _logger.LogInformation("Found dataset by ID: {DatasetId} for Agent: {AgentId}",
-                        datasetId, entity.AgentId);
+                               datasetId, entity.AgentId);
+
+                    // Cache the result
+                    await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
+
                     return entity;
                 }
 
@@ -158,6 +255,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
+                var cacheKey = string.Format(GET_ALL_DATASETS_BY_AGENT_CACHE_KEY, agentId);
+                var cachedEntities = await _cacheManager.GetAsync<List<DataSetTableEntity>>(cacheKey);
+
+                if (cachedEntities != null)
+                {
+                    _logger.LogDebug("Cache hit for all datasets by Agent: {AgentId}, Count: {Count}",
+                         agentId, cachedEntities.Count);
+                    return cachedEntities;
+                }
+
                 _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}", agentId);
 
                 var entities = new List<DataSetTableEntity>();
@@ -168,8 +275,10 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}",
-                    entities.Count, agentId);
+                // Cache the result
+                await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
+
+                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}");
 
                 return entities;
             }
@@ -184,8 +293,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    agentId, datasetType);
+                var cacheKey = string.Format(GET_DATASETS_BY_AGENT_TYPE_CACHE_KEY, agentId, datasetType);
+                var cachedEntities = await _cacheManager.GetAsync<List<DataSetTableEntity>>(cacheKey);
+
+                if (cachedEntities != null)
+                {
+                    _logger.LogDebug($"Cache hit for datasets by Agent: {agentId}, Type: {datasetType}, Count: {cachedEntities.Count}");
+                    return cachedEntities;
+                }
+
+                _logger.LogInformation($"Retrieving all datasets for Agent: {agentId}, Type: {datasetType}");
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetType eq '{datasetType}'";
@@ -195,15 +312,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    entities.Count, agentId, datasetType);
+                // Cache the result
+                await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
+
+                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}, Type: {datasetType}");
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    agentId, datasetType);
+                _logger.LogError(ex, $"Failed to retrieve datasets for Agent: {agentId}, Type: {datasetType}");
                 throw;
             }
         }
@@ -212,8 +330,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Retrieving datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    agentId, datasetName);
+                var cacheKey = string.Format(GET_DATASETS_BY_NAME_CACHE_KEY, agentId, datasetName);
+                var cachedEntities = await _cacheManager.GetAsync<List<DataSetTableEntity>>(cacheKey);
+
+                if (cachedEntities != null)
+                {
+                    _logger.LogDebug($"Cache hit for datasets by Agent: {agentId}, DatasetName: {datasetName}, Count: {cachedEntities.Count}");
+                    return cachedEntities;
+                }
+
+                _logger.LogInformation($"Retrieving datasets by dataset name for Agent: {agentId}, DatasetName: {datasetName}");
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}'";
@@ -223,15 +349,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     entities.Add(entity);
                 }
 
-                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    entities.Count, agentId, datasetName);
+                // Cache the result
+                await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
+
+                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}, DatasetName: {datasetName}");
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    agentId, datasetName);
+                _logger.LogError(ex, $"Failed to retrieve datasets by dataset name for Agent: {agentId}, DatasetName: {datasetName}");
                 throw;
             }
         }
@@ -246,26 +373,35 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
-                    agentId, datasetName, datasetType);
+                var cacheKey = string.Format(GET_DATASET_BY_NAME_TYPE_CACHE_KEY, agentId, datasetName, datasetType);
+                var cachedEntity = await _cacheManager.GetAsync<DataSetTableEntity>(cacheKey);
+
+                if (cachedEntity != null)
+                {
+                    _logger.LogDebug($"Cache hit for dataset by Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                    return cachedEntity;
+                }
+
+                _logger.LogInformation($"Retrieving dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
 
                 var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}' and DatasetType eq '{datasetType}'";
 
                 await foreach (var entity in TableClient.QueryAsync<DataSetTableEntity>(filter))
                 {
-                    _logger.LogInformation("Found dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
-                        agentId, datasetName, datasetType);
+                    // Cache the result
+                    await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
+
+                    _logger.LogInformation($"Found dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+
                     return entity;
                 }
 
-                _logger.LogInformation("Dataset not found for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
-                    agentId, datasetName, datasetType);
+                _logger.LogInformation($"Dataset not found for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
-                    agentId, datasetName, datasetType);
+                _logger.LogError(ex, $"Failed to retrieve dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
                 throw;
             }
         }
@@ -275,23 +411,31 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Deleting dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                     agentId, datasetId);
+
+                // Get the entity first to have full details for cache invalidation
+                var entity = await GetDataSetAsync(agentId, datasetId);
 
                 await TableClient.DeleteEntityAsync(agentId, datasetId);
+
+                // Invalidate related caches
+                await InvalidateDataSetCacheAsync(agentId, datasetId, entity);
+
                 _logger.LogInformation("Successfully deleted dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                agentId, datasetId);
+
                 return true;
             }
             catch (Azure.RequestFailedException ex) when (ex.Status == 404)
             {
                 _logger.LogInformation("Dataset not found for deletion - Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                          agentId, datasetId);
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+      agentId, datasetId);
                 throw;
             }
         }
@@ -319,8 +463,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     }
                 }
 
+                // Invalidate all agent-related caches
+                await InvalidateAgentCacheAsync(agentId);
+
+                // Also invalidate individual dataset caches
+                foreach (var dataset in datasets)
+                {
+                    await InvalidateDataSetCacheAsync(agentId, dataset.DatasetId, dataset);
+                }
+
                 _logger.LogInformation("Successfully deleted {DeletedCount} datasets for Agent: {AgentId}",
-                    deletedCount, agentId);
+                 deletedCount, agentId);
 
                 return deletedCount;
             }
@@ -336,14 +489,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Updating dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+      agentId, datasetId);
 
                 // Get the existing entity
                 var existingEntity = await GetDataSetAsync(agentId, datasetId);
                 if (existingEntity == null)
                 {
                     _logger.LogInformation("Dataset not found for update - Agent: {AgentId}, DatasetId: {DatasetId}",
-                        agentId, datasetId);
+                          agentId, datasetId);
                     return null;
                 }
 
@@ -354,8 +507,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Save the updated entity
                 await TableClient.UpsertEntityAsync(existingEntity);
 
+                // Invalidate related caches
+                await InvalidateDataSetCacheAsync(agentId, datasetId, existingEntity);
+
                 _logger.LogInformation("Successfully updated dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+          agentId, datasetId);
 
                 return existingEntity;
             }

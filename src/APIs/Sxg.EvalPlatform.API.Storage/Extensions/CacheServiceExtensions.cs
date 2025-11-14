@@ -1,9 +1,12 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.Configuration;
 using Sxg.EvalPlatform.API.Storage.Services;
 using StackExchange.Redis;
+using SXG.EvalPlatform.Common;
+using Azure.Identity;
+using Microsoft.Azure.StackExchangeRedis;
 
 namespace Sxg.EvalPlatform.API.Storage.Extensions
 {
@@ -30,7 +33,7 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
             {
                 case "redis":
                 case "distributed":
-                    services.AddRedisCacheServices(cacheOptions);
+                    services.AddRedisCacheServices(cacheOptions, configuration);
                     break;
                 case "memory":
                 default:
@@ -48,133 +51,178 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
         {
             // Configure memory cache options
             services.AddMemoryCache(options =>
-          {
-              if (cacheOptions.Memory.SizeLimitMB > 0)
-              {
-                  options.SizeLimit = cacheOptions.Memory.SizeLimitMB * 1024 * 1024; // Convert MB to bytes
-              }
-              options.CompactionPercentage = cacheOptions.Memory.CompactionPercentage;
-              options.ExpirationScanFrequency = TimeSpan.FromSeconds(cacheOptions.Memory.ExpirationScanFrequencySeconds);
-          });
+            {
+                if (cacheOptions.Memory.SizeLimitMB > 0)
+                {
+                    options.SizeLimit = cacheOptions.Memory.SizeLimitMB * 1024 * 1024; // Convert MB to bytes
+                }
+                options.CompactionPercentage = cacheOptions.Memory.CompactionPercentage;
+                options.ExpirationScanFrequency = TimeSpan.FromSeconds(cacheOptions.Memory.ExpirationScanFrequencySeconds);
+            });
 
             // Register cache manager
             services.AddScoped<ICacheManager>(provider =>
-           {
-               var memoryCache = provider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
-               var logger = provider.GetRequiredService<ILogger<MemoryCacheManager>>();
+            {
+                var memoryCache = provider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                var logger = provider.GetRequiredService<ILogger<MemoryCacheManager>>();
 
-               return new MemoryCacheManager(memoryCache, logger);
-           });
+                return new MemoryCacheManager(memoryCache, logger);
+            });
 
             return services;
         }
 
         /// <summary>
-        /// Add Redis cache services with fast performance settings
+        /// Add Redis cache services with Azure AD (Managed Identity) authentication
         /// </summary>
-        private static IServiceCollection AddRedisCacheServices(this IServiceCollection services, CacheOptions cacheOptions)
+        private static IServiceCollection AddRedisCacheServices(this IServiceCollection services, CacheOptions cacheOptions, IConfiguration configuration)
         {
             if (string.IsNullOrEmpty(cacheOptions.Redis.Endpoint))
             {
-                throw new InvalidOperationException("Redis endpoint is required when using Redis cache provider. Configure 'Cache:Redis:Endpoint' in application settings.");
+                var logger = services.BuildServiceProvider().GetService<ILoggerFactory>()?.CreateLogger("CacheServiceExtensions");
+                logger?.LogWarning("Redis endpoint is not configured. Falling back to memory cache.");
+                return services.AddMemoryCacheServices(cacheOptions);
             }
 
-            // Configure Redis connection using ConfigurationOptions for better control
-            services.AddSingleton<IConnectionMultiplexer>(provider =>
+            var environment = configuration.GetValue<string>("ApiSettings:Environment")
+            ?? configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT")
+                 ?? "Production";
+
+            var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
+            var startupLogger = loggerFactory?.CreateLogger("CacheServiceExtensions");
+
+            startupLogger?.LogInformation("Configuring Redis cache - Endpoint: {Endpoint}, Environment: {Environment}",
+         cacheOptions.Redis.Endpoint, environment);
+
+            try
             {
-                var logger = provider.GetService<ILogger<IConnectionMultiplexer>>();
+                // Parse endpoint
+                var endpointParts = cacheOptions.Redis.Endpoint.Split(',')[0].Split(':');
+                var host = endpointParts[0];
+                var port = endpointParts.Length > 1 && int.TryParse(endpointParts[1], out var p) ? p : 6380;
+                var cacheName = host.Split('.')[0];
 
-                try
+                // Get credential
+                var credential = CommonUtils.GetTokenCredential(environment);
+
+                // Only set username for PPE and Production (Managed Identity environments)
+                var requiresUsername = environment.Equals("PPE", StringComparison.OrdinalIgnoreCase) ||
+             environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
+
+                startupLogger?.LogInformation("Using credential type: {CredentialType}, Environment: {Environment}, Username required: {UsernameRequired}",
+           credential.GetType().Name, environment, requiresUsername);
+
+                // Configure distributed cache
+                services.AddStackExchangeRedisCache(options =>
                 {
-                    // Use ConfigurationOptions for better control over timeouts and connection settings
-                    var configurationOptions = new ConfigurationOptions();
+                    options.ConnectionMultiplexerFactory = async () =>
+                    {
+                        var configOptions = new ConfigurationOptions
+                        {
+                            EndPoints = { { host, port } },
+                            Ssl = true,
+                            AbortOnConnectFail = false,
+                            ConnectTimeout = cacheOptions.Redis.ConnectTimeoutSeconds * 1000,
+                            SyncTimeout = cacheOptions.Redis.CommandTimeoutSeconds * 1000,
+                            AsyncTimeout = cacheOptions.Redis.CommandTimeoutSeconds * 1000,
+                            ConnectRetry = cacheOptions.Redis.Retry.MaxRetryAttempts,
+                            ReconnectRetryPolicy = new LinearRetry(cacheOptions.Redis.Retry.BaseDelayMs),
+                            KeepAlive = 60,
+                            AllowAdmin = false
+                        };
 
-                    // Parse endpoint to get host and port
-                    var endpointParts = cacheOptions.Redis.Endpoint.Split(':');
-                    var host = endpointParts[0];
-                    var port = endpointParts.Length > 1 && int.TryParse(endpointParts[1], out var p) ? p : 6380;
+                        // Only set username for cloud environments
+                        if (requiresUsername)
+                        {
+                            configOptions.User = cacheName;
+                        }
 
-                    configurationOptions.EndPoints.Add(host, port);
-                    configurationOptions.Ssl = cacheOptions.Redis.UseSsl;
-                    configurationOptions.ConnectTimeout = cacheOptions.Redis.ConnectTimeoutSeconds * 1000;
-                    configurationOptions.SyncTimeout = cacheOptions.Redis.CommandTimeoutSeconds * 1000;
-                    configurationOptions.ConnectRetry = cacheOptions.Redis.Retry.MaxRetryAttempts;
-                    configurationOptions.AbortOnConnectFail = false; // Important for cloud scenarios
-                    configurationOptions.ReconnectRetryPolicy = new LinearRetry(cacheOptions.Redis.Retry.BaseDelayMs);
+                        // Configure with token credential
+                        await configOptions.ConfigureForAzureWithTokenCredentialAsync(credential);
 
-                    // Add keepalive settings
-                    configurationOptions.KeepAlive = 60; // Send keepalive every 60 seconds
-                    configurationOptions.DefaultDatabase = 0;
+                        var multiplexer = await ConnectionMultiplexer.ConnectAsync(configOptions);
+                        return multiplexer;
+                    };
+                    options.InstanceName = cacheOptions.Redis.InstanceName ?? "SXG-EvalPlatform-";
+                });
 
-                    logger?.LogInformation("Configuring Redis connection to {Host}:{Port} with SSL:{UseSsl}, ConnectTimeout:{ConnectTimeout}ms, SyncTimeout:{SyncTimeout}ms",
-        host, port, cacheOptions.Redis.UseSsl, configurationOptions.ConnectTimeout, configurationOptions.SyncTimeout);
-
-                    return ConnectionMultiplexer.Connect(configurationOptions);
-                }
-                catch (Exception ex)
+                // Register IConnectionMultiplexer - THIS WAS MISSING!
+                services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
                 {
-                    logger?.LogError(ex, "Failed to connect to Redis cache at {Endpoint}", cacheOptions.Redis.Endpoint);
-                    throw new InvalidOperationException($"Failed to connect to Redis cache: {ex.Message}", ex);
-                }
-            });
+                    var logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger("RedisConnection");
 
-            // Configure distributed cache with connection string approach
-            var connectionString = BuildRedisConnectionString(cacheOptions.Redis);
-            services.AddStackExchangeRedisCache(options =>
+                    try
+                    {
+                        var configOptions = new ConfigurationOptions
+                        {
+                            EndPoints = { { host, port } },
+                            Ssl = true,
+                            AbortOnConnectFail = false,
+                            ConnectTimeout = cacheOptions.Redis.ConnectTimeoutSeconds * 1000,
+                            SyncTimeout = cacheOptions.Redis.CommandTimeoutSeconds * 1000,
+                            AsyncTimeout = cacheOptions.Redis.CommandTimeoutSeconds * 1000,
+                            ConnectRetry = cacheOptions.Redis.Retry.MaxRetryAttempts,
+                            ReconnectRetryPolicy = new LinearRetry(cacheOptions.Redis.Retry.BaseDelayMs),
+                            KeepAlive = 60,
+                            AllowAdmin = false
+                        };
+
+                        // Only set username for cloud environments
+                        if (requiresUsername)
+                        {
+                            configOptions.User = cacheName;
+                        }
+
+                        // Configure with token credential
+                        var configTask = configOptions.ConfigureForAzureWithTokenCredentialAsync(credential);
+                        configTask.GetAwaiter().GetResult();
+
+                        logger?.LogInformation("Connecting to Redis - Environment: {Environment}, Username: {Username}",
+                         environment, requiresUsername ? cacheName : "(not set)");
+
+                        var connectTask = ConnectionMultiplexer.ConnectAsync(configOptions);
+                        connectTask.GetAwaiter().GetResult();
+
+                        var multiplexer = connectTask.Result;
+                        logger?.LogInformation("✅ Redis ConnectionMultiplexer created. IsConnected: {IsConnected}", multiplexer.IsConnected);
+
+                        return multiplexer;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "❌ Failed to create Redis ConnectionMultiplexer: {Message}", ex.Message);
+                        throw;
+                    }
+                });
+
+                // Register cache manager WITH ConnectionMultiplexer
+                services.AddScoped<ICacheManager>(provider =>
+                {
+                    var distributedCache = provider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
+                    var cacheLogger = provider.GetRequiredService<ILogger<RedisCacheManager>>();
+
+                    IConnectionMultiplexer? conn = null;
+                    try
+                    {
+                        conn = provider.GetService<IConnectionMultiplexer>();
+                    }
+                    catch (Exception ex)
+                    {
+                        cacheLogger.LogWarning(ex, "Could not get IConnectionMultiplexer");
+                    }
+
+                    return new RedisCacheManager(distributedCache, cacheLogger, conn);
+                });
+
+                startupLogger?.LogInformation("✅ Redis cache services registered successfully");
+            }
+            catch (Exception ex)
             {
-                options.Configuration = connectionString;
-                options.InstanceName = cacheOptions.Redis.InstanceName ?? "SXG-EvalPlatform";
-            });
-
-            // Register cache manager with telemetry service
-            services.AddScoped<ICacheManager>(provider =>
-                      {
-                          var distributedCache = provider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
-                          var logger = provider.GetRequiredService<ILogger<RedisCacheManager>>();
-                          var connectionMultiplexer = provider.GetService<IConnectionMultiplexer>();
-
-                          return new RedisCacheManager(distributedCache, logger, connectionMultiplexer);
-                      });
+                startupLogger?.LogError(ex, "Failed to configure Redis cache. Falling back to memory cache. Error: {Error}", ex.Message);
+                return services.AddMemoryCacheServices(cacheOptions);
+            }
 
             return services;
-        }
-
-        /// <summary>
-        /// Build Redis connection string with supported parameters only
-        /// </summary>
-        private static string BuildRedisConnectionString(RedisOptions redisOptions)
-        {
-            var connectionStringBuilder = new List<string>
-        {
-             redisOptions.Endpoint!
-     };
-
-            if (redisOptions.UseSsl)
-            {
-                connectionStringBuilder.Add("ssl=true");
-            }
-
-            // Use fast timeouts for performance
-            if (redisOptions.ConnectTimeoutSeconds > 0)
-            {
-                connectionStringBuilder.Add($"connectTimeout={redisOptions.ConnectTimeoutSeconds * 1000}");
-            }
-
-            if (redisOptions.CommandTimeoutSeconds > 0)
-            {
-                connectionStringBuilder.Add($"syncTimeout={redisOptions.CommandTimeoutSeconds * 1000}");
-            }
-
-            // Add retry configuration
-            if (redisOptions.Retry.Enabled)
-            {
-                connectionStringBuilder.Add($"connectRetry={redisOptions.Retry.MaxRetryAttempts}");
-            }
-
-            // Add only supported resilience settings
-            connectionStringBuilder.Add("abortConnect=false");
-
-            return string.Join(",", connectionStringBuilder);
         }
     }
 }

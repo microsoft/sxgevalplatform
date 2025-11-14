@@ -69,6 +69,10 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     options.AbsoluteExpirationRelativeToNow = expiration.Value;
                 }
 
+                // Set size for cache entry (required when SizeLimit is configured)
+                // Using a simple heuristic: 1 unit per entry (can be refined based on actual object size)
+                options.Size = 1;
+
                 // Add callback to remove from tracking when expired
                 options.RegisterPostEvictionCallback((evictedKey, evictedValue, reason, state) =>
                  {
@@ -79,7 +83,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _memoryCache.Set(key, value, options);
                 _keyAccessTimes[key] = DateTime.UtcNow;
 
-                _logger.LogDebug("Cache entry set - Key: {Key}, Expiration: {Expiration}", key, expiration);
+                _logger.LogDebug("Cache entry set - Key: {Key}, Expiration: {Expiration}, Size: 1", key, expiration);
             }
             catch (Exception ex)
             {
@@ -102,7 +106,9 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             {
                 var options = new MemoryCacheEntryOptions
                 {
-                    AbsoluteExpiration = absoluteExpiration
+                    AbsoluteExpiration = absoluteExpiration,
+                    // Set size for cache entry (required when SizeLimit is configured)
+                    Size = 1
                 };
 
                 // Add callback to remove from tracking when expired
@@ -115,7 +121,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _memoryCache.Set(key, value, options);
                 _keyAccessTimes[key] = DateTime.UtcNow;
 
-                _logger.LogDebug("Cache entry set - Key: {Key}, AbsoluteExpiration: {AbsoluteExpiration}", key, absoluteExpiration);
+                _logger.LogDebug("Cache entry set - Key: {Key}, AbsoluteExpiration: {AbsoluteExpiration}, Size: 1", key, absoluteExpiration);
             }
             catch (Exception ex)
             {

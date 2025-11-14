@@ -76,6 +76,11 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.CreatedOn, opt => opt.MapFrom(src => src.CreatedOn))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.LastUpdatedBy))
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => src.LastUpdatedOn));
+
+            CreateMap<EvalRunEntity, EvalRunDto>();
+
+            CreateMap<EvalRunEntity, EvalRunDto>().ReverseMap();
+
         }
 
         private void ConfigureDataSetMappings()

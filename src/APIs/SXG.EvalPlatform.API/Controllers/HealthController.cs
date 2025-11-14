@@ -344,132 +344,376 @@ public class HealthController : ControllerBase
     }
 
     /// <summary>
-    /// Test Redis cache directly using IConnectionMultiplexer
+    /// Test Redis cache directly using IConnectionMultiplexer with comprehensive diagnostics
     /// </summary>
     private async Task<DependencyHealthCheckDTO> CheckRedisCacheDirectlyAsync(Stopwatch stopwatch)
     {
+        var diagnostics = new List<string>();
+        
         try
         {
+            // Get configuration for diagnostics
+            var configuration = HttpContext.RequestServices.GetService<IConfiguration>();
+            if (configuration != null)
+            {
+                diagnostics.Add("=== Redis Configuration ===");
+                diagnostics.Add($"Provider: {configuration.GetValue<string>("Cache:Provider")}");
+                diagnostics.Add($"Endpoint: {configuration.GetValue<string>("Cache:Redis:Endpoint")}");
+                diagnostics.Add($"InstanceName: {configuration.GetValue<string>("Cache:Redis:InstanceName")}");
+                diagnostics.Add($"UseManagedIdentity: {configuration.GetValue<bool>("Cache:Redis:UseManagedIdentity")}");
+                diagnostics.Add($"UseSsl: {configuration.GetValue<bool>("Cache:Redis:UseSsl")}");
+                diagnostics.Add($"ConnectTimeout: {configuration.GetValue<int>("Cache:Redis:ConnectTimeoutSeconds")}s");
+                diagnostics.Add($"CommandTimeout: {configuration.GetValue<int>("Cache:Redis:CommandTimeoutSeconds")}s");
+                diagnostics.Add($"Environment: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
+                diagnostics.Add($"MachineName: {Environment.MachineName}");
+                diagnostics.Add("");
+            }
+
             // Get Redis connection multiplexer directly
             var connectionMultiplexer = HttpContext.RequestServices.GetService<StackExchange.Redis.IConnectionMultiplexer>();
 
             if (connectionMultiplexer == null)
             {
+                diagnostics.Add("ERROR: Redis IConnectionMultiplexer not registered in DI container");
+                _logger.LogError("Redis health check failed: ConnectionMultiplexer not registered");
+            
                 return new DependencyHealthCheckDTO
                 {
                     Name = "Cache (Redis)",
                     IsHealthy = false,
                     ErrorMessage = "Redis connection multiplexer not registered or not connected",
-                    ResponseTime = stopwatch.Elapsed
+                    ResponseTime = stopwatch.Elapsed,
+                    AdditionalInfo = string.Join(Environment.NewLine, diagnostics)
                 };
             }
 
-            // Check if Redis is connected
-            if (!connectionMultiplexer.IsConnected)
+            diagnostics.Add("=== Connection Status ===");
+            diagnostics.Add($"IsConnected: {connectionMultiplexer.IsConnected}");
+            diagnostics.Add($"IsConnecting: {connectionMultiplexer.IsConnecting}");
+            
+         // Get endpoint information
+            var endpoints = connectionMultiplexer.GetEndPoints();
+        diagnostics.Add($"Endpoints Count: {endpoints.Length}");
+            foreach (var endpoint in endpoints)
+  {
+     diagnostics.Add($"  - {endpoint}");
+            }
+         diagnostics.Add("");
+        // Check if Redis is connected
+   if (!connectionMultiplexer.IsConnected)
             {
-                return new DependencyHealthCheckDTO
-                {
-                    Name = "Cache (Redis)",
-                    IsHealthy = false,
-                    ErrorMessage = "Redis connection is not established",
-                    ResponseTime = stopwatch.Elapsed
-                };
-            }
+   diagnostics.Add("WARNING: Redis connection is not established");
+        
+     // Try to get connection status from each endpoint
+ diagnostics.Add("=== Endpoint Status ===");
+           foreach (var endpoint in endpoints)
+      {
+         try
+        {
+           var server = connectionMultiplexer.GetServer(endpoint);
+                diagnostics.Add($"Endpoint {endpoint}:");
+     diagnostics.Add($"  IsConnected: {server.IsConnected}");
+        diagnostics.Add($"  IsReplica: {server.IsReplica}");
+    }
+               catch (Exception endpointEx)
+            {
+  diagnostics.Add($"  Error checking endpoint: {endpointEx.GetType().Name} - {endpointEx.Message}");
+     }
+     }
+     diagnostics.Add("");
+                diagnostics.Add("Note: Connection will retry in background. Cache operations may timeout until connected.");
+      }
 
+ diagnostics.Add("=== Performing Operations ===");
             var database = connectionMultiplexer.GetDatabase();
-            var testKey = "health-check-" + Guid.NewGuid().ToString("N")[..8];
+   var testKey = "health-check-" + Guid.NewGuid().ToString("N")[..8];
             var testValue = "health-test-" + DateTime.UtcNow.Ticks;
 
-            // Test SET operation directly on Redis
+            diagnostics.Add($"Test Key: {testKey}");
+   diagnostics.Add($"Test Value: {testValue}");
+        
+         // Test SET operation with timeout
+        var setStartTime = Stopwatch.GetTimestamp();
             var setResult = await database.StringSetAsync(testKey, testValue, TimeSpan.FromMinutes(1));
-            if (!setResult)
-            {
-                return new DependencyHealthCheckDTO
-                {
-                    Name = "Cache (Redis)",
-                    IsHealthy = false,
-                    ErrorMessage = "Redis SET operation failed",
-                    ResponseTime = stopwatch.Elapsed
-                };
-            }
+ var setDuration = TimeSpan.FromTicks(Stopwatch.GetTimestamp() - setStartTime);
+          
+  diagnostics.Add($"SET Operation: {(setResult ? "Success" : "Failed")} (Duration: {setDuration.TotalMilliseconds:F2}ms)");
+            
+ if (!setResult)
+    {
+      diagnostics.Add("ERROR: Redis SET operation failed");
+        _logger.LogError("Redis health check failed: SET operation failed");
+         
+ return new DependencyHealthCheckDTO
+   {
+       Name = "Cache (Redis)",
+            IsHealthy = false,
+      ErrorMessage = "Redis SET operation failed",
+  ResponseTime = stopwatch.Elapsed,
+           AdditionalInfo = string.Join(Environment.NewLine, diagnostics)
+ };
+       }
 
-            // Test GET operation directly on Redis
-            var getValue = await database.StringGetAsync(testKey);
-            if (!getValue.HasValue || getValue != testValue)
+         // Test GET operation
+ var getStartTime = Stopwatch.GetTimestamp();
+          var getValue = await database.StringGetAsync(testKey);
+     var getDuration = TimeSpan.FromTicks(Stopwatch.GetTimestamp() - getStartTime);
+            
+     diagnostics.Add($"GET Operation: {(getValue.HasValue ? "Success" : "Failed")} (Duration: {getDuration.TotalMilliseconds:F2}ms)");
+            diagnostics.Add($"Retrieved Value Match: {getValue == testValue}");
+            
+  if (!getValue.HasValue || getValue != testValue)
             {
-                return new DependencyHealthCheckDTO
-                {
-                    Name = "Cache (Redis)",
-                    IsHealthy = false,
-                    ErrorMessage = "Redis GET operation failed or returned incorrect value",
-                    ResponseTime = stopwatch.Elapsed
-                };
-            }
+         diagnostics.Add($"ERROR: Retrieved value mismatch. Expected: {testValue}, Got: {(getValue.HasValue ? getValue.ToString() : "null")}");
+    _logger.LogError("Redis health check failed: GET operation failed or value mismatch");
+            
+             return new DependencyHealthCheckDTO
+        {
+          Name = "Cache (Redis)",
+          IsHealthy = false,
+  ErrorMessage = "Redis GET operation failed or returned incorrect value",
+       ResponseTime = stopwatch.Elapsed,
+        AdditionalInfo = string.Join(Environment.NewLine, diagnostics)
+     };
+ }
 
             // Test DELETE operation
-            await database.KeyDeleteAsync(testKey);
+       var deleteStartTime = Stopwatch.GetTimestamp();
+  var deleteResult = await database.KeyDeleteAsync(testKey);
+         var deleteDuration = TimeSpan.FromTicks(Stopwatch.GetTimestamp() - deleteStartTime);
 
-            // Get Redis server info for additional details
-            var server = connectionMultiplexer.GetServer(connectionMultiplexer.GetEndPoints().First());
-            var info = await server.InfoAsync("server");
-
-            // Parse Redis info - it's grouped data
+      diagnostics.Add($"DELETE Operation: {(deleteResult ? "Success" : "Failed")} (Duration: {deleteDuration.TotalMilliseconds:F2}ms)");
+   diagnostics.Add("");
+            // Get Redis server info
+diagnostics.Add("=== Server Information ===");
             var redisVersion = "Unknown";
-            var clients = "Unknown";
-            var memory = "Unknown";
-
-            try
+  var clients = "Unknown";
+        var memory = "Unknown";
+         var uptime = "Unknown";
+            var role = "Unknown";
+            
+   try
             {
-                // Flatten the grouped data and search for specific keys
-                var flatInfo = info.SelectMany(group => group).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+       var server = connectionMultiplexer.GetServer(endpoints.First());
+  var info = await server.InfoAsync("server");
+   var statsInfo = await server.InfoAsync("stats");
+     var clientsInfo = await server.InfoAsync("clients");
+   var memoryInfo = await server.InfoAsync("memory");
+           var replicationInfo = await server.InfoAsync("replication");
 
-                redisVersion = flatInfo.ContainsKey("redis_version") ? flatInfo["redis_version"] : "Unknown";
-                clients = flatInfo.ContainsKey("connected_clients") ? flatInfo["connected_clients"] : "Unknown";
-                memory = flatInfo.ContainsKey("used_memory_human") ? flatInfo["used_memory_human"] : "Unknown";
-            }
-            catch (Exception infoEx)
-            {
-                _logger.LogWarning(infoEx, "Failed to parse Redis server info");
-            }
+                var allInfo = info.Concat(statsInfo).Concat(clientsInfo).Concat(memoryInfo).Concat(replicationInfo)
+        .SelectMany(group => group)
+           .GroupBy(kvp => kvp.Key)
+   .Select(g => g.First())
+             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            return new DependencyHealthCheckDTO
+     redisVersion = allInfo.ContainsKey("redis_version") ? allInfo["redis_version"] : "Unknown";
+         clients = allInfo.ContainsKey("connected_clients") ? allInfo["connected_clients"] : "Unknown";
+           memory = allInfo.ContainsKey("used_memory_human") ? allInfo["used_memory_human"] : "Unknown";
+    uptime = allInfo.ContainsKey("uptime_in_days") ? $"{allInfo["uptime_in_days"]} days" : "Unknown";
+            role = allInfo.ContainsKey("role") ? allInfo["role"] : "Unknown";
+
+ diagnostics.Add($"Redis Version: {redisVersion}");
+                diagnostics.Add($"Role: {role}");
+   diagnostics.Add($"Connected Clients: {clients}");
+     diagnostics.Add($"Used Memory: {memory}");
+            diagnostics.Add($"Uptime: {uptime}");
+         
+     if (allInfo.ContainsKey("maxmemory_human"))
+         diagnostics.Add($"Max Memory: {allInfo["maxmemory_human"]}");
+            if (allInfo.ContainsKey("total_commands_processed"))
+      diagnostics.Add($"Total Commands Processed: {allInfo["total_commands_processed"]}");
+if (allInfo.ContainsKey("instantaneous_ops_per_sec"))
+       diagnostics.Add($"Ops/Sec: {allInfo["instantaneous_ops_per_sec"]}");
+   }
+   catch (Exception infoEx)
             {
-                Name = "Cache (Redis)",
-                IsHealthy = true,
-                ResponseTime = stopwatch.Elapsed,
-                AdditionalInfo = $"Version: {redisVersion}, Clients: {clients}, Memory: {memory}"
+             diagnostics.Add($"Warning: Failed to retrieve server info: {infoEx.GetType().Name} - {infoEx.Message}");
+      _logger.LogWarning(infoEx, "Failed to parse Redis server info");
+ }
+
+            diagnostics.Add("");
+      diagnostics.Add("=== Performance Metrics ===");
+            diagnostics.Add($"Total Health Check Duration: {stopwatch.Elapsed.TotalMilliseconds:F2}ms");
+         diagnostics.Add($"SET Duration: {setDuration.TotalMilliseconds:F2}ms");
+  diagnostics.Add($"GET Duration: {getDuration.TotalMilliseconds:F2}ms");
+       diagnostics.Add($"DELETE Duration: {deleteDuration.TotalMilliseconds:F2}ms");
+
+       _logger.LogInformation("Redis health check successful");
+
+  return new DependencyHealthCheckDTO
+       {
+          Name = "Cache (Redis)",
+  IsHealthy = true,
+            ResponseTime = stopwatch.Elapsed,
+          AdditionalInfo = $"Version: {redisVersion}, Clients: {clients}, Memory: {memory}, Role: {role}, SET: {setDuration.TotalMilliseconds:F0}ms, GET: {getDuration.TotalMilliseconds:F0}ms, DELETE: {deleteDuration.TotalMilliseconds:F0}ms"
             };
         }
         catch (StackExchange.Redis.RedisTimeoutException ex)
         {
+          diagnostics.Add("");
+diagnostics.Add("=== EXCEPTION: RedisTimeoutException ===");
+            diagnostics.Add($"Type: {ex.GetType().FullName}");
+            diagnostics.Add($"Message: {ex.Message}");
+ diagnostics.Add($"Source: {ex.Source}");
+            diagnostics.Add($"HResult: 0x{ex.HResult:X8}");
+         diagnostics.Add("");
+   diagnostics.Add("Stack Trace:");
+            diagnostics.Add(ex.StackTrace ?? "(no stack trace)");
+            
+            if (ex.InnerException != null)
+        {
+       diagnostics.Add("");
+           diagnostics.Add($"Inner Exception Type: {ex.InnerException.GetType().FullName}");
+                diagnostics.Add($"Inner Exception Message: {ex.InnerException.Message}");
+          diagnostics.Add("Inner Exception Stack Trace:");
+diagnostics.Add(ex.InnerException.StackTrace ?? "(no stack trace)");
+      }
+
+      if (ex.Data.Count > 0)
+{
+     diagnostics.Add("");
+      diagnostics.Add("Exception Data:");
+       foreach (var key in ex.Data.Keys)
+         diagnostics.Add($"  {key}: {ex.Data[key]}");
+            }
+            
+            var errorDetails = string.Join(Environment.NewLine, diagnostics);
+            _logger.LogError(ex, "RedisTimeoutException during health check. Diagnostics: {Diagnostics}", errorDetails);
+            
             return new DependencyHealthCheckDTO
             {
-                Name = "Cache (Redis)",
+         Name = "Cache (Redis)",
                 IsHealthy = false,
-                ErrorMessage = $"Redis timeout: {ex.Message}",
-                ResponseTime = stopwatch.Elapsed
-            };
+          ErrorMessage = $"Redis timeout: {ex.Message}",
+        ResponseTime = stopwatch.Elapsed,
+  AdditionalInfo = errorDetails
+          };
         }
         catch (StackExchange.Redis.RedisConnectionException ex)
         {
-            return new DependencyHealthCheckDTO
+      diagnostics.Add("");
+      diagnostics.Add("=== EXCEPTION: RedisConnectionException ===");
+            diagnostics.Add($"Type: {ex.GetType().FullName}");
+            diagnostics.Add($"Message: {ex.Message}");
+    diagnostics.Add($"Source: {ex.Source}");
+          diagnostics.Add($"FailureType: {ex.FailureType}");
+            diagnostics.Add($"HResult: 0x{ex.HResult:X8}");
+     diagnostics.Add("");
+    diagnostics.Add("Stack Trace:");
+      diagnostics.Add(ex.StackTrace ?? "(no stack trace)");
+   
+     if (ex.InnerException != null)
+   {
+    diagnostics.Add("");
+   diagnostics.Add($"Inner Exception Type: {ex.InnerException.GetType().FullName}");
+    diagnostics.Add($"Inner Exception Message: {ex.InnerException.Message}");
+  diagnostics.Add("Inner Exception Stack Trace:");
+     diagnostics.Add(ex.InnerException.StackTrace ?? "(no stack trace)");
+            }
+
+      if (ex.Data.Count > 0)
             {
-                Name = "Cache (Redis)",
-                IsHealthy = false,
-                ErrorMessage = $"Redis connection failed: {ex.Message}",
-                ResponseTime = stopwatch.Elapsed
-            };
+       diagnostics.Add("");
+     diagnostics.Add("Exception Data:");
+  foreach (var key in ex.Data.Keys)
+        diagnostics.Add($"  {key}: {ex.Data[key]}");
+    }
+    
+      var errorDetails = string.Join(Environment.NewLine, diagnostics);
+            _logger.LogError(ex, "RedisConnectionException during health check. Diagnostics: {Diagnostics}", errorDetails);
+            
+   return new DependencyHealthCheckDTO
+       {
+      Name = "Cache (Redis)",
+        IsHealthy = false,
+ ErrorMessage = $"Redis connection failed: {ex.Message}",
+           ResponseTime = stopwatch.Elapsed,
+        AdditionalInfo = errorDetails
+  };
+        }
+        catch (StackExchange.Redis.RedisException ex)
+        {
+   diagnostics.Add("");
+ diagnostics.Add("=== EXCEPTION: RedisException ===");
+        diagnostics.Add($"Type: {ex.GetType().FullName}");
+            diagnostics.Add($"Message: {ex.Message}");
+            diagnostics.Add($"Source: {ex.Source}");
+      diagnostics.Add($"HResult: 0x{ex.HResult:X8}");
+   diagnostics.Add("");
+            diagnostics.Add("Stack Trace:");
+  diagnostics.Add(ex.StackTrace ?? "(no stack trace)");
+            
+    if (ex.InnerException != null)
+   {
+       diagnostics.Add("");
+   diagnostics.Add($"Inner Exception Type: {ex.InnerException.GetType().FullName}");
+    diagnostics.Add($"Inner Exception Message: {ex.InnerException.Message}");
+     diagnostics.Add("Inner Exception Stack Trace:");
+                diagnostics.Add(ex.InnerException.StackTrace ?? "(no stack trace)");
+  }
+
+            if (ex.Data.Count > 0)
+            {
+diagnostics.Add("");
+       diagnostics.Add("Exception Data:");
+       foreach (var key in ex.Data.Keys)
+          diagnostics.Add($"  {key}: {ex.Data[key]}");
+   }
+         
+            var errorDetails = string.Join(Environment.NewLine, diagnostics);
+  _logger.LogError(ex, "RedisException during health check. Diagnostics: {Diagnostics}", errorDetails);
+        
+ return new DependencyHealthCheckDTO
+  {
+    Name = "Cache (Redis)",
+        IsHealthy = false,
+             ErrorMessage = $"Redis error: {ex.Message}",
+ ResponseTime = stopwatch.Elapsed,
+            AdditionalInfo = errorDetails
+       };
         }
         catch (Exception ex)
         {
-            return new DependencyHealthCheckDTO
+            diagnostics.Add("");
+diagnostics.Add("=== EXCEPTION: Unexpected Error ===");
+    diagnostics.Add($"Exception Type: {ex.GetType().FullName}");
+       diagnostics.Add($"Message: {ex.Message}");
+   diagnostics.Add($"Source: {ex.Source}");
+   diagnostics.Add($"HResult: 0x{ex.HResult:X8}");
+      diagnostics.Add("");
+   diagnostics.Add("Stack Trace:");
+     diagnostics.Add(ex.StackTrace ?? "(no stack trace)");
+         
+       if (ex.InnerException != null)
             {
-                Name = "Cache (Redis)",
-                IsHealthy = false,
-                ErrorMessage = $"Redis error: {ex.Message}",
-                ResponseTime = stopwatch.Elapsed
-            };
+              diagnostics.Add("");
+         diagnostics.Add($"Inner Exception Type: {ex.InnerException.GetType().FullName}");
+ diagnostics.Add($"Inner Exception Message: {ex.InnerException.Message}");
+      diagnostics.Add("Inner Exception Stack Trace:");
+    diagnostics.Add(ex.InnerException.StackTrace ?? "(no stack trace)");
+          }
+        
+ if (ex.Data.Count > 0)
+    {
+    diagnostics.Add("");
+                diagnostics.Add("Exception Data:");
+ foreach (var key in ex.Data.Keys)
+        diagnostics.Add($"  {key}: {ex.Data[key]}");
         }
+    
+            var errorDetails = string.Join(Environment.NewLine, diagnostics);
+    _logger.LogError(ex, "Unexpected exception during Redis health check. Diagnostics: {Diagnostics}", errorDetails);
+            
+          return new DependencyHealthCheckDTO
+            {
+       Name = "Cache (Redis)",
+    IsHealthy = false,
+       ErrorMessage = $"Redis error: {ex.Message}",
+                ResponseTime = stopwatch.Elapsed,
+    AdditionalInfo = errorDetails
+       };
+      }
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Net;
 
 namespace SxgEvalPlatformApi.Models;
 
@@ -15,8 +16,11 @@ public class SaveEvaluationResultDto
     /// Can be an array of objects, a single object, or any valid JSON format.
     /// Example: [{"id": 1, "question": "...", "actualAnswer": "...", "Metrics": {...}}]
     /// </summary>
-    [Required(ErrorMessage = "EvaluationResults is required")]
-    public JsonElement EvaluationResults { get; set; }
+    [Required(ErrorMessage = "EvaluationResultSummary is required")]
+    public JsonElement EvaluationResultSummary { get; set; }
+
+    [Required(ErrorMessage = "EvaluationResultDataset is required")]
+    public JsonElement EvaluationResultDataset { get; set; }
 }
 
 /// <summary>
@@ -45,13 +49,8 @@ public class StoredEvaluationResultDto
 /// </summary>
 public class EvaluationResultSaveResponseDto
 {
-    public bool Success { get; set; }
-    
-    public string Message { get; set; } = string.Empty;
-    
     public Guid EvalRunId { get; set; }
     
-    public string BlobPath { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -59,13 +58,41 @@ public class EvaluationResultSaveResponseDto
 /// </summary>
 public class EvaluationResultResponseDto
 {
-    public bool Success { get; set; }
-    
-    public string Message { get; set; } = string.Empty;
-    
-    public Guid EvalRunId { get; set; }
-    
-    public string FileName { get; set; } = string.Empty;
-    
+    [JsonPropertyName("evalRunId")]
+    public string EvalRunId { get; set; }
+
+    [JsonPropertyName("agentId")]
+    public string AgentId { get; set; }
+
+    [JsonPropertyName("dataSetId")]
+    public string DataSetId { get; set; }
+
+    [JsonPropertyName("dataSetName")]
+    public string DataSetName { get; set; }
+
+    [JsonPropertyName("metricsConfigurationId")]
+    public string MetricsConfigurationId { get; set; }
+
+    [JsonPropertyName("metricsConfigurationName")]
+    public string MetricsConfigurationName { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; }
+
+    [JsonPropertyName("startedAt")]
+    public DateTime? StartedAt { get; set; }
+
+    [JsonPropertyName("completedAt")]
+    public DateTime? CompletedAt { get; set; }
     public JsonElement? EvaluationRecords { get; set; }
+    
 }
+
+public class APIRequestProcessingResultDto
+{
+    public bool IsSuccessful { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public HttpStatusCode StatusCode { get; set; }
+
+}
+
