@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sxg.EvalPlatform.API.Storage.Configuration;
 using Sxg.EvalPlatform.API.Storage.Services;
@@ -19,26 +18,55 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
         /// Add cache services to the service collection
         /// </summary>
         /// <param name="services">The service collection</param>
-        /// <param name="configuration">The configuration</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddCacheServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddCacheServices(this IServiceCollection services)
         {
-            // Bind cache configuration
-            var cacheOptions = new CacheOptions();
-            configuration.GetSection("Cache").Bind(cacheOptions);
-            services.Configure<CacheOptions>(configuration.GetSection("Cache"));
-
-            // Register cache services based on provider type
-            switch (cacheOptions.Provider.ToLowerInvariant())
+            // Ensure IConfigHelper is registered first (if not already)
+            // This is safe to call multiple times
+            if (!services.Any(x => x.ServiceType == typeof(IConfigHelper)))
             {
-                case "redis":
-                case "distributed":
-                    services.AddRedisCacheServices(cacheOptions, configuration);
-                    break;
-                case "memory":
-                default:
-                    services.AddMemoryCacheServices(cacheOptions);
-                    break;
+                throw new InvalidOperationException("IConfigHelper must be registered before calling AddCacheServices. Please ensure AddBusinessServices is called first.");
+            }
+
+            // Build a temporary service provider to resolve IConfigHelper
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                var configHelper = serviceProvider.GetRequiredService<IConfigHelper>();
+                var dataCachingEnabled = configHelper.IsDataCachingEnabled();
+
+                if (!dataCachingEnabled)
+                {
+                    var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+                    var logger = loggerFactory?.CreateLogger("CacheServiceExtensions");
+                    logger?.LogWarning("⚠️ Data caching is DISABLED via FeatureFlags:EnableDataCaching configuration");
+
+                    // Register NoCacheManager when caching is disabled
+                    services.AddScoped<ICacheManager, NoCacheManager>();
+                    return services;
+                }
+
+                // Get cache configuration from IConfigHelper
+                var cacheOptions = configHelper.GetConfigurationSection<CacheOptions>("Cache");
+                services.Configure<CacheOptions>(options =>
+                {
+                    options.Provider = cacheOptions.Provider;
+                    options.DefaultExpirationMinutes = cacheOptions.DefaultExpirationMinutes;
+                    options.Memory = cacheOptions.Memory;
+                    options.Redis = cacheOptions.Redis;
+                });
+
+                // Register cache services based on provider type
+                switch (cacheOptions.Provider.ToLowerInvariant())
+                {
+                    case "redis":
+                    case "distributed":
+                        services.AddRedisCacheServices(cacheOptions, configHelper);
+                        break;
+                    case "memory":
+                    default:
+                        services.AddMemoryCacheServices(cacheOptions);
+                        break;
+                }
             }
 
             return services;
@@ -75,7 +103,7 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
         /// <summary>
         /// Add Redis cache services with Azure AD (Managed Identity) authentication
         /// </summary>
-        private static IServiceCollection AddRedisCacheServices(this IServiceCollection services, CacheOptions cacheOptions, IConfiguration configuration)
+        private static IServiceCollection AddRedisCacheServices(this IServiceCollection services, CacheOptions cacheOptions, IConfigHelper configHelper)
         {
             if (string.IsNullOrEmpty(cacheOptions.Redis.Endpoint))
             {
@@ -84,15 +112,13 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
                 return services.AddMemoryCacheServices(cacheOptions);
             }
 
-            var environment = configuration.GetValue<string>("ApiSettings:Environment")
-            ?? configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT")
-                 ?? "Production";
+            var environment = configHelper.GetASPNetCoreEnvironment();
 
             var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
             var startupLogger = loggerFactory?.CreateLogger("CacheServiceExtensions");
 
             startupLogger?.LogInformation("Configuring Redis cache - Endpoint: {Endpoint}, Environment: {Environment}",
-         cacheOptions.Redis.Endpoint, environment);
+                cacheOptions.Redis.Endpoint, environment);
 
             try
             {
@@ -107,10 +133,10 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
 
                 // Only set username for PPE and Production (Managed Identity environments)
                 var requiresUsername = environment.Equals("PPE", StringComparison.OrdinalIgnoreCase) ||
-             environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
+               environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
 
                 startupLogger?.LogInformation("Using credential type: {CredentialType}, Environment: {Environment}, Username required: {UsernameRequired}",
-           credential.GetType().Name, environment, requiresUsername);
+                    credential.GetType().Name, environment, requiresUsername);
 
                 // Configure distributed cache
                 services.AddStackExchangeRedisCache(options =>
@@ -136,17 +162,23 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
                         {
                             configOptions.User = cacheName;
                         }
+                        var isLocal = environment.Equals("Local", StringComparison.OrdinalIgnoreCase);
 
-                        // Configure with token credential
-                        await configOptions.ConfigureForAzureWithTokenCredentialAsync(credential);
-
+                        if (isLocal)
+                        {
+                            await configOptions.ConfigureForAzureWithTokenCredentialAsync(new AzureCliCredential());
+                        }
+                        else
+                        {
+                            await configOptions.ConfigureForAzureWithSystemAssignedManagedIdentityAsync();
+                        }
                         var multiplexer = await ConnectionMultiplexer.ConnectAsync(configOptions);
                         return multiplexer;
                     };
                     options.InstanceName = cacheOptions.Redis.InstanceName ?? "SXG-EvalPlatform-";
                 });
 
-                // Register IConnectionMultiplexer - THIS WAS MISSING!
+                // Register IConnectionMultiplexer
                 services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
                 {
                     var logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger("RedisConnection");
@@ -178,7 +210,7 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
                         configTask.GetAwaiter().GetResult();
 
                         logger?.LogInformation("Connecting to Redis - Environment: {Environment}, Username: {Username}",
-                         environment, requiresUsername ? cacheName : "(not set)");
+                            environment, requiresUsername ? cacheName : "(not set)");
 
                         var connectTask = ConnectionMultiplexer.ConnectAsync(configOptions);
                         connectTask.GetAwaiter().GetResult();

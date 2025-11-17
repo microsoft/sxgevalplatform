@@ -117,15 +117,15 @@ public partial class EvalRunsController
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
-                activity?.SetTag("error.category", "Authorization");
+                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);
 
-                _logger.LogWarning(ex, "Authorization error occurred while saving evaluation results for EvalRunId: {EvalRunId}, Duration: {Duration}ms",
-           evalRunId, stopwatch.ElapsedMilliseconds);
+   _logger.LogWarning(ex, "Authorization error occurred while saving evaluation results for EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+         evalRunId, stopwatch.ElapsedMilliseconds);
 
-                return CreateErrorResponse<EvaluationResultSaveResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
+       return CreateErrorResponse<EvaluationResultSaveResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
             activity?.SetTag("error.category", "UnexpectedError");
@@ -164,8 +164,8 @@ public partial class EvalRunsController
             activity?.SetTag("evalRunId", evalRunId.ToString());
             activity?.SetTag("operation", "GetEvaluationResult");
 
-            var evalRunIdValidation = ValidateEvalRunId(evalRunId);
-            if (evalRunIdValidation != null)
+            // Validate EvalRunId
+            if (evalRunId == Guid.Empty)
             {
                 stopwatch.Stop();
                 activity?.SetTag("success", false);
@@ -177,7 +177,7 @@ public partial class EvalRunsController
                 _logger.LogWarning("Invalid EvalRunId validation failed - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
              evalRunId, stopwatch.ElapsedMilliseconds);
 
-                return evalRunIdValidation;
+                return CreateFieldValidationError<EvaluationResultResponseDto>("evalRunId", "Evaluation run ID is required and must be a valid GUID");
             }
 
             _logger.LogInformation("Retrieving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
@@ -239,12 +239,12 @@ public partial class EvalRunsController
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
-                activity?.SetTag("error.category", "Authorization");
+                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);
 
-                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation results for EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+   _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation results for EvalRunId: {EvalRunId}, Duration: {Duration}ms",
                     evalRunId, stopwatch.ElapsedMilliseconds);
 
                 return CreateErrorResponse<EvaluationResultResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);

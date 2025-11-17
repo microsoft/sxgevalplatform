@@ -204,5 +204,28 @@ namespace Sxg.EvalPlatform.API.Storage
             }
             return tableName;
         }
+
+        /// <summary>
+        /// Gets the feature flag value for data caching enablement
+        /// </summary>
+        /// <returns>True if data caching is enabled (default), false otherwise</returns>
+        public bool IsDataCachingEnabled()
+        {
+            // Default to true (enabled) if not configured to maintain backward compatibility
+            return _configuration.GetValue<bool>("FeatureFlags:EnableDataCaching", true);
+        }
+
+        /// <summary>
+        /// Gets a strongly-typed configuration section
+        /// </summary>
+        /// <typeparam name="T">The type to bind the configuration section to</typeparam>
+        /// <param name="sectionName">The name of the configuration section</param>
+        /// <returns>The bound configuration object</returns>
+        public T GetConfigurationSection<T>(string sectionName) where T : class, new()
+        {
+            var configObject = new T();
+            _configuration.GetSection(sectionName).Bind(configObject);
+            return configObject;
+        }
     }
 }

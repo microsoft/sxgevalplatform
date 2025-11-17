@@ -1,6 +1,5 @@
 ﻿using Azure.Core;
 using Azure.Storage.Queues;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SXG.EvalPlatform.Common;
 
@@ -15,15 +14,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         private readonly QueueServiceClient _queueServiceClient;
         private readonly ILogger<AzureQueueStorageService> _logger;
 
-        public AzureQueueStorageService(IConfigHelper configHelper, IConfiguration configuration, ILogger<AzureQueueStorageService> logger)
+        public AzureQueueStorageService(IConfigHelper configHelper, ILogger<AzureQueueStorageService> logger)
         {
             _logger = logger;
 
             var accountName = configHelper.GetAzureStorageAccountName();
-
             var queueUri = $"https://{accountName}.queue.core.windows.net";
 
-            var environment = configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            var environment = configHelper.GetASPNetCoreEnvironment();
             TokenCredential credential = CommonUtils.GetTokenCredential(environment);
 
             // Use managed identity for authentication

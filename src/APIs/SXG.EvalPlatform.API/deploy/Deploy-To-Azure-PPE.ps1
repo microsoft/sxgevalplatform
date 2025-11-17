@@ -199,6 +199,9 @@ $appSettings = @(
     "OpenTelemetry__MaxExportBatchSize=100",
  "OpenTelemetry__ExportTimeoutMilliseconds=30000",
     
+    # Feature Flags
+    "FeatureFlags__EnableDataCaching=true",
+    
     # Logging Settings
     "Logging__LogLevel__Default=Information",
   "Logging__LogLevel__Microsoft.AspNetCore=Warning",

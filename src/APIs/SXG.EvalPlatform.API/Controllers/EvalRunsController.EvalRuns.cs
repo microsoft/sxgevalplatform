@@ -101,7 +101,7 @@ public partial class EvalRunsController
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);
@@ -134,13 +134,17 @@ public partial class EvalRunsController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<EvalRunDto>> GetEvalRun(Guid evalRunId)
     {
+        using var activity = _telemetryService?.StartActivity("EvalRunsController.GetEvalRun");
+
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
-            var evalRunIdValidation = ValidateEvalRunId(evalRunId);
-            if (evalRunIdValidation != null)
-            {
-                return evalRunIdValidation;
-            }
+             // Validate EvalRunId
+             if (evalRunId == Guid.Empty)
+             {
+                return CreateFieldValidationError<EvalRunDto>("evalRunId", "Evaluation run ID is required and must be a valid GUID");
+                }
 
             _logger.LogInformation("Retrieving evaluation run with ID: {EvalRunId}", evalRunId);
 
@@ -160,7 +164,7 @@ public partial class EvalRunsController
         }
         catch (Exception ex)
         {
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
                 return CreateErrorResponse<EvalRunDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
@@ -193,12 +197,12 @@ public partial class EvalRunsController
         {
             if (string.IsNullOrWhiteSpace(agentId))
             {
-                return CreateBadRequestResponse<List<EvalRunDto>>("agentId", "AgentId is required and cannot be empty");
+                return CreateFieldValidationError<List<EvalRunDto>>("agentId", "AgentId is required and cannot be empty");
             }
 
             if (startDateTime.HasValue && endDateTime.HasValue && startDateTime > endDateTime)
             {
-                return CreateBadRequestResponse<List<EvalRunDto>>("dateRange", "StartDateTime cannot be later than EndDateTime");
+                return CreateFieldValidationError<List<EvalRunDto>>("dateRange", "StartDateTime cannot be later than EndDateTime");
             }
 
             _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
@@ -214,7 +218,7 @@ public partial class EvalRunsController
         }
         catch (Exception ex)
         {
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
                 return CreateErrorResponse<List<EvalRunDto>>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);

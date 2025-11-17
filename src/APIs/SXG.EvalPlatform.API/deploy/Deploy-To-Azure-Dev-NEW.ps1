@@ -146,7 +146,7 @@ $appSettings = @(
     "ASPNETCORE_ENVIRONMENT=Development",
     
     # API Settings
-    "ApiSettings__Version=1.0.0",
+  "ApiSettings__Version=1.0.0",
     "ApiSettings__Environment=Development",
     
     # Azure Storage Settings
@@ -156,10 +156,10 @@ $appSettings = @(
     "AzureStorage__EvalResultsFolderName=evaluation-results",
     "AzureStorage__MetricsConfigurationsFolderName=metrics-configurations",
     "AzureStorage__PlatformConfigurationsContainer=platform-configurations",
-    "AzureStorage__DefaultMetricsConfiguration=default-metric-configuration.json",
+ "AzureStorage__DefaultMetricsConfiguration=default-metric-configuration.json",
     "AzureStorage__MetricsConfigurationsTable=MetricsConfigurationsTable",
     "AzureStorage__DataSetsTable=DataSetsTable",
-    "AzureStorage__EvalRunsTable=EvalRunsTable",
+ "AzureStorage__EvalRunsTable=EvalRunsTable",
     "AzureStorage__DatasetEnrichmentRequestsQueueName=dataset-enrichment-requests",
     "AzureStorage__EvalProcessingRequestsQueueName=eval-processing-requests",
   
@@ -196,12 +196,15 @@ $appSettings = @(
     "OpenTelemetry__EnableConsoleExporter=false",
     "OpenTelemetry__EnableApplicationInsights=true",
     "OpenTelemetry__SamplingRatio=1.0",
-    "OpenTelemetry__MaxExportBatchSize=100",
+ "OpenTelemetry__MaxExportBatchSize=100",
   "OpenTelemetry__ExportTimeoutMilliseconds=30000",
+    
+    # Feature Flags
+    "FeatureFlags__EnableDataCaching=true",
     
     # Logging Settings
     "Logging__LogLevel__Default=Information",
-    "Logging__LogLevel__Microsoft.AspNetCore=Warning",
+ "Logging__LogLevel__Microsoft.AspNetCore=Warning",
     "Logging__LogLevel__Microsoft.ApplicationInsights=Warning",
     "Logging__ApplicationInsights__LogLevel__Default=Information",
     "Logging__ApplicationInsights__LogLevel__Microsoft=Warning"

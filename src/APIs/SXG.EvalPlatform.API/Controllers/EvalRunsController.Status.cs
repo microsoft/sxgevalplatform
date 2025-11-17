@@ -119,7 +119,7 @@ public partial class EvalRunsController
 
                 _logger.LogWarning($"Invalid status value - EvalRunId: {evalRunId}, InvalidStatus: {updateDto.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
 
-                return CreateBadRequestResponse<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
+                return CreateFieldValidationError<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
             }
 
             _logger.LogInformation($"Updating evaluation run status to {updateDto.Status} for ID: {evalRunId}");
@@ -191,15 +191,15 @@ public partial class EvalRunsController
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("error.category", "Authorization");
-                activity?.SetTag("http.status_code", 403);
+      activity?.SetTag("http.status_code", 403);
 
                 _logger.LogWarning(ex, $"Authorization error occurred while updating evaluation run status - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
 
                 return CreateErrorResponse<UpdateResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
-            }
+   }
 
             activity?.SetTag("error.category", "UnexpectedError");
             activity?.SetTag("http.status_code", 500);
@@ -295,7 +295,7 @@ public partial class EvalRunsController
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            if (IsAuthorizationError(ex))
+            if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);

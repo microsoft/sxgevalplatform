@@ -18,7 +18,7 @@
         string GetEvalProcessingRequestsQueueName();
         string GetDatasetEnrichmentRequestAPIEndPoint();
         string GetDataVerseAPIScope();
-        
+
         // Cache configuration methods
         string GetCacheProvider();
         string? GetRedisCacheEndpoint();
@@ -26,5 +26,11 @@
         bool IsDistributedCacheEnabled();
         string GetASPNetCoreEnvironment();
         string GetEvalRunTableName();
+
+        // Feature flags
+        bool IsDataCachingEnabled();
+
+        // Configuration helper for binding sections (needed for CacheOptions)
+        T GetConfigurationSection<T>(string sectionName) where T : class, new();
     }
 }

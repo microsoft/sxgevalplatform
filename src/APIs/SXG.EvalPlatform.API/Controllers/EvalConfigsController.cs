@@ -155,7 +155,6 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("agent_id", agentId);
                 activity?.SetTag("environment_name", environmentName);
 
-                ValidateAndAddToModelState(agentId, "agentId", "agentid");
                 if (!ModelState.IsValid)
                 {
                     _logger.LogWarning("Invalid or missing agent ID");

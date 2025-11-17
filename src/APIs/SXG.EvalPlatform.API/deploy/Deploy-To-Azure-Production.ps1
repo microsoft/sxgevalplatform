@@ -155,7 +155,7 @@ Write-Host "[8/8] Configuring App Settings for PRODUCTION environment..." -Foreg
 
 $appSettings = @(
     "ASPNETCORE_ENVIRONMENT=Production",
-    
+  
     # API Settings
     "ApiSettings__Version=1.0.0",
     "ApiSettings__Environment=Production",
@@ -169,11 +169,11 @@ $appSettings = @(
     "AzureStorage__PlatformConfigurationsContainer=platform-configurations",
     "AzureStorage__DefaultMetricsConfiguration=default-metric-configuration.json",
     "AzureStorage__MetricsConfigurationsTable=MetricsConfigurationsTable",
-    "AzureStorage__DataSetsTable=DataSetsTable",
+ "AzureStorage__DataSetsTable=DataSetsTable",
     "AzureStorage__EvalRunsTable=EvalRunsTable",
     "AzureStorage__DatasetEnrichmentRequestsQueueName=dataset-enrichment-requests",
   "AzureStorage__EvalProcessingRequestsQueueName=eval-processing-requests",
-    
+  
     # Cache Settings - Redis (Active for Production)
     "Cache__Provider=Redis",
     "Cache__DefaultExpirationMinutes=60",
@@ -187,7 +187,7 @@ $appSettings = @(
  "Cache__Redis__UseManagedIdentity=true",
     "Cache__Redis__ConnectTimeoutSeconds=5",
     "Cache__Redis__CommandTimeoutSeconds=3",
-    "Cache__Redis__UseSsl=true",
+  "Cache__Redis__UseSsl=true",
     "Cache__Redis__Retry__Enabled=true",
   "Cache__Redis__Retry__MaxRetryAttempts=2",
     "Cache__Redis__Retry__BaseDelayMs=500",
@@ -210,10 +210,13 @@ $appSettings = @(
     "OpenTelemetry__MaxExportBatchSize=100",
     "OpenTelemetry__ExportTimeoutMilliseconds=30000",
     
+    # Feature Flags
+    "FeatureFlags__EnableDataCaching=true",
+    
     # Logging Settings
     "Logging__LogLevel__Default=Information",
   "Logging__LogLevel__Microsoft.AspNetCore=Warning",
-    "Logging__LogLevel__Microsoft.ApplicationInsights=Warning",
+ "Logging__LogLevel__Microsoft.ApplicationInsights=Warning",
     "Logging__ApplicationInsights__LogLevel__Default=Information",
     "Logging__ApplicationInsights__LogLevel__Microsoft=Warning"
 )

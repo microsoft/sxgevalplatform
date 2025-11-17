@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Identity;
-using Microsoft.Extensions.Configuration;
 using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.Services
@@ -18,17 +17,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         private readonly HttpClient _httpClient;
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<DataVerseAPIService> _logger;
-        private readonly IConfiguration _configuration;
 
         public DataVerseAPIService(
             HttpClient httpClient, 
             IConfigHelper configHelper, 
-            IConfiguration configuration,
             ILogger<DataVerseAPIService> logger)
         {
             _httpClient = httpClient;
             _configHelper = configHelper;
-            _configuration = configuration;
             _logger = logger;
         }
 
@@ -40,7 +36,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 var scope = _configHelper.GetDataVerseAPIScope();
-                var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+                var environment = _configHelper.GetASPNetCoreEnvironment();
                 var credential = CommonUtils.GetTokenCredential(environment);
 
                 var tokenRequestContext = new TokenRequestContext(new[] { scope });
