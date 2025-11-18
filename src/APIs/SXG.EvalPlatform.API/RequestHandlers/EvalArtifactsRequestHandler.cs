@@ -260,8 +260,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 });
 
                 // Send message to evaluation processing queue (no caching for queue operations)
-                await SendEvalProcessingRequestAsync(evalRunId, evalRunEntity.MetricsConfigurationId, evalRunId.ToString(), 
-                    evalRunEntity.AgentId, evalRunEntity.DataSetId, blobPath);
+                await SendEvalProcessingRequestAsync(evalRunId, evalRunEntity.MetricsConfigurationId);
 
                 return new EnrichedDatasetResponseDto
                 {
@@ -396,8 +395,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Original dataset ID</param>
         /// <param name="enrichedDatasetBlobPath">Path to the enriched dataset blob</param>
-        private async Task SendEvalProcessingRequestAsync(Guid evalRunId, string metricsConfigurationId, string enrichedDatasetId, 
-            string agentId, string datasetId, string enrichedDatasetBlobPath)
+        private async Task SendEvalProcessingRequestAsync(Guid evalRunId, string metricsConfigurationId)
         {
             try
             {
@@ -407,12 +405,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     EvalRunId = evalRunId,
                     MetricsConfigurationId = metricsConfigurationId,
-                    EnrichedDatasetId = enrichedDatasetId,
-                    AgentId = agentId,
-                    DatasetId = datasetId,
                     RequestedAt = DateTime.UtcNow,
                     Priority = "Normal",
-                    EnrichedDatasetBlobPath = enrichedDatasetBlobPath
                 };
 
                 var messageContent = JsonSerializer.Serialize(processingRequest, new JsonSerializerOptions 

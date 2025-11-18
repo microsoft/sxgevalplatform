@@ -238,8 +238,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Helper services - Register IConfigHelper FIRST before anything else that depends on it
-        services.AddScoped<IConfigHelper, ConfigHelper>();
+        services.AddSingleton<IConfigHelper, ConfigHelper>();
 
         // Storage services
         services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();

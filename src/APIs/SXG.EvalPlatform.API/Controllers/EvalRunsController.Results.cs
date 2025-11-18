@@ -89,9 +89,8 @@ public partial class EvalRunsController
             _logger.LogInformation("Successfully saved evaluation results - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
   evalRunId, stopwatch.ElapsedMilliseconds);
 
-            return CreatedAtAction(nameof(GetEvaluationResult),
-         new { configurationId = result.EvalResponse.EvalRunId },
-  result);
+            // FIX: Use evalRunId instead of configurationId to match the GetEvaluationResult route parameter
+            return CreatedAtAction(nameof(GetEvaluationResult), new { evalRunId = result.EvalResponse.EvalRunId }, result);
 
         }
         catch (RequestFailedException ex)

@@ -192,7 +192,11 @@ namespace Sxg.EvalPlatform.API.Storage
 
         public string GetASPNetCoreEnvironment()
         {
-            return _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            // Try to get from environment variable first (Azure App Settings)
+            var environment = _configuration["ASPNETCORE_ENVIRONMENT"];
+            
+            // Fallback to default if not set
+            return environment ?? "Production";
         }
 
         public string GetEvalRunTableName()
