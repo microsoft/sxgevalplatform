@@ -20,18 +20,18 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
-/src/APIs/.vs/Sxg.Eval.Platform.Api
-/src/APIs/SXG.EvalPlatform.API/bin/Debug/net8.0
-/src/APIs/SXG.EvalPlatform.API/obj
 /.vs
+/src/APIs/.vs/Sxg.Eval.Platform.Api
+/src/APIs/SXG.EvalPlatform.API/bin
+/src/APIs/SXG.EvalPlatform.API/obj
 /src/APIs/Sxg.EvalPlatform.API.IntegrationTests/bin
 /src/APIs/Sxg.EvalPlatform.API.IntegrationTests/obj
-/src/APIs/Sxg.EvalPlatform.API.Storage/bin/Debug/net8.0
+/src/APIs/Sxg.EvalPlatform.API.Storage/bin
 /src/APIs/Sxg.EvalPlatform.API.Storage/obj
-/src/APIs/Sxg.EvalPlatform.API.Storage.IntegrationTests/obj/Debug/net8.0
+/src/APIs/Sxg.EvalPlatform.API.Storage.IntegrationTests/obj
 /src/APIs/Sxg.EvalPlatform.API.Storage.IntegrationTests/obj
 /src/APIs/Sxg.EvalPlatform.API.Storage.UnitTests/bin
 /src/APIs/Sxg.EvalPlatform.API.Storage.UnitTests/obj
 /src/APIs/Sxg.EvalPlatform.API.UnitTests/obj
-/src/APIs/SXG.EvalPlatform.Common/bin/Debug/net8.0
+/src/APIs/SXG.EvalPlatform.Common/bin
 /src/APIs/SXG.EvalPlatform.Common/obj
