@@ -1,0 +1,123 @@
+trigger:
+  branches:
+    include:
+      - users/serajag/deploymentPipelineSetup
+      - main
+
+parameters:
+- name: deployInfrastructure
+  displayName: 'Infrastructure Deployment'
+  type: string
+  values:
+  - 'Auto'
+  - 'Force'
+  - 'Skip'
+  default: 'Auto'
+
+variables:
+  azureSubscription: 'SXGCore_ConfigService_Dev'
+  resourceGroup: 'rg-sxg-agent-evaluation-platform'
+  appName: 'my-web-app'
+  location: 'eastus'
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
+  REPO_ROOT: '$(Build.SourcesDirectory)'
+  downloadArtifactName: 'EvalArtifact'
+
+stages:
+# ---------------------------
+# Stage 1: Infrastructure Setup
+# ---------------------------
+- stage: Infrastructure
+  displayName: 'Provision Azure Resources'
+  jobs:
+    - job: DeployInfra
+      displayName: 'Deploy Infrastructure'
+      pool:
+        vmImage: 'windows'
+      steps:
+        - checkout: self
+
+        - task: AzureCLI@2
+          condition: succeeded()
+          inputs:
+            azureSubscription: $(azureSubscription)
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              echo "Deploying Azure resources..."
+              az group create --name $(resourceGroup) --location $(location)
+              az deployment group create \
+                --resource-group $(resourceGroup) \
+                --template-file infra/main.bicep \
+                --parameters environmentName=dev location=$(location) appName=$(appName)
+
+# ---------------------------
+# Stage 2: Build & Deploy to Dev
+# ---------------------------
+# - stage: Dev
+#   displayName: 'Build and Deploy to Dev'
+#   dependsOn: Infrastructure
+#   jobs:
+#     - job: BuildAndDeployDev
+#       pool:
+#         vmImage: 'windows'
+#       steps:
+#         - checkout: self
+
+#         - task: UseDotNet@2
+#           inputs:
+#             packageType: 'sdk'
+#             version: '7.x'
+
+#         - script: |
+#             dotnet build --configuration Release
+#             dotnet publish -c Release -o $(Build.ArtifactStagingDirectory)
+#           displayName: 'Build and Publish'
+
+#         - task: AzureWebApp@1
+#           inputs:
+#             azureSubscription: $(azureSubscription)
+#             appName: $(appName)-dev
+#             package: '$(Build.ArtifactStagingDirectory)'
+
+# ---------------------------
+# Stage 3: Deploy to PPE
+# ---------------------------
+# - stage: PPE
+#   displayName: 'Deploy to PPE'
+#   dependsOn: Dev
+#   jobs:
+#     - deployment: DeployQA
+#       environment: 'PPE'
+#       pool:
+#         vmImage: 'windows'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - task: AzureWebApp@1
+#                 inputs:
+#                   azureSubscription: $(azureSubscription)
+#                   appName: $(appName)-qa
+#                   package: '$(Pipeline.Workspace)/BuildAndDeployDev'
+
+# # ---------------------------
+# # Stage 4: Deploy to Prod
+# # ---------------------------
+# - stage: Prod
+#   displayName: 'Deploy to Production'
+#   dependsOn: PPE
+#   jobs:
+#     - deployment: DeployProd
+#       environment: 'Prod'
+#       pool:
+#         vmImage: 'windows'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps            steps:
+#               - task: AzureWebApp@1
+#                 inputs:
+#                   azureSubscription: $(azureSubscription)
+#                   appName: $(appName)
