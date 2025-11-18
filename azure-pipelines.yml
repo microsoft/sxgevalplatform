@@ -34,7 +34,7 @@ stages:
     - job: DeployInfra
       displayName: 'Deploy Infrastructure'
       pool:
-        type: 'windows'
+        vmImage: 'windows-latest'
       steps:
         - checkout: self
 
