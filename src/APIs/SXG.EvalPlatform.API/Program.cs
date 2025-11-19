@@ -38,6 +38,7 @@ var app = builder.Build();
 app.UseMiddleware<TelemetryMiddleware>();
 
 // Enable Swagger in all environments for API documentation
+// Must come BEFORE authentication middleware to allow anonymous access
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -49,6 +50,8 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+
+// Authentication/Authorization - Swagger endpoints are already registered above, so they're accessible
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

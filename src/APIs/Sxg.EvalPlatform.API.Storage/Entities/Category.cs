@@ -10,6 +10,9 @@ namespace Sxg.EvalPlatform.API.Storage.Entities
         [JsonPropertyName("displayName")]
         public string DisplayName { get; set; }
 
+        [JsonPropertyName("description")]
+        public string Description { get; set; }
+
         [JsonPropertyName("metrics")]
         public List<Metric> Metrics { get; set; }
     }
