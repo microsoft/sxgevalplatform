@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
       - users/serajag/deploymentPipelineSetup
-      - main
 
 parameters:
 - name: deployInfrastructure
