@@ -58,23 +58,23 @@ module resourceNames 'naming.bicep' = {
 // }
 
 // App Insights
-module appInsights '../../common/infrastructure/templates/bicep/ApplicationInsights/main.module.bicep' = {
-  name: 'appInsightsDeploy-${releaseNumber}'
-  dependsOn: [
-    resourceNames
-    logAnalytics
-    keyVault
-  ]
-  params: {
-    name: resourceNames.outputs.applicationInsightsName
-    location: location
-    workspaceResourceId: logAnalytics.outputs.resourceId
-    releaseNumber: releaseNumber
-    environment: environment
-    actionGroupId: actionGroup.id
-    serviceName: serviceName
-  }
-}
+// module appInsights '../../common/infrastructure/templates/bicep/ApplicationInsights/main.module.bicep' = {
+//   name: 'appInsightsDeploy-${releaseNumber}'
+//   dependsOn: [
+//     resourceNames
+//     logAnalytics
+//     keyVault
+//   ]
+//   params: {
+//     name: resourceNames.outputs.applicationInsightsName
+//     location: location
+//     workspaceResourceId: logAnalytics.outputs.resourceId
+//     releaseNumber: releaseNumber
+//     environment: environment
+//     actionGroupId: actionGroup.id
+//     serviceName: serviceName
+//   }
+// }
 
 // Storage Account
 // module storageAccount '../../common/infrastructure/templates/bicep/StorageAccount/main.module.bicep' = {
