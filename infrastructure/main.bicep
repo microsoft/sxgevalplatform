@@ -29,11 +29,14 @@ param azureAdClientId string
 @description('Unique release number for this deployment. Defaults to the current date.')
 param releaseNumber string = utcNow('yyyyMMdd.HHmm')
 
-// @description('Resource ID needed to acquire access tokens to contact Provider services. Required.')
-// param evalResourceId string
+@description('Component Id for the service.Required.')
+param componentId string
 
-var serviceName = 'Eval'
-var resourcePrefix = 'sxg-eval'
+@description('Service Name.Required.')
+param serviceName string
+
+@description('Prefix for the resource name.Required.')
+param resourcePrefix string
 
 // Get names for resources
 // module resourceNames 'naming.bicep' = {
@@ -46,16 +49,20 @@ var resourcePrefix = 'sxg-eval'
 //   }
 // }
 
-// module managedIdentity '../../common/infrastructure/templates/bicep/ManagedIdentity/main.module.bicep' = {
-//   name: 'managedIdentity-${releaseNumber}'
-//   dependsOn: [
-//     resourceNames
-//   ]
-//   params: {
-//     location: location
-//     name: resourceNames.outputs.serviceManagedIdentityName
-//   }
-// }
+module managedIdentity 'templates/bicep/ManagedIdentity/main.module.bicep' = {
+  name: 'managedIdentity-${releaseNumber}'
+  dependsOn: [
+    //resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-managedIdentity-${environment}'
+    location: location
+    releaseNumber: releaseNumber
+    serviceName: serviceName
+    environment: environment
+    componentId: componentId
+  }
+}
 
 // App Insights
 module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
@@ -66,29 +73,29 @@ module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
     // keyVault
   ]
   params: {
-    name: 'sxg-eval-appInsights-dev'
+    name: 'sxg-eval-appInsights-${environment}'
     location: location
-    //workspaceResourceId: logAnalytics.outputs.resourceId
     releaseNumber: releaseNumber
-    environment: environment
-    //actionGroupId: actionGroup.id
     serviceName: serviceName
+    environment: environment
+    componentId: componentId
   }
 }
 
 // Storage Account
-// module storageAccount '../../common/infrastructure/templates/bicep/StorageAccount/main.module.bicep' = {
-//   name: 'storageAccountDeploy-${releaseNumber}'
-//   dependsOn: [
-//     resourceNames
-//     logAnalytics
-//   ]
-//   params: {
-//     name: resourceNames.outputs.storageAccount
-//     location: location
-//     logAnalyticsName: resourceNames.outputs.logAnalyticsWorkspace
-//     releaseNumber: releaseNumber
-//     environment: environment
-//     actionGroupId: actionGroup.id
-//   }
-// }
+module storageAccount 'templates/bicep/StorageAccount/main.module.bicep' = {
+  name: 'storageAccountDeploy-${releaseNumber}'
+  dependsOn: [
+    resourceNames
+    logAnalytics
+  ]
+  params: {
+    name: 'sxg-eval-storageAccount-${environment}'
+    location: location
+    logAnalyticsName: 'sxg-eval-logAnalytics-${environment}'
+    releaseNumber: releaseNumber
+    serviceName: serviceName
+    environment: environment
+    componentId: componentId
+  }
+}

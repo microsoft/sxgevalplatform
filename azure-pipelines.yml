@@ -21,6 +21,9 @@ variables:
   azureClientId: 'your-client-id'
   azureTenantId: 'your-tenant-id'
   azureAdClientId: 'your-ad-client-id'
+  componentId: '409ab2c3-dafd-4ee4-b158-b405c578bbcd'
+  serviceName: 'Eval'
+  resourcePrefix: 'sxg-eval'
   CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
   WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
   REPO_ROOT: '$(Build.SourcesDirectory)'
@@ -53,7 +56,8 @@ stages:
                 --resource-group $(resourceGroup) \
                 --template-file infrastructure/main.bicep \
                 --parameters environment=dev location=$(location) \
-                azureClientId=$(azureClientId) azureTenantId=$(azureTenantId) azureAdClientId=$(azureAdClientId)
+                azureClientId=$(azureClientId) azureTenantId=$(azureTenantId) azureAdClientId=$(azureAdClientId) \
+                componentId=$(componentId) serviceName=$(serviceName) resourcePrefix=$(resourcePrefix)
 
 # ---------------------------
 # Stage 2: Build & Deploy to Dev

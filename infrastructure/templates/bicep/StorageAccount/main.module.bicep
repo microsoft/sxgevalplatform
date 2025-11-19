@@ -10,11 +10,17 @@ param logAnalyticsName string
 @description('Unique release number for this deployment. Defaults to the current date.')
 param releaseNumber string = utcNow('yyyyMMdd.HHmm')
 
-@description('Alert Action Group Id. Required.')
-param actionGroupId string
+// @description('Alert Action Group Id. Required.')
+// param actionGroupId string
 
 @description('Environment into which to deploy resources. Required.')
 param environment string
+
+@description('Component Id for the service.Required.')
+param componentId string
+
+@description('Service Name.Required.')
+param serviceName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: name
@@ -176,16 +182,16 @@ resource tableDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-
 }
 
 // Alerts
-module alerts 'alerts.module.bicep' = {
-  name: 'storageAccountalertsDeploy-${releaseNumber}'
-  dependsOn: []
-  params: {
-    location: location
-    actionGroupId: actionGroupId
-    storageAccountResourceId: storageAccount.id
-	  environment: environment
-  }
-}
+// module alerts 'alerts.module.bicep' = {
+//   name: 'storageAccountalertsDeploy-${releaseNumber}'
+//   dependsOn: []
+//   params: {
+//     location: location
+//     actionGroupId: actionGroupId
+//     storageAccountResourceId: storageAccount.id
+// 	  environment: environment
+//   }
+// }
 
 output resourceId string = storageAccount.id
 output storageName string = storageAccount.name
