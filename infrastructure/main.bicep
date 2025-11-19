@@ -57,10 +57,9 @@ module managedIdentity 'templates/bicep/ManagedIdentity/main.module.bicep' = {
   params: {
     name: 'sxg-eval-managedIdentity-${environment}'
     location: location
-    releaseNumber: releaseNumber
-    serviceName: serviceName
-    environment: environment
-    componentId: componentId
+    // serviceName: serviceName
+    // environment: environment
+    // componentId: componentId
   }
 }
 
@@ -75,10 +74,21 @@ module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
   params: {
     name: 'sxg-eval-appInsights-${environment}'
     location: location
-    releaseNumber: releaseNumber
     serviceName: serviceName
     environment: environment
     componentId: componentId
+  }
+}
+
+// Log Analytics Workspace
+module logAnalytics 'templates/bicep/LogAnalytics/main.module.bicep' = {
+  name: 'logAnalyticsDeploy-${releaseNumber}'
+  dependsOn: [
+    //resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-logAnalytics-${environment}'
+    location: location
   }
 }
 
@@ -86,14 +96,13 @@ module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
 module storageAccount 'templates/bicep/StorageAccount/main.module.bicep' = {
   name: 'storageAccountDeploy-${releaseNumber}'
   dependsOn: [
-    resourceNames
-    logAnalytics
+    // resourceNames
+     logAnalytics
   ]
   params: {
     name: 'sxg-eval-storageAccount-${environment}'
     location: location
     logAnalyticsName: 'sxg-eval-logAnalytics-${environment}'
-    releaseNumber: releaseNumber
     serviceName: serviceName
     environment: environment
     componentId: componentId

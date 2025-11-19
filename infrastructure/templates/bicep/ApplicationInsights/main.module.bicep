@@ -4,9 +4,6 @@ param name string
 @description('Azure region to deploy the resource. Required.')
 param location string
 
-@description('Unique release number for this deployment. Defaults to the current date.')
-param releaseNumber string = utcNow('yyyyMMdd.HHmm')
-
 @description('Environment into which to deploy resources. Required.')
 param environment string
 

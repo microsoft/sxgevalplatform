@@ -7,12 +7,6 @@ param location string
 @description('Name of the Log Analytics Workspace to upload diagnostic logs to. Required.')
 param logAnalyticsName string
 
-@description('Unique release number for this deployment. Defaults to the current date.')
-param releaseNumber string = utcNow('yyyyMMdd.HHmm')
-
-// @description('Alert Action Group Id. Required.')
-// param actionGroupId string
-
 @description('Environment into which to deploy resources. Required.')
 param environment string
 
@@ -180,18 +174,6 @@ resource tableDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-
     ]
   }
 }
-
-// Alerts
-// module alerts 'alerts.module.bicep' = {
-//   name: 'storageAccountalertsDeploy-${releaseNumber}'
-//   dependsOn: []
-//   params: {
-//     location: location
-//     actionGroupId: actionGroupId
-//     storageAccountResourceId: storageAccount.id
-// 	  environment: environment
-//   }
-// }
 
 output resourceId string = storageAccount.id
 output storageName string = storageAccount.name
