@@ -11,6 +11,7 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
     using SxG.EvalPlatform.Plugins.Services;
+    using Microsoft.Crm.Sdk.Messages;
 
     /// <summary>
     /// Plugin for updating dataset from external eval datasets API and updating eval run records
@@ -79,7 +80,7 @@ namespace SxG.EvalPlatform.Plugins
                     return;
                 }
 
-                // Update the eval run record with retrieved dataset content
+                // Update the eval run record with retrieved dataset content (store as file column instead of text field)
                 bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, loggingService);
                 if (!updateSuccess)
                 {
@@ -272,9 +273,9 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Updates eval run record with retrieved dataset content
+        /// Updates eval run record by uploading dataset JSON into file column and setting status
         /// </summary>
-        /// <param name="evalRunId">Eval run ID</param>
+        /// /// <param name="evalRunId">Eval run ID</param>
         /// <param name="datasetJson">Retrieved dataset content as JSON string</param>
         /// <param name="organizationService">Organization service</param>
         /// <param name="loggingService">Logging service</param>
@@ -283,27 +284,82 @@ namespace SxG.EvalPlatform.Plugins
         {
             try
             {
-                // Parse the EvalRunId GUID for direct update using Primary Key
                 if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
                 {
                     loggingService.Trace($"{nameof(UpdateDataset)}: Invalid EvalRunId format: {evalRunId}", TraceSeverity.Error);
                     return false;
                 }
 
-                // Update using late-bound entity to avoid serialization issues with Elastic tables
-                var updateEntity = new Entity("cr890_evalrun", evalRunGuid);
-                updateEntity["cr890_dataset"] = datasetJson;
-                updateEntity["cr890_status"] = new OptionSetValue(2);  // Status = Updated
+                if (string.IsNullOrEmpty(datasetJson))
+                {
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Dataset JSON is empty", TraceSeverity.Warning);
+                    return false;
+                }
 
-                organizationService.Update(updateEntity);
+                var fileName = $"dataset-{evalRunGuid}.json";
+                byte[] dataBytes = Encoding.UTF8.GetBytes(datasetJson);
+                loggingService.Trace($"{nameof(UpdateDataset)}: Preparing to upload file '{fileName}' size {dataBytes.Length} bytes to file column cr890_datasetfile");
 
-                loggingService.Trace($"{nameof(UpdateDataset)}: Successfully updated eval run record");
-                loggingService.Trace($"{nameof(UpdateDataset)}: Dataset content length: {datasetJson?.Length ?? 0} characters, Status set to Updated (2)");
+                // Initialize upload
+                var initReq = new InitializeFileBlocksUploadRequest
+                {
+                    Target = new EntityReference("cr890_evalrun", evalRunGuid),
+                    FileAttributeName = "cr890_datasetfile",
+                    FileName = fileName
+                };
+                var initResp = (InitializeFileBlocksUploadResponse)organizationService.Execute(initReq);
+                var uploadId = initResp.FileContinuationToken;
+                loggingService.Trace($"{nameof(UpdateDataset)}: File upload initialized. UploadId={uploadId}");
+
+                // Upload blocks (single or multiple depending on size)
+                const int blockSize = 4 * 1024 * 1024; //4MB block size
+                var blockIds = new System.Collections.Generic.List<string>();
+                int offset = 0;
+                int blockIndex = 0;
+                while (offset < dataBytes.Length)
+                {
+                    int remaining = dataBytes.Length - offset;
+                    int currentSize = remaining > blockSize ? blockSize : remaining;
+                    byte[] block = new byte[currentSize];
+                    Buffer.BlockCopy(dataBytes, offset, block, 0, currentSize);
+                    string blockId = blockIndex.ToString();
+
+                    var uploadBlockReq = new UploadBlockRequest
+                    {
+                        FileContinuationToken = uploadId,
+                        BlockId = blockId,
+                        BlockData = block
+                    };
+                    organizationService.Execute(uploadBlockReq);
+
+                    blockIds.Add(blockId);
+                    offset += currentSize;
+                    blockIndex++;
+                }
+                loggingService.Trace($"{nameof(UpdateDataset)}: Uploaded {blockIds.Count} block(s) for file '{fileName}'");
+
+                // Commit upload
+                var commitReq = new CommitFileBlocksUploadRequest
+                {
+                    FileContinuationToken = uploadId,
+                    FileName = fileName,
+                    MimeType = "application/json",
+                    BlockList = blockIds.ToArray()
+                };
+                organizationService.Execute(commitReq);
+                loggingService.Trace($"{nameof(UpdateDataset)}: File blocks committed successfully for '{fileName}'");
+
+                // Update status field only (OptionSetValue2 = Updated)
+                var statusEntity = new Entity("cr890_evalrun", evalRunGuid);
+                statusEntity["cr890_status"] = new OptionSetValue(2);
+                organizationService.Update(statusEntity);
+
+                loggingService.Trace($"{nameof(UpdateDataset)}: Successfully updated status to Updated (2) after file upload");
                 return true;
             }
             catch (Exception ex)
             {
-                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating eval run record");
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating eval run record (file upload)");
                 return false;
             }
         }

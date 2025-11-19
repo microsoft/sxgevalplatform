@@ -12,6 +12,7 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
     using SxG.EvalPlatform.Plugins.Services;
+    using Microsoft.Crm.Sdk.Messages;
 
     /// <summary>
     /// Plugin for publishing enriched dataset by retrieving stored dataset and calling external API
@@ -126,7 +127,7 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Retrieves dataset from eval run record
+        /// Retrieves dataset from eval run record's file column
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="organizationService">Organization service</param>
@@ -143,17 +144,49 @@ namespace SxG.EvalPlatform.Plugins
                     return null;
                 }
 
-                // Retrieve using early-bound entity
-                var evalRunRecord = organizationService.Retrieve(EvalRun.EntityLogicalName, evalRunGuid, new ColumnSet("cr890_dataset")).ToEntity<EvalRun>();
+                // Retrieve the eval run record to get file column info
+                var evalRunRecord = organizationService.Retrieve("cr890_evalrun", evalRunGuid, new ColumnSet("cr890_datasetfile"));
 
-                string dataset = evalRunRecord.cr890_Dataset;
-                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from eval run record");
+                // Check if file column has a value
+                if (!evalRunRecord.Contains("cr890_datasetfile") || evalRunRecord["cr890_datasetfile"] == null)
+                {
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: No dataset file found in eval run record", TraceSeverity.Warning);
+                    return null;
+                }
+
+                // Download the entire file at once using InitializeFileBlocksDownloadRequest
+                var initDownloadRequest = new InitializeFileBlocksDownloadRequest
+                {
+                    Target = new EntityReference("cr890_evalrun", evalRunGuid),
+                    FileAttributeName = "cr890_datasetfile"
+                };
+
+                var initDownloadResponse = (InitializeFileBlocksDownloadResponse)organizationService.Execute(initDownloadRequest);
+                string downloadId = initDownloadResponse.FileContinuationToken;
+                long fileSize = initDownloadResponse.FileSizeInBytes;
+
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: File download initialized. DownloadId={downloadId}, FileSize={fileSize} bytes");
+
+                // Download the entire file in one request
+                var downloadBlockRequest = new DownloadBlockRequest
+                {
+                    FileContinuationToken = downloadId,
+                    Offset = 0,
+                    BlockLength = (int)fileSize // Download entire file
+                };
+
+                var downloadBlockResponse = (DownloadBlockResponse)organizationService.Execute(downloadBlockRequest);
+                byte[] fileData = downloadBlockResponse.Data;
+
+                // Convert byte array to string
+                string dataset = Encoding.UTF8.GetString(fileData);
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from file column (size: {fileData.Length} bytes)");
 
                 return dataset;
             }
             catch (Exception ex)
             {
-                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception retrieving dataset from eval run record");
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception retrieving dataset from eval run file column");
                 return null;
             }
         }
