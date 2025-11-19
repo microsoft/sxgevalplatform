@@ -27,6 +27,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
     //WorkspaceResourceId: workspaceResourceId
     RetentionInDays: 30
   }
+  tags: {
+    ComponentId: '409ab2c3-dafd-4ee4-b158-b405c578bbcd'
+  }
 }
 
 // Alerts
