@@ -8,8 +8,8 @@
 @description('Environment into which to deploy resources. Required.')
 param environment string
 
-@description('Azure regions this app will be deployed in. Used by databases and other resources that support replicas. Required.')
-param regions array
+// @description('Azure regions this app will be deployed in. Used by databases and other resources that support replicas. Required.')
+// param regions array
 
 @description('Azure region in which to deploy shared resources which are only deployed in one region.')
 param location string = resourceGroup().location
@@ -29,8 +29,8 @@ param azureAdClientId string
 @description('Unique release number for this deployment. Defaults to the current date.')
 param releaseNumber string = utcNow('yyyyMMdd.HHmm')
 
-@description('Resource ID needed to acquire access tokens to contact Provider services. Required.')
-param evalResourceId string
+// @description('Resource ID needed to acquire access tokens to contact Provider services. Required.')
+// param evalResourceId string
 
 var serviceName = 'Eval'
 var resourcePrefix = 'sxg-eval'
