@@ -50,7 +50,8 @@ stages:
               az deployment group create \
                 --resource-group $(resourceGroup) \
                 --template-file infrastructure/main.bicep \
-                --parameters environmentName=dev location=$(location) appName=$(appName)
+                --parameters environment=dev location=$(location) appName=$(appName) \
+                azureClientId=$(azureClientId) azureTenantId=$(azureTenantId) azureAdClientId=$(azureAdClientId)
 
 # ---------------------------
 # Stage 2: Build & Deploy to Dev
