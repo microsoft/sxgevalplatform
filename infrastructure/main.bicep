@@ -61,9 +61,9 @@ var resourcePrefix = 'sxg-eval'
 module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
   name: 'appInsightsDeploy-${releaseNumber}'
   dependsOn: [
-    resourceNames
-    logAnalytics
-    keyVault
+    //resourceNames
+    // logAnalytics
+    // keyVault
   ]
   params: {
     name: 'sxg-eval-appInsights-dev'
