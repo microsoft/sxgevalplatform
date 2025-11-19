@@ -4,14 +4,14 @@ param name string
 @description('Azure region to deploy the resource. Required.')
 param location string
 
-@description('Resource identifier of the log analytics workspace to bind app insights to. Required.')
-param workspaceResourceId string
+// @description('Resource identifier of the log analytics workspace to bind app insights to. Required.')
+// param workspaceResourceId string
 
 @description('Unique release number for this deployment. Defaults to the current date.')
 param releaseNumber string = utcNow('yyyyMMdd.HHmm')
 
-@description('Alert Action Group Id. Required.')
-param actionGroupId string
+// @description('Alert Action Group Id. Required.')
+// param actionGroupId string
 
 @description('Environment into which to deploy resources. Required.')
 param environment string
