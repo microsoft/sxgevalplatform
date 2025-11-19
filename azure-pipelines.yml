@@ -49,7 +49,7 @@ stages:
             scriptLocation: 'inlineScript'
             inlineScript: |
               echo "Deploying Azure resources..."
-              az group create --name $(resourceGroup) --location $(location)
+              #az group create --name $(resourceGroup) --location $(location)
               az deployment group create \
                 --resource-group $(resourceGroup) \
                 --template-file infrastructure/main.bicep \
