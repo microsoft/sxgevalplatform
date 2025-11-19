@@ -58,7 +58,7 @@ var resourcePrefix = 'sxg-eval'
 // }
 
 // App Insights
-module appInsights '../../common/infrastructure/templates/bicep/ApplicationInsights/main.module.bicep' = {
+module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
   name: 'appInsightsDeploy-${releaseNumber}'
   dependsOn: [
     resourceNames
