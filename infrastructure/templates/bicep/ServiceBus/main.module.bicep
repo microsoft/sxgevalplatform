@@ -33,7 +33,7 @@ resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
   name: 'ServiceBusDiagnostics'
   scope: serviceBusNamespace
   properties: {
-    workspaceId: log    workspaceId: logAnalyticsWorkspaceId
+    //workspaceId: log    workspaceId: logAnalyticsWorkspaceId
     logs: [
       {
         category: 'OperationalLogs'
@@ -59,7 +59,7 @@ resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
 
 
 resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = {
-  name: '${name}/${queueName}'
+  name: '${serviceBusNamespace}/${queueName}'
   properties: {
     enablePartitioning: true
     maxSizeInMegabytes: 1024
