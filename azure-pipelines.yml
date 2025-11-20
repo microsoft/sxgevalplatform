@@ -18,7 +18,7 @@ variables:
   resourceGroup: 'rg-sxg-agent-evaluation-platform'
   rgNamePrefix: 'sxg-core-eval-rg-'
   commonRegion: 'westus2'
-  regions: ["westus2", "eastus2"]
+  regions: 'westus2 eastus2'
   azureClientId: 'your-client-id'
   azureTenantId: 'your-tenant-id'
   azureAdClientId: 'your-ad-client-id'
