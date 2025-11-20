@@ -27,6 +27,13 @@ resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2021-11-01' = {
     ComponentId: componentId
     Env: environment
   }
+  properties: {
+    premiumMessagingPartitions: 0
+    minimumTlsVersion: '1.2'
+    publicNetworkAccess: 'Enabled'
+    disableLocalAuth: true
+    zoneRedundant: true
+  }
 }
 
 resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -40,11 +47,19 @@ resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
         enabled: true
       }
       {
-        category: 'VNetConnectionEvent'
+        category: 'RuntimeAuditLogs'
         enabled: true
       }
       {
-        category: 'RuntimeAuditLogs'
+        category: 'DiagnosticErrorLogs'
+        enabled: true
+      }
+      {
+        category: 'ApplicationMetricsLogs'
+        enabled: true
+      }
+      {
+        category: 'DataDRLogs'
         enabled: true
       }
     ]
