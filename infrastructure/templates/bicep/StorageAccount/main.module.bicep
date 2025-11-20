@@ -4,8 +4,8 @@ param name string
 @description('Azure region to deploy the resource. Required.')
 param location string
 
-@description('Id of the Log Analytics Workspace to upload diagnostic logs to. Required.')
-param logAnalyticsWorkspaceId string
+@description('Name of the Log Analytics Workspace to upload diagnostic logs to. Required.')
+param logAnalyticsWorkspaceName string
 
 @description('Environment into which to deploy resources. Required.')
 param environment string
@@ -78,7 +78,7 @@ resource tableServices 'Microsoft.Storage/storageAccounts/tableServices@2022-09-
 }
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
-  id: logAnalyticsWorkspaceId
+  name: logAnalyticsWorkspaceName
 }
 
 resource accountDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {

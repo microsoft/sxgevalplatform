@@ -102,7 +102,7 @@ module storageAccount 'templates/bicep/StorageAccount/main.module.bicep' = {
   params: {
     name: 'sxgevalstorageaccount${environment}'
     location: location
-    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    logAnalyticsWorkspaceName: 'sxg-eval-logAnalytics-${environment}'
     serviceName: serviceName
     environment: environment
     componentId: componentId
