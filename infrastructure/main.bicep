@@ -121,5 +121,6 @@ module serviceBus 'templates/bicep/ServiceBus/main.module.bicep' = {
     environment: environment
     componentId: componentId
     queueName: 'evalResults'
+    storageAccountId: 'sxgevalstorageaccount${environment}'
   }
 }

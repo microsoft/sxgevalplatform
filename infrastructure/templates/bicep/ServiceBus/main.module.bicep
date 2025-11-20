@@ -16,6 +16,9 @@ param queueName string
 @description('skuName.Required.')
 param skuName string = 'Standard' // Options: Basic, Standard, Premium
 
+@description('storage account for diagnosticSetting.Required.')
+param storageAccountId string
+
 resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2021-11-01' = {
   name: name
   location: location
@@ -40,7 +43,7 @@ resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
   name: 'ServiceBusDiagnostics'
   scope: serviceBusNamespace
   properties: {
-    //workspaceId: log    workspaceId: logAnalyticsWorkspaceId
+    storageAccountId: storageAccountId
     logs: [
       {
         category: 'OperationalLogs'
