@@ -108,3 +108,18 @@ module storageAccount 'templates/bicep/StorageAccount/main.module.bicep' = {
     componentId: componentId
   }
 }
+
+// Service Bus
+module serviceBus 'templates/bicep/ServiceBus/main.module.bicep' = {
+  name: 'serviceBusDeploy-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-serviceBus-${environment}'
+    location: location
+    environment: environment
+    componentId: componentId
+    queueName: 'evalResults'
+  }
+}

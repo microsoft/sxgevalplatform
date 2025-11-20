@@ -16,8 +16,9 @@ parameters:
 variables:
   azureSubscription: 'SXGCore_ConfigService_Dev'
   resourceGroup: 'rg-sxg-agent-evaluation-platform'
-  appName: 'my-web-app'
-  location: 'eastus'
+  rgNamePrefix: 'sxg-core-eval-rg-'
+  commonRegion: 'westus2'
+  regions: ("westus2" "eastus2")
   azureClientId: 'your-client-id'
   azureTenantId: 'your-tenant-id'
   azureAdClientId: 'your-ad-client-id'
@@ -51,11 +52,19 @@ stages:
             scriptLocation: 'inlineScript'
             inlineScript: |
               echo "Deploying Azure resources..."
-              #az group create --name $(resourceGroup) --location $(location)
+
+              resourceGroup="$(rgNamePrefix)common-dev"
+              echo "Checking if resource group $resourceGroup exists..."
+              if az group exists --name $resourceGroup; then
+                echo "Resource group $resourceGroup already exists."
+              else
+                echo "Creating resource group $resourceGroup..."
+                az group create --name $resourceGroup --location $(commonRegion)
+
               az deployment group create \
-                --resource-group $(resourceGroup) \
+                --resource-group $resourceGroup \
                 --template-file infrastructure/main.bicep \
-                --parameters environment=dev location=$(location) \
+                --parameters environment=dev location=$(commonRegion) \
                 azureClientId=$(azureClientId) azureTenantId=$(azureTenantId) azureAdClientId=$(azureAdClientId) \
                 componentId=$(componentId) serviceName=$(serviceName) resourcePrefix=$(resourcePrefix)
 
