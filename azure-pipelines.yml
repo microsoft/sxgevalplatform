@@ -18,7 +18,7 @@ variables:
   resourceGroup: 'rg-sxg-agent-evaluation-platform'
   rgNamePrefix: 'sxg-core-eval-rg-'
   commonRegion: 'westus2'
-  regions: ("westus2" "eastus2")
+  regions: ["westus2", "eastus2"]
   azureClientId: 'your-client-id'
   azureTenantId: 'your-tenant-id'
   azureAdClientId: 'your-ad-client-id'
@@ -60,6 +60,7 @@ stages:
               else
                 echo "Creating resource group $resourceGroup..."
                 az group create --name $resourceGroup --location $(commonRegion)
+              fi
 
               az deployment group create \
                 --resource-group $resourceGroup \
