@@ -7,7 +7,7 @@ namespace SxG.EvalPlatform.Plugins.Common.Framework
     using SxG.EvalPlatform.Plugins.Services;
     using IEnvironmentVariableService = IEnvironmentVariableService;
 
-    public interface ILocalPluginContext
+    public interface ILocalPluginContext : IDisposable
     {
         /// <summary>
         /// Synchronous registered plug-ins can post the execution context to the Microsoft Azure Service Bus. <br/>

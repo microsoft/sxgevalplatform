@@ -6,12 +6,15 @@
     using SxG.EvalPlatform.Plugins.Services;
     using IEnvironmentVariableService = Interfaces.IEnvironmentVariableService;
 
-    public class LocalPluginContext : ILocalPluginContext
+    public class LocalPluginContext : ILocalPluginContext, IDisposable
     {
+        private bool _disposed = false;
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "LocalPluginContext")]
         public IServiceProvider ServiceProvider { get; private set; }
 
         public IManagedIdentityService ManagedIdentityService { get; private set; }
+        
         /// <summary>
         /// The Microsoft Dynamics 365 on behalf of token service.
         /// </summary>
@@ -172,10 +175,45 @@
             else
             {
                 TracingService.Trace(
- "{0}, Correlation Id: {1}, Initiating User: {2}",
-          message,
-     PluginExecutionContext.CorrelationId,
-           PluginExecutionContext.InitiatingUserId);
+                    "{0}, Correlation Id: {1}, Initiating User: {2}",
+                    message,
+                    PluginExecutionContext.CorrelationId,
+                    PluginExecutionContext.InitiatingUserId);
+            }
+        }
+
+        /// <summary>
+        /// Disposes resources, ensuring telemetry is flushed
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes resources
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose logging service if it was created
+                    if (_loggingService is IDisposable disposableLoggingService)
+                    {
+                        try
+                        {
+                            disposableLoggingService.Dispose();
+                        }
+                        catch
+                        {
+                            // Silently handle disposal errors
+                        }
+                    }
+                }
+                _disposed = true;
             }
         }
     }

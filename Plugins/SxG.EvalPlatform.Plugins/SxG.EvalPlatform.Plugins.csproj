@@ -45,6 +45,12 @@
 			Placeholder
 		</Description>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>gerdgeg.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -58,6 +64,7 @@
     <Reference Include="Microsoft.Xrm.Sdk">
       <HintPath>$(SolutionDir)packages\Microsoft.CrmSdk.CoreAssemblies.9.0.2.29\lib\net462\Microsoft.Xrm.Sdk.dll</HintPath>
     </Reference>
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
     <Reference Include="Microsoft.Crm.Sdk.Proxy">
       <HintPath>$(SolutionDir)packages\Microsoft.CrmSdk.CoreAssemblies.9.0.2.29\lib\net462\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
     </Reference>
@@ -89,6 +96,7 @@
     <Compile Include="Plugins\UpdateDataset.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Framework\PluginBase.cs" />
+    <Compile Include="Services\AppInsightsTelemetryHelper.cs" />
     <Compile Include="Services\IPluginConfigurationService.cs" />
     <Compile Include="Services\IPluginLoggingService.cs" />
     <Compile Include="Services\PluginConfigurationService.cs" />
@@ -98,6 +106,7 @@
     <Content Include=".gitignore" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="gerdgeg.snk" />
     <None Include="README.md" />
   </ItemGroup>
   <Target Name="GetTfmPublishedFiles">

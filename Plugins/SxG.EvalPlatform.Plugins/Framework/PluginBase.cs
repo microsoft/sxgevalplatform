@@ -80,49 +80,51 @@ namespace SxG.EvalPlatform.Plugins.Common.Framework
             }
 
             // Construct the local plug-in context.
-            LocalPluginContext localcontext = new LocalPluginContext(serviceProvider, _secureConfig);
-            localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Entered {0}.Execute()", this.ChildClassName));
-
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            try
+            using (LocalPluginContext localcontext = new LocalPluginContext(serviceProvider, _secureConfig))
             {
-                LocalPluginContextManager.InitiatingExecution(localcontext);
+                localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Entered {0}.Execute()", this.ChildClassName));
 
-                // Invoke the custom implementation 
-                ExecuteCrmPlugin(localcontext);
+                var stopWatch = new Stopwatch();
+                stopWatch.Start();
 
-                // stop the timer and log the request
-                stopWatch.Stop();
+                try
+                {
+                    LocalPluginContextManager.InitiatingExecution(localcontext);
 
-                // now exit - if the derived plug-in has incorrectly registered overlapping event registrations,
-                // guard against multiple executions.
-                return;
-            }
-            catch (FaultException<OrganizationServiceFault> e)
-            {
-                localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exception: {0}", e.ToString()));
+                    // Invoke the custom implementation 
+                    ExecuteCrmPlugin(localcontext);
 
-                stopWatch.Stop();
+                    // stop the timer and log the request
+                    stopWatch.Stop();
 
-                // Handle the exception.
-                throw;
-            }
-            catch (System.Exception e)
-            {
-                localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exception: {0}", e.ToString()));
+                    // now exit - if the derived plug-in has incorrectly registered overlapping event registrations,
+                    // guard against multiple executions.
+                    return;
+                }
+                catch (FaultException<OrganizationServiceFault> e)
+                {
+                    localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exception: {0}", e.ToString()));
 
-                stopWatch.Stop();
+                    stopWatch.Stop();
 
-                // Handle the exception.
-                throw;
-            }
-            finally
-            {
-                localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exiting {0}.Execute()", this.ChildClassName));
-                LocalPluginContextManager.FinalizingExecution();
-            }
+                    // Handle the exception.
+                    throw;
+                }
+                catch (System.Exception e)
+                {
+                    localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exception: {0}", e.ToString()));
+
+                    stopWatch.Stop();
+
+                    // Handle the exception.
+                    throw;
+                }
+                finally
+                {
+                    localcontext.Trace(string.Format(CultureInfo.InvariantCulture, "Exiting {0}.Execute()", this.ChildClassName));
+                    LocalPluginContextManager.FinalizingExecution();
+                }
+            } // LocalPluginContext disposed here, ensuring telemetry is flushed
         }
 
         /// <summary>
