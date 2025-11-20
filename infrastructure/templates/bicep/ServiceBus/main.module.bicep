@@ -53,6 +53,9 @@ resource diagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
         category: 'AllMetrics'
         enabled: true
       }
+    ]
+  }
+}
 
 
 resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = {
@@ -64,3 +67,4 @@ resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = {
     defaultMessageTimeToLive: 'P7D'
     requiresDuplicateDetection: false
   }
+}
