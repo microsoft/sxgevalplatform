@@ -12,7 +12,8 @@ Configure these environment variables in Dataverse:
 |------------|------|-------------|---------------|----------|
 | `cr890_EvalApiBaseUrl` | Text | Base URL for Eval API | `https://sxgevalapidev.azurewebsites.net` | Yes |
 | `cr890_ApiTimeoutSeconds` | Decimal | API call timeout (seconds) | `30` | No |
-| `cr890_EnableAppInsightsLogging` | Yes/No | Enable Application Insights (WIP - Currently this is not working) | `No` | No |
+| `cr890_ApiScope` | Text | OAuth scope for API authentication | `443bbe62-c474-49f7-884c-d1b5a23eb735/.default` | No |
+| `cr890_EnableAppInsightsLogging` | Yes/No | Enable Application Insights | `No` | No |
 | `cr890_EnableAuditLogging` | Yes/No | Enable Dataverse audit logs | `Yes` | No |
 | `cr890_AppInsightsConnectionString` | Text | Azure App Insights connection string | (none) | Only if App Insights enabled |
 
@@ -109,6 +110,47 @@ The logging service automatically detects the configuration at runtime:
 - **No recompilation needed**: Toggle logging by changing environment variables
 
 Both logging destinations can run simultaneously or independently based on your configuration.
+
+## Authentication Helper
+
+### Overview
+
+The `AuthTokenHelper` utility provides a centralized way to acquire authentication tokens using Managed Identity Service for external API calls.
+
+### Usage
+
+```csharp
+// Get API scope from configuration
+string apiScope = configService.GetApiScope();
+
+// Acquire token using Managed Identity
+string authToken = AuthTokenHelper.AcquireToken(
+    managedIdentityService, 
+    apiScope, 
+    loggingService, 
+  nameof(YourPlugin));
+
+// Add authorization header to HTTP request
+AuthTokenHelper.AddAuthorizationHeader(
+    httpWebRequest, 
+    authToken, 
+ loggingService, 
+    nameof(YourPlugin));
+```
+
+### Features
+
+- **Centralized token acquisition** - Single reusable utility across all plugins
+- **Environment variable configuration** - OAuth scope configurable via `cr890_ApiScope`
+- **Comprehensive logging** - All operations logged for troubleshooting
+- **Graceful error handling** - Returns null if token acquisition fails
+- **Automatic header formatting** - Adds "Bearer {token}" to Authorization header
+
+### Configuration
+
+The OAuth scope is configured via the `cr890_ApiScope` environment variable:
+- **Default**: `443bbe62-c474-49f7-884c-d1b5a23eb735/.default`
+- **Format**: `{ResourceId}/.default` or specific scopes
 
 ## Entity Structure
 

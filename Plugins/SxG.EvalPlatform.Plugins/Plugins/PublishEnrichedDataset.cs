@@ -6,6 +6,7 @@ namespace SxG.EvalPlatform.Plugins
     using System.Text;
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Sdk.Query;
+    using SxG.EvalPlatform.Plugins.Common;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
@@ -33,6 +34,7 @@ namespace SxG.EvalPlatform.Plugins
             var loggingService = localContext.LoggingService;
             var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
+            var managedIdentityService = localContext.ManagedIdentityService;
 
             try
             {
@@ -63,8 +65,12 @@ namespace SxG.EvalPlatform.Plugins
                     return;
                 }
 
+                // Get authentication token for external API calls
+                string apiScope = configService.GetApiScope();
+                string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
+
                 // Call external API to publish enriched dataset
-                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, loggingService, configService);
+                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, authToken, loggingService, configService);
                 if (!publishSuccess)
                 {
                     var errorResponse = PublishEnrichedDatasetResponse.CreateError("Failed to publish enriched dataset to external API", request.EvalRunId);
@@ -77,9 +83,9 @@ namespace SxG.EvalPlatform.Plugins
 
                 // Log event to Application Insights
                 loggingService.LogEvent("PublishEnrichedDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
-  {
-        { "EvalRunId", request.EvalRunId },
-     { "DatasetSize", dataset?.Length.ToString() ?? "0" }
+                {
+                    { "EvalRunId", request.EvalRunId },
+                    { "DatasetSize", dataset?.Length.ToString() ?? "0" }
                 });
 
                 // Create success response
@@ -195,10 +201,11 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="dataset">Dataset JSON string to publish</param>
+        /// <param name="authToken">Authentication bearer token</param>
         /// <param name="loggingService">Logging service</param>
         /// <param name="configService">Configuration service</param>
         /// <returns>True if publish successful</returns>
-        private bool CallExternalPublishApi(string evalRunId, string dataset, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        private bool CallExternalPublishApi(string evalRunId, string dataset, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
@@ -210,6 +217,9 @@ namespace SxG.EvalPlatform.Plugins
                 httpWebRequest.Method = "POST";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 // Prepare request body with enrichedDataset property
                 string requestBody = CreatePublishRequestBody(dataset);

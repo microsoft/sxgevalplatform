@@ -55,5 +55,11 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <returns>Connection string for Application Insights</returns>
         string GetAppInsightsConnectionString();
+
+        /// <summary>
+        /// Gets the OAuth scope for external API authentication
+        /// </summary>
+        /// <returns>OAuth scope (e.g., "443bbe62-c474-49f7-884c-d1b5a23eb735/.default")</returns>
+        string GetApiScope();
     }
 }
