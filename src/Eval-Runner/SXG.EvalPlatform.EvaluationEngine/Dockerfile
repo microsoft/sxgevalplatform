@@ -28,9 +28,9 @@ RUN groupadd -r evaluser && useradd -r -g evaluser evaluser
 # Copy installed packages from builder stage
 COPY --from=builder /root/.local /home/evaluser/.local
 
-# Copy application code
+# Copy application code and all configuration files
 COPY src/ ./src/
-COPY appsettings.json .
+COPY appsettings*.json ./
 
 # Set environment variables
 ENV PATH=/home/evaluser/.local/bin:$PATH

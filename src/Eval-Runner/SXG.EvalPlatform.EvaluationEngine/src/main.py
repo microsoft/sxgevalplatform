@@ -144,9 +144,7 @@ class EvaluationApp:
                 logger, 
                 "process_evaluation_message",
                 eval_run_id=message.eval_run_id,
-                agent_id=message.agent_id,
                 metrics_configuration_id=message.metrics_configuration_id,
-                enriched_dataset_id=message.enriched_dataset_id,
                 priority=message.priority
             )
             
@@ -177,7 +175,6 @@ class EvaluationApp:
                 "process_evaluation_message",
                 e,
                 eval_run_id=message.eval_run_id,
-                agent_id=message.agent_id,
                 error_details=str(e)
             )
             return False  # Return False to indicate processing failed

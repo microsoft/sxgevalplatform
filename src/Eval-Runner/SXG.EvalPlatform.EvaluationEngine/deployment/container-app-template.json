@@ -30,6 +30,18 @@
                 "description": "Container image tag"
             }
         },
+        "runtimeEnvironment": {
+            "type": "string",
+            "defaultValue": "Development",
+            "allowedValues": [
+                "Development",
+                "PPE",
+                "Production"
+            ],
+            "metadata": {
+                "description": "Runtime environment for configuration selection"
+            }
+        },
         "minReplicas": {
             "type": "int",
             "defaultValue": 3,
@@ -65,75 +77,30 @@
                 "description": "Memory allocation (optimized for concurrent processing)"
             }
         },
+        "managedEnvironmentName": {
+            "type": "string",
+            "defaultValue": "eval-framework-env",
+            "metadata": {
+                "description": "Container Apps managed environment name"
+            }
+        },
         "applicationInsightsConnectionString": {
             "type": "securestring",
             "metadata": {
-                "description": "Application Insights Connection String"
+                "description": "Application Insights connection string"
             }
         },
         "azureStorageAccountName": {
             "type": "string",
             "metadata": {
-                "description": "Azure Storage Account Name for managed identity access"
+                "description": "Azure Storage Account name for queue scaling"
             }
         },
         "azureQueueName": {
             "type": "string",
             "defaultValue": "evaluation-requests",
             "metadata": {
-                "description": "Azure Storage Queue Name"
-            }
-        },
-        "evaluationApiBaseUrl": {
-            "type": "string",
-            "metadata": {
-                "description": "Base URL for the Evaluation API"
-            }
-        },
-        "azureOpenAiEndpoint": {
-            "type": "string",
-            "metadata": {
-                "description": "Azure OpenAI Endpoint"
-            }
-        },
-        "azureOpenAiApiVersion": {
-            "type": "string",
-            "defaultValue": "2025-01-01-preview",
-            "metadata": {
-                "description": "Azure OpenAI API Version"
-            }
-        },
-        "azureOpenAiDeploymentName": {
-            "type": "string",
-            "defaultValue": "gpt-4.1",
-            "metadata": {
-                "description": "Azure OpenAI Deployment Name"
-            }
-        },
-        "azureTenantId": {
-            "type": "string",
-            "metadata": {
-                "description": "Azure Tenant ID for managed identity"
-            }
-        },
-        "azureSubscriptionId": {
-            "type": "string",
-            "metadata": {
-                "description": "Azure Subscription ID"
-            }
-        },
-        "azureAiProjectName": {
-            "type": "string",
-            "defaultValue": "evalplatformproject",
-            "metadata": {
-                "description": "Azure AI Foundry Project Name"
-            }
-        },
-        "managedEnvironmentName": {
-            "type": "string",
-            "defaultValue": "eval-framework-env",
-            "metadata": {
-                "description": "Container Apps managed environment name"
+                "description": "Azure Queue name for scaling"
             }
         }
     },
@@ -164,7 +131,7 @@
                         }
                     ],
                     "ingress": {
-                        "external": false,
+                        "external": true,
                         "targetPort": "[parameters('targetPort')]",
                         "allowInsecure": false,
                         "traffic": [
@@ -179,7 +146,7 @@
                     "revisionSuffix": "[concat('rev-', utcNow('yyyyMMddHHmmss'))]",
                     "containers": [
                         {
-                            "name": "eval-framework-container",
+                            "name": "eval-framework-app",
                             "image": "[variables('containerImageName')]",
                             "resources": {
                                 "cpu": "[parameters('cpuCores')]",
@@ -187,56 +154,8 @@
                             },
                             "env": [
                                 {
-                                    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                                    "secretRef": "application-insights-connection-string"
-                                },
-                                {
-                                    "name": "AZURE_STORAGE_ACCOUNT_NAME",
-                                    "value": "[parameters('azureStorageAccountName')]"
-                                },
-                                {
-                                    "name": "AZURE_QUEUE_NAME",
-                                    "value": "[parameters('azureQueueName')]"
-                                },
-                                {
-                                    "name": "AZURE_USE_MANAGED_IDENTITY",
-                                    "value": "true"
-                                },
-                                {
-                                    "name": "AZURE_TENANT_ID",
-                                    "value": "[parameters('azureTenantId')]"
-                                },
-                                {
-                                    "name": "AZURE_SUBSCRIPTION_ID",
-                                    "value": "[parameters('azureSubscriptionId')]"
-                                },
-                                {
-                                    "name": "AZURE_RESOURCE_GROUP_NAME",
-                                    "value": "[parameters('resourceGroupName')]"
-                                },
-                                {
-                                    "name": "AZURE_AI_PROJECT_NAME",
-                                    "value": "[parameters('azureAiProjectName')]"
-                                },
-                                {
-                                    "name": "EVALUATION_API_BASE_URL",
-                                    "value": "[parameters('evaluationApiBaseUrl')]"
-                                },
-                                {
-                                    "name": "AZURE_OPENAI_ENDPOINT",
-                                    "value": "[parameters('azureOpenAiEndpoint')]"
-                                },
-                                {
-                                    "name": "AZURE_OPENAI_API_VERSION",
-                                    "value": "[parameters('azureOpenAiApiVersion')]"
-                                },
-                                {
-                                    "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
-                                    "value": "[parameters('azureOpenAiDeploymentName')]"
-                                },
-                                {
-                                    "name": "AZURE_OPENAI_USE_MANAGED_IDENTITY",
-                                    "value": "true"
+                                    "name": "RUNTIME_ENVIRONMENT",
+                                    "value": "[parameters('runtimeEnvironment')]"
                                 },
                                 {
                                     "name": "PYTHONPATH",
@@ -285,30 +204,6 @@
                                 {
                                     "name": "ENABLE_PERFORMANCE_LOGGING",
                                     "value": "true"
-                                }
-                            ],
-                            "probes": [
-                                {
-                                    "type": "Liveness",
-                                    "httpGet": {
-                                        "path": "/health",
-                                        "port": "[parameters('targetPort')]"
-                                    },
-                                    "initialDelaySeconds": 30,
-                                    "periodSeconds": 30,
-                                    "timeoutSeconds": 10,
-                                    "failureThreshold": 3
-                                },
-                                {
-                                    "type": "Readiness",
-                                    "httpGet": {
-                                        "path": "/ready",
-                                        "port": "[parameters('targetPort')]"
-                                    },
-                                    "initialDelaySeconds": 10,
-                                    "periodSeconds": 10,
-                                    "timeoutSeconds": 5,
-                                    "failureThreshold": 3
                                 }
                             ]
                         }

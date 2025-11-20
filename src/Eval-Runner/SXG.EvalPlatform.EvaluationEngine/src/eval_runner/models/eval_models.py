@@ -23,16 +23,37 @@ class QueueMessage:
     """Message received from Azure Storage Queue."""
     eval_run_id: str
     metrics_configuration_id: str
-    enriched_dataset_id: str
-    agent_id: str
-    dataset_id: str
-    requested_at: datetime
+    requested_at: Optional[datetime] = None
     priority: str = "Normal"
     
     @classmethod
     def from_json(cls, message_body: str) -> 'QueueMessage':
-        """Create QueueMessage from JSON string."""
-        data = json.loads(message_body)
+        """
+        Create QueueMessage from JSON string with enhanced error handling.
+        
+        Args:
+            message_body: JSON string or already parsed dict
+            
+        Returns:
+            QueueMessage instance
+            
+        Raises:
+            json.JSONDecodeError: When JSON parsing fails
+            KeyError: When required fields are missing
+        """
+        try:
+            # Handle both string and already-parsed dict inputs
+            if isinstance(message_body, str):
+                data = json.loads(message_body)
+            elif isinstance(message_body, dict):
+                data = message_body
+            else:
+                raise ValueError(f"Expected string or dict, got {type(message_body)}")
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse queue message JSON. Content: {repr(message_body[:200])}")
+            logger.error(f"JSON Error: {e}")
+            raise
         
         # Helper function to get value supporting both camelCase and PascalCase
         def get_field(camel_case: str, pascal_case: str, required: bool = True) -> str:
@@ -41,18 +62,28 @@ class QueueMessage:
             elif camel_case in data:
                 return str(data[camel_case])
             elif required:
-                raise KeyError(f"Required field missing: expected '{pascal_case}' or '{camel_case}'")
+                available_keys = list(data.keys()) if isinstance(data, dict) else []
+                raise KeyError(f"Required field missing: expected '{pascal_case}' or '{camel_case}'. Available keys: {available_keys}")
             return ""
+        
+        try:
+            # Parse requested_at if provided
+            requested_at = None
+            if 'RequestedAt' in data or 'requestedAt' in data:
+                requested_at_str = get_field('requestedAt', 'RequestedAt', False)
+                if requested_at_str:
+                    requested_at = datetime.fromisoformat(requested_at_str)
             
-        return cls(
-            eval_run_id=get_field('evalRunId', 'EvalRunId'),
-            metrics_configuration_id=get_field('metricsConfigurationId', 'MetricsConfigurationId'),
-            enriched_dataset_id=get_field('enrichedDatasetId', 'EnrichedDatasetId'),
-            agent_id=get_field('agentId', 'AgentId'),
-            dataset_id=get_field('datasetId', 'DatasetId'),
-            requested_at=datetime.fromisoformat(get_field('requestedAt', 'RequestedAt')),
-            priority=get_field('priority', 'Priority', False) or 'Normal'
-        )
+            return cls(
+                eval_run_id=get_field('evalRunId', 'EvalRunId'),
+                metrics_configuration_id=get_field('metricsConfigurationId', 'MetricsConfigurationId'),
+                requested_at=requested_at,
+                priority=get_field('priority', 'Priority', False) or 'Normal'
+            )
+        except Exception as e:
+            logger.error(f"Failed to create QueueMessage from parsed data: {data}")
+            logger.error(f"Error: {e}")
+            raise
 
 @dataclass
 class DatasetItem:
@@ -356,9 +387,11 @@ class EvaluationConfig:
     @classmethod
     def create(cls, queue_message: QueueMessage, metrics_response: MetricsConfigurationResponse, dataset: Dataset) -> 'EvaluationConfig':
         """Create EvaluationConfig from queue message, metrics response, and dataset."""
+        # Use agent_id from metrics response since queue message no longer contains it
+        agent_id = metrics_response.agent_id
         return cls(
             eval_run_id=queue_message.eval_run_id,
-            agent_id=queue_message.agent_id,
+            agent_id=agent_id,
             metrics_configuration=metrics_response.metrics_configuration,
             dataset=dataset
         )

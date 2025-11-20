@@ -39,6 +39,7 @@ class ApiEndpointsConfig:
     enriched_dataset_endpoint: str
     metrics_configuration_endpoint: str
     update_status: str
+    post_results_endpoint: str
 
 @dataclass
 class EvaluationConfig:
@@ -61,36 +62,50 @@ class EvaluationConfig:
             raise ConfigurationError("retry_attempts must be non-negative")
 
 @dataclass
-class AzureOpenAIConfig:
-    """Configuration for Azure OpenAI service."""
+class AzureAIConfig:
+    """Configuration for Azure AI services (both OpenAI and AI Foundry)."""
+    # Required parameters (no defaults)
     endpoint: str
-    api_key: Optional[str]
-    deployment_name: str
-    api_version: str
-    use_managed_identity: bool = True
-    subscription_id: Optional[str] = None
-    resource_group_name: Optional[str] = None
-    resource_name: Optional[str] = None
+    project_id: str
+    project_name: str
+    subscription_id: str
+    resource_group_name: str
+    resource_name: str
+    
+    # Optional parameters with defaults must come last
+    deployment_name: str = "gpt-4.1"
+    api_version: str = "2025-01-01-preview"
     tenant_id: Optional[str] = None
     
+    # Authentication configuration
+    use_managed_identity: bool = True
+    api_key: Optional[str] = None
+    
     def validate(self) -> None:
-        """Validate Azure OpenAI configuration."""
+        """Validate Azure AI configuration."""
+        # OpenAI endpoint validation
         if not self.endpoint or self.endpoint == "https://your-openai-endpoint.openai.azure.com/":
             raise ConfigurationError("Azure OpenAI endpoint must be configured")
         
+        # Authentication validation
         if self.use_managed_identity:
-            # For managed identity, we need tenant ID and resource details
             if self.tenant_id and self.tenant_id == "your-tenant-id":
                 raise ConfigurationError("Azure tenant ID must be configured for managed identity")
             if self.subscription_id and self.subscription_id == "your-subscription-id":
                 raise ConfigurationError("Azure subscription ID should be configured for managed identity")
         else:
-            # For API key authentication
             if not self.api_key or self.api_key == "your-azure-openai-api-key":
                 raise ConfigurationError("Azure OpenAI API key must be configured when not using managed identity")
         
+        # Required fields validation
         if not self.deployment_name or self.deployment_name == "your-gpt-deployment-name":
             raise ConfigurationError("Azure OpenAI deployment name must be configured")
+        if not self.subscription_id or self.subscription_id == "your-azure-subscription-id":
+            raise ConfigurationError("Azure subscription ID must be configured")
+        if not self.resource_group_name or self.resource_group_name == "your-resource-group-name":
+            raise ConfigurationError("Azure resource group name must be configured")
+        if not self.project_name or self.project_name == "your-project-name":
+            raise ConfigurationError("Azure AI project name must be configured")
 
 @dataclass
 class ApplicationInsightsConfig:
@@ -107,26 +122,6 @@ class ApplicationInsightsConfig:
             self.enable_telemetry = False
 
 @dataclass
-class AzureAIConfig:
-    """Configuration for Azure AI Foundry project."""
-    project_id: str
-    subscription_id: str
-    resource_group_name: str
-    project_name: str
-    tenant_id: Optional[str] = None
-    
-    def validate(self) -> None:
-        """Validate Azure AI configuration."""
-        if not self.subscription_id or self.subscription_id == "your-azure-subscription-id":
-            raise ConfigurationError("Azure subscription ID must be configured")
-        if not self.resource_group_name or self.resource_group_name == "your-resource-group-name":
-            raise ConfigurationError("Azure resource group name must be configured")
-        if not self.project_name or self.project_name == "your-project-name":
-            raise ConfigurationError("Azure AI project name must be configured")
-        if self.tenant_id and self.tenant_id == "your-tenant-id":
-            raise ConfigurationError("Azure tenant ID must be configured")
-
-@dataclass
 class LoggingConfig:
     """Configuration for logging."""
     default_level: str = "Information"
@@ -141,9 +136,14 @@ class AppSettings:
         Initialize application settings.
         
         Args:
-            config_path: Path to the configuration file. If None, uses appsettings.json
+            config_path: Path to the configuration file. If None, determines file based on RUNTIME_ENVIRONMENT
         """
-        self.config_path = config_path or "appsettings.json"
+        if config_path:
+            self.config_path = config_path
+        else:
+            # Determine config file based on RUNTIME_ENVIRONMENT
+            environment = os.getenv('RUNTIME_ENVIRONMENT', 'Local')
+            self.config_path = f"appsettings.{environment}.json"
         self._config_data = self._load_config()
         
         # Load configurations
@@ -152,8 +152,10 @@ class AppSettings:
         self.evaluation = self._load_evaluation_config()
         self.application_insights = self._load_application_insights_config()
         self.logging = self._load_logging_config()
-        self.azure_openai = self._load_azure_openai_config()
         self.azure_ai = self._load_azure_ai_config()
+        
+        # Deprecated properties (for backward compatibility)
+        self.azure_openai = self.azure_ai  # Point to consolidated config
         
     
     def validate_configuration(self) -> None:
@@ -165,131 +167,21 @@ class AppSettings:
         # Only validate if they need to be used
         
     def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from file or environment variables."""
-        config_data = {}
+        """Load configuration from appsettings file only."""
+        logging.info(f"Loading configuration from: {self.config_path}")
         
-        # Try to load from file first
         if os.path.exists(self.config_path):
-            with open(self.config_path, 'r') as f:
-                config_data = json.load(f)
-        
-        # Override with environment variables if available
-        config_data = self._override_with_env_vars(config_data)
-        
-        return config_data
+            try:
+                with open(self.config_path, 'r') as f:
+                    config_data = json.load(f)
+                logging.info(f"Successfully loaded configuration from {self.config_path}")
+                return config_data
+            except Exception as e:
+                raise ConfigurationError(f"Failed to parse configuration file {self.config_path}: {e}")
+        else:
+            raise ConfigurationError(f"Configuration file not found: {self.config_path}")
     
-    def _override_with_env_vars(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Override configuration with environment variables."""
-        # Azure Storage
-        if 'AzureStorage' not in config_data:
-            config_data['AzureStorage'] = {}
-        
-        config_data['AzureStorage']['AccountName'] = os.getenv(
-            'AZURE_STORAGE_ACCOUNT_NAME', 
-            config_data['AzureStorage'].get('AccountName', '')
-        )
-        config_data['AzureStorage']['QueueName'] = os.getenv(
-            'AZURE_QUEUE_NAME', 
-            config_data['AzureStorage'].get('QueueName', 'eval-processing-requests')
-        )
-        config_data['AzureStorage']['SuccessQueueName'] = os.getenv(
-            'AZURE_SUCCESS_QUEUE_NAME', 
-            config_data['AzureStorage'].get('SuccessQueueName', 'eval-processing-requests-completed')
-        )
-        config_data['AzureStorage']['FailureQueueName'] = os.getenv(
-            'AZURE_FAILURE_QUEUE_NAME', 
-            config_data['AzureStorage'].get('FailureQueueName', 'eval-processing-requests-failed')
-        )
-        config_data['AzureStorage']['BlobContainerPrefix'] = os.getenv(
-            'AZURE_BLOB_CONTAINER_PREFIX', 
-            config_data['AzureStorage'].get('BlobContainerPrefix', 'agent-')
-        )
-        config_data['AzureStorage']['UseManagedIdentity'] = os.getenv(
-            'AZURE_USE_MANAGED_IDENTITY', 
-            str(config_data['AzureStorage'].get('UseManagedIdentity', True))
-        ).lower() == 'true'
-        config_data['AzureStorage']['ConnectionString'] = os.getenv(
-            'AZURE_STORAGE_CONNECTION_STRING', 
-            config_data['AzureStorage'].get('ConnectionString', '')
-        )
-        
-        # API Endpoints
-        if 'ApiEndpoints' not in config_data:
-            config_data['ApiEndpoints'] = {}
-        
-        config_data['ApiEndpoints']['BaseUrl'] = os.getenv(
-            'EVALUATION_API_BASE_URL', 
-            config_data['ApiEndpoints'].get('BaseUrl', '')
-        )
-        config_data['ApiEndpoints']['EvalConfigEndpoint'] = os.getenv(
-            'EVAL_CONFIG_ENDPOINT', 
-            config_data['ApiEndpoints'].get('EvalConfigEndpoint', '')
-        )
-        config_data['ApiEndpoints']['StatusUpdateEndpoint'] = os.getenv(
-            'STATUS_UPDATE_ENDPOINT', 
-            config_data['ApiEndpoints'].get('StatusUpdateEndpoint', '')
-        )
-        
-        # Azure OpenAI
-        if 'AzureOpenAI' not in config_data:
-            config_data['AzureOpenAI'] = {}
-        
-        config_data['AzureOpenAI']['Endpoint'] = os.getenv(
-            'AZURE_OPENAI_ENDPOINT', 
-            config_data['AzureOpenAI'].get('Endpoint', '')
-        )
-        config_data['AzureOpenAI']['DeploymentName'] = os.getenv(
-            'AZURE_OPENAI_DEPLOYMENT_NAME',
-            config_data['AzureOpenAI'].get('DeploymentName', 'gpt-4.1')
-        )
-        config_data['AzureOpenAI']['ApiVersion'] = os.getenv(
-            'AZURE_OPENAI_API_VERSION',
-            config_data['AzureOpenAI'].get('ApiVersion', '2025-01-01-preview')
-        )
-        config_data['AzureOpenAI']['UseManagedIdentity'] = os.getenv(
-            'AZURE_OPENAI_USE_MANAGED_IDENTITY',
-            str(config_data['AzureOpenAI'].get('UseManagedIdentity', True))
-        ).lower() == 'true'
-        config_data['AzureOpenAI']['TenantId'] = os.getenv(
-            'AZURE_TENANT_ID',
-            config_data['AzureOpenAI'].get('TenantId', '')
-        )
-        config_data['AzureOpenAI']['SubscriptionId'] = os.getenv(
-            'AZURE_SUBSCRIPTION_ID',
-            config_data['AzureOpenAI'].get('SubscriptionId', '')
-        )
-        
-        # Azure AI Foundry
-        if 'AzureAI' not in config_data:
-            config_data['AzureAI'] = {}
-        
-        config_data['AzureAI']['SubscriptionId'] = os.getenv(
-            'AZURE_SUBSCRIPTION_ID',
-            config_data['AzureAI'].get('SubscriptionId', '')
-        )
-        config_data['AzureAI']['ResourceGroupName'] = os.getenv(
-            'AZURE_RESOURCE_GROUP_NAME',
-            config_data['AzureAI'].get('ResourceGroupName', '')
-        )
-        config_data['AzureAI']['ProjectName'] = os.getenv(
-            'AZURE_AI_PROJECT_NAME',
-            config_data['AzureAI'].get('ProjectName', '')
-        )
-        config_data['AzureAI']['TenantId'] = os.getenv(
-            'AZURE_TENANT_ID',
-            config_data['AzureAI'].get('TenantId', '')
-        )
-        
-        # Application Insights
-        if 'ApplicationInsights' not in config_data:
-            config_data['ApplicationInsights'] = {}
-        
-        config_data['ApplicationInsights']['ConnectionString'] = os.getenv(
-            'APPLICATIONINSIGHTS_CONNECTION_STRING',
-            config_data['ApplicationInsights'].get('ConnectionString', '')
-        )
-        
-        return config_data
+    # Remove the old _override_with_env_vars method - we now rely purely on appsettings.json files
     
     def _load_azure_storage_config(self) -> AzureStorageConfig:
         """Load Azure Storage configuration."""
@@ -315,7 +207,8 @@ class AppSettings:
             base_url=api_config.get('BaseUrl', ''),
             enriched_dataset_endpoint=api_config.get('EnrichedDatasetEndpoint', ''),
             metrics_configuration_endpoint=api_config.get('MetricsConfigurationEndpoint', ''),
-            update_status=api_config.get('UpdateStatus', '')
+            update_status=api_config.get('UpdateStatus', ''),  # Fixed: changed from 'UpdateStatusEndpoint' to match JSON config
+            post_results_endpoint=api_config.get('PostResultsEndpoint', '')
         )
     
     def _load_evaluation_config(self) -> EvaluationConfig:
@@ -350,30 +243,32 @@ class AppSettings:
             microsoft_level=log_levels.get('Microsoft', 'Warning')
         )
     
-    def _load_azure_openai_config(self) -> AzureOpenAIConfig:
-        """Load Azure OpenAI configuration."""
-        openai_config = self._config_data.get('AzureOpenAI', {})
-        return AzureOpenAIConfig(
-            endpoint=openai_config.get('Endpoint', 'https://your-openai-endpoint.openai.azure.com/'),
-            api_key=openai_config.get('ApiKey'),  # Can be None for managed identity
-            deployment_name=openai_config.get('DeploymentName', 'your-gpt-deployment-name'),
-            api_version=openai_config.get('ApiVersion', '2024-10-21'),
-            use_managed_identity=openai_config.get('UseManagedIdentity', True),
-            subscription_id=openai_config.get('SubscriptionId'),
-            resource_group_name=openai_config.get('ResourceGroupName'),
-            resource_name=openai_config.get('ResourceName'),
-            tenant_id=openai_config.get('TenantId')
-        )
-    
     def _load_azure_ai_config(self) -> AzureAIConfig:
-        """Load Azure AI Foundry configuration."""
+        """Load consolidated Azure AI configuration from both AzureOpenAI and AzureAI sections."""
+        # Load from both sections to support backward compatibility
+        openai_config = self._config_data.get('AzureOpenAI', {})
         ai_config = self._config_data.get('AzureAI', {})
+        
+        # Use the original working structure: AzureOpenAI for OpenAI config, AzureAI for project config
         return AzureAIConfig(
+            # OpenAI configuration from AzureOpenAI section
+            endpoint=openai_config.get('Endpoint', 'https://your-openai-endpoint.openai.azure.com/'),
+            deployment_name=openai_config.get('DeploymentName', 'gpt-4.1'),
+            api_version=openai_config.get('ApiVersion', '2025-01-01-preview'),
+            
+            # AI Foundry project configuration from AzureAI section
             project_id=ai_config.get('ProjectId', 'your-azure-ai-project-id'),
-            subscription_id=ai_config.get('SubscriptionId', 'your-azure-subscription-id'),
-            resource_group_name=ai_config.get('ResourceGroupName', 'your-resource-group-name'),
             project_name=ai_config.get('ProjectName', 'your-project-name'),
-            tenant_id=ai_config.get('TenantId')
+            
+            # Shared Azure configuration (prefer AzureAI values, fallback to AzureOpenAI)
+            subscription_id=ai_config.get('SubscriptionId', openai_config.get('SubscriptionId', 'your-azure-subscription-id')),
+            resource_group_name=ai_config.get('ResourceGroupName', openai_config.get('ResourceGroupName', 'your-resource-group-name')),
+            resource_name=ai_config.get('ResourceName', openai_config.get('ResourceName', 'your-azure-resource-name')),
+            tenant_id=ai_config.get('TenantId', openai_config.get('TenantId')),
+            
+            # Authentication (check both sections, prefer AzureAI)
+            use_managed_identity=ai_config.get('UseDefaultAzureCredential', openai_config.get('UseManagedIdentity', True)),
+            api_key=openai_config.get('ApiKey')  # Only from OpenAI config
         )
     
     def setup_logging(self) -> None:
@@ -391,26 +286,33 @@ class AppSettings:
         
         default_level = level_map.get(self.logging.default_level.upper(), logging.INFO)
         
-        # Configure root logger
+        # Clear any existing handlers to avoid duplicates
+        logger = logging.getLogger()
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+        
+        # Configure root logger with empty handlers (we'll add specific ones)
         logging.basicConfig(
             level=default_level,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[]
+            handlers=[],
+            force=True
         )
         
-        logger = logging.getLogger()
         handlers = []
         
-        # Add console handler if enabled
+        # ALWAYS add console handler if console logging is enabled
         if self.application_insights.enable_console_logging:
             console_handler = logging.StreamHandler()
             console_handler.setLevel(default_level)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             console_handler.setFormatter(formatter)
             handlers.append(console_handler)
+            print(f"Console logging enabled with level: {self.logging.default_level}")
         
         # Configure OpenTelemetry if enabled
         if self.application_insights.enable_telemetry:
+            print(f"Setting up OpenTelemetry with Application Insights...")
             try:
                 from ..telemetry.opentelemetry_config import otel_config
                 
@@ -418,35 +320,28 @@ class AppSettings:
                     # Set up OpenTelemetry with Azure Monitor
                     otel_config.setup_telemetry(
                         connection_string=self.application_insights.connection_string,
-                        enable_console=self.application_insights.enable_console_logging
+                        enable_console=False  # Console handler already added above
                     )
+                    print(f"OpenTelemetry configured with Application Insights")
                 else:
-                    print("⚠️  Application Insights connection string not configured")
-                    if self.application_insights.enable_console_logging:
-                        print("   Falling back to console-only logging")
+                    print("WARNING: Application Insights connection string not configured")
                 
             except ImportError:
-                print("⚠️  OpenTelemetry packages not installed. Run: pip install opentelemetry-api opentelemetry-sdk azure-monitor-opentelemetry-exporter")
-                # Add basic console handler as fallback
-                if self.application_insights.enable_console_logging:
-                    console_handler = logging.StreamHandler()
-                    console_handler.setLevel(default_level)
-                    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                    console_handler.setFormatter(formatter)
-                    handlers.append(console_handler)
+                print("WARNING: OpenTelemetry packages not installed. Run: pip install opentelemetry-api opentelemetry-sdk azure-monitor-opentelemetry-exporter")
             except Exception as e:
-                print(f"⚠️  Failed to configure OpenTelemetry: {e}")
-                # Add basic console handler as fallback
-                if self.application_insights.enable_console_logging:
-                    console_handler = logging.StreamHandler()
-                    console_handler.setLevel(default_level)
-                    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                    console_handler.setFormatter(formatter)
-                    handlers.append(console_handler)
+                print(f"WARNING: Failed to configure OpenTelemetry: {e}")
+        else:
+            print(f"WARNING: Application Insights telemetry disabled for faster local development")
         
-        # Add any remaining handlers to logger
+        # Add all handlers to logger
         for handler in handlers:
             logger.addHandler(handler)
+            
+        print(f"Logging configured with {len(handlers)} handler(s): {[type(h).__name__ for h in handlers]}")
+        
+        # Set specific logger levels
+        logging.getLogger('System').setLevel(level_map.get(self.logging.system_level.upper(), logging.WARNING))
+        logging.getLogger('Microsoft').setLevel(level_map.get(self.logging.microsoft_level.upper(), logging.WARNING))
     
     def shutdown_telemetry(self):
         """Shutdown telemetry providers gracefully."""

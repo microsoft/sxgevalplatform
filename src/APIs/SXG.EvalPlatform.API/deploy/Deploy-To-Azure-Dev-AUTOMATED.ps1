@@ -11,12 +11,12 @@ param(
     
     [Parameter(Mandatory=$false)]
     [string]$Location = "eastus",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$StorageAccountName = "sxgagentevaldev",
 
     [Parameter(Mandatory=$false)]
-    [string]$SubscriptionId,
+ [string]$SubscriptionId,
 
     [Parameter(Mandatory=$false)]
     [int]$WarmupWaitSeconds = 120,
@@ -50,18 +50,18 @@ function ConvertTo-AppSettings {
         }
         elseif ($value -is [Array]) {
    # Handle arrays (convert to JSON string or skip based on need)
-       for ($i = 0; $i < $value.Count; $i++) {
+       for ($i = 0; $i -lt $value.Count; $i++) {
            if ($value[$i] -is [PSCustomObject]) {
   $settings += ConvertTo-AppSettings -JsonObject $value[$i] -Prefix "${key}__${i}"
          }
-                else {
+           else {
    $settings += "${key}__${i}=$($value[$i])"
-                }
+   }
     }
         }
-        else {
-            # Simple value
-            $settings += "${key}=${value}"
+ else {
+        # Simple value
+  $settings += "${key}=${value}"
  }
     }
     
@@ -72,22 +72,24 @@ function ConvertTo-AppSettings {
 function Get-MergedAppSettings {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$Environment,
+  [string]$Environment,
     
         [Parameter(Mandatory=$true)]
      [string]$StorageAccountName
     )
     
-    $baseSettingsPath = "../appsettings.json"
-    $envSettingsPath = "../appsettings.$Environment.json"
+ # Get script directory and construct paths relative to it
+    $scriptDir = Split-Path -Parent $PSCommandPath
+ $baseSettingsPath = Join-Path $scriptDir "..\appsettings.json"
+    $envSettingsPath = Join-Path $scriptDir "..\appsettings.$Environment.json"
     
     Write-Host "Reading base appsettings from: $baseSettingsPath" -ForegroundColor Cyan
     
     if (-not (Test-Path $baseSettingsPath)) {
-        throw "Base appsettings.json not found at: $baseSettingsPath"
+     throw "Base appsettings.json not found at: $baseSettingsPath"
     }
     
-    # Read and parse base settings
+ # Read and parse base settings
     $baseSettings = Get-Content $baseSettingsPath -Raw | ConvertFrom-Json
     
     # Read and merge environment-specific settings if they exist
@@ -326,12 +328,13 @@ Write-Host ""
 
 # Step 5: Build Application
 Write-Host "[6/10] Building application..." -ForegroundColor Yellow
-$projectPath = "../SXG.EvalPlatform.API.csproj"
+$scriptDir = Split-Path -Parent $PSCommandPath
+$projectPath = Join-Path $scriptDir "..\SXG.EvalPlatform.API.csproj"
 
 if (-not (Test-Path $projectPath)) {
     Write-Host "? Project file not found: $projectPath" -ForegroundColor Red
     
-    # Restart the app
+ # Restart the app
     az webapp start --name $AppName --resource-group $ResourceGroupName --output none
     exit 1
 }
@@ -351,7 +354,8 @@ Write-Host ""
 
 # Step 6: Publish Application
 Write-Host "[7/10] Publishing application..." -ForegroundColor Yellow
-$publishPath = "./publish-dev"
+$scriptDir = Split-Path -Parent $PSCommandPath
+$publishPath = Join-Path $scriptDir "publish-dev"
 if (Test-Path $publishPath) {
     Remove-Item $publishPath -Recurse -Force
 }
@@ -369,8 +373,8 @@ Write-Host "? Publish successful" -ForegroundColor Green
 Write-Host ""
 
 # Step 7: Create Deployment Package
-Write-Host "[7/10] Creating deployment package..." -ForegroundColor Yellow
-$zipPath = ".\deploy-dev.zip"
+Write-Host "[8/12] Creating deployment package..." -ForegroundColor Yellow
+$zipPath = Join-Path $scriptDir "deploy-dev.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
@@ -381,7 +385,7 @@ Write-Host "? Deployment package created: $([math]::Round($zipSize, 2)) MB" -For
 Write-Host ""
 
 # Step 8: Deploy to Azure
-Write-Host "[8/10] Deploying to Azure App Service (while stopped)..." -ForegroundColor Yellow
+Write-Host "[9/12] Deploying to Azure App Service (while stopped)..." -ForegroundColor Yellow
 Write-Host "This may take a few minutes..." -ForegroundColor Cyan
 
 az webapp deploy `
@@ -395,22 +399,22 @@ az webapp deploy `
 if ($LASTEXITCODE -ne 0) {
     Write-Host "? Deployment failed" -ForegroundColor Red
     
-# Restart the app anyway
+    # Restart the app anyway
     az webapp start --name $AppName --resource-group $ResourceGroupName --output none
     exit 1
 }
 Write-Host "? Application deployed successfully" -ForegroundColor Green
 Write-Host ""
 
-# Step 9: Wait before starting (2 minutes as requested)
-Write-Host "[9/10] Waiting $WarmupWaitSeconds seconds before starting App Service..." -ForegroundColor Yellow
+# Step 9: Wait before starting
+Write-Host "[10/12] Waiting $WarmupWaitSeconds seconds before starting App Service..." -ForegroundColor Yellow
 Write-Host "This ensures deployment artifacts are fully written..." -ForegroundColor Cyan
 Start-Sleep -Seconds $WarmupWaitSeconds
 Write-Host "? Wait complete" -ForegroundColor Green
 Write-Host ""
 
 # Step 10: START the App Service
-Write-Host "[10/10] Starting App Service: $AppName" -ForegroundColor Yellow
+Write-Host "[11/12] Starting App Service: $AppName" -ForegroundColor Yellow
 
 az webapp start --name $AppName --resource-group $ResourceGroupName --output none
 
@@ -423,7 +427,7 @@ Write-Host "? App Service started successfully" -ForegroundColor Green
 Write-Host ""
 
 # Step 11: Wait for Application Warmup
-Write-Host "[11/10] Waiting $HealthCheckWaitSeconds seconds for application warmup..." -ForegroundColor Yellow
+Write-Host "[12/12] Waiting $HealthCheckWaitSeconds seconds for application warmup..." -ForegroundColor Yellow
 Write-Host "This allows the application to initialize..." -ForegroundColor Cyan
 
 $appUrl = "https://$AppName.azurewebsites.net"
@@ -437,7 +441,7 @@ Write-Host "? Warmup period complete" -ForegroundColor Green
 Write-Host ""
 
 # Step 12: Health Check Verification
-Write-Host "[12/10] Running comprehensive health check..." -ForegroundColor Yellow
+Write-Host "Running comprehensive health check..." -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Cyan
 
 $healthResult = Test-AppServiceHealth -AppServiceUrl $appUrl -MaxRetries 3

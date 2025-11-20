@@ -10,7 +10,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from ..services.http_client import api_client
-from ..services.azure_storage import get_blob_service
 from ..models.eval_models import (
     QueueMessage, Dataset, EnrichedDatasetResponse, MetricsConfigurationResponse, EvaluationConfig,
     DatasetItem, MetricScore, DatasetItemResult, MetricSummary, EvaluationSummary
@@ -30,8 +29,252 @@ class EvaluationEngine:
     def __init__(self):
         """Initialize the evaluation engine."""
         self.api_client = api_client
-        self.get_blob_service = get_blob_service
         self._processing_lock = asyncio.Lock()  # Ensure only one evaluation runs at a time
+        
+    async def _fetch_with_retry(self, fetch_function, *args, operation_name: str, eval_run_id_for_logging: str, max_retries: int = 3, base_delay: int = 60):
+        """
+        Execute an API fetch operation with exponential backoff retry logic.
+        
+        Args:
+            fetch_function: The API function to call
+            *args: Arguments to pass to the fetch function
+            operation_name: Name of the operation for logging
+            eval_run_id_for_logging: Eval run ID for logging context
+            max_retries: Maximum number of retry attempts (default: 3)
+            base_delay: Base delay in seconds (default: 60), will be exponentially increased
+            
+        Returns:
+            The result from the successful API call
+            
+        Raises:
+            Exception: If all retry attempts fail
+        """
+        last_exception = None
+        
+        for attempt in range(max_retries + 1):  # +1 for initial attempt
+            start_time = time.time()  # Initialize start_time for each attempt
+            try:
+                if attempt > 0:
+                    # Calculate exponential backoff delay: 60s, 120s, 240s
+                    retry_delay = base_delay * (2 ** (attempt - 1))
+                    
+                    log_operation_start(
+                        logger,
+                        f"{operation_name}_retry",
+                        eval_run_id=eval_run_id_for_logging,
+                        attempt=attempt,
+                        max_attempts=max_retries,
+                        operation=operation_name,
+                        retry_delay_seconds=retry_delay,
+                        backoff_strategy="exponential"
+                    )
+                
+                # Execute the API call with telemetry
+                result = await fetch_function(*args)
+                call_duration = time.time() - start_time
+                
+                if attempt > 0:
+                    # Log successful retry with comprehensive telemetry
+                    log_operation_success(
+                        logger,
+                        f"{operation_name}_retry",
+                        eval_run_id=eval_run_id_for_logging,
+                        attempt=attempt,
+                        operation=operation_name,
+                        success_after_retries=True,
+                        call_duration_seconds=call_duration,
+                        result_received=True,
+                        backoff_strategy="exponential"
+                    )
+                else:
+                    # Log successful first attempt
+                    from ..utils.logging_helper import log_structured
+                    log_structured(
+                        logger,
+                        logging.INFO,
+                        f"{operation_name} succeeded on first attempt",
+                        eval_run_id=eval_run_id_for_logging,
+                        operation=operation_name,
+                        call_duration_seconds=call_duration,
+                        attempt=1,
+                        retry_not_needed=True
+                    )
+                
+                return result
+                
+            except Exception as e:
+                last_exception = e
+                call_duration = time.time() - start_time
+                
+                # Extract detailed error information for telemetry
+                error_details = self._extract_api_error_details(e)
+                
+                if attempt < max_retries:
+                    # Calculate exponential backoff delay for next attempt
+                    retry_delay = base_delay * (2 ** attempt)
+                    
+                    # Log retry attempt with comprehensive telemetry
+                    log_operation_error(
+                        logger,
+                        f"{operation_name}_attempt",
+                        e,
+                        eval_run_id=eval_run_id_for_logging,
+                        attempt=attempt + 1,
+                        max_attempts=max_retries,
+                        operation=operation_name,
+                        retry_delay_seconds=retry_delay,
+                        will_retry=True,
+                        error_details=str(e),
+                        call_duration_seconds=call_duration,
+                        backoff_strategy="exponential",
+                        # Detailed API error telemetry
+                        **error_details
+                    )
+                    
+                    # Enhanced logging with exponential backoff info
+                    from ..utils.logging_helper import log_structured
+                    log_structured(
+                        logger,
+                        logging.WARNING,
+                        f"{operation_name} attempt {attempt + 1} failed, retrying with exponential backoff",
+                        eval_run_id=eval_run_id_for_logging,
+                        operation=operation_name,
+                        attempt=attempt + 1,
+                        max_attempts=max_retries + 1,
+                        retry_delay_seconds=retry_delay,
+                        next_retry_in_seconds=retry_delay,
+                        backoff_pattern=f"Attempt {attempt + 2}: {retry_delay}s delay",
+                        total_retries_remaining=max_retries - attempt,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                        call_duration_seconds=call_duration,
+                        # Include API-specific error details
+                        **error_details
+                    )
+                    
+                    # Wait with exponential backoff
+                    logger.info(f"Waiting {retry_delay} seconds before retry attempt {attempt + 2}/{max_retries + 1} for {operation_name} (exponential backoff)")
+                    await asyncio.sleep(retry_delay)
+                else:
+                    # Log final failure with comprehensive telemetry
+                    log_operation_error(
+                        logger,
+                        f"{operation_name}_final_failure",
+                        e,
+                        eval_run_id=eval_run_id_for_logging,
+                        attempt=attempt + 1,
+                        max_attempts=max_retries,
+                        operation=operation_name,
+                        all_retries_exhausted=True,
+                        error_details=str(e),
+                        stack_trace=traceback.format_exc(),
+                        call_duration_seconds=call_duration,
+                        backoff_strategy="exponential",
+                        retry_history=[f"60s", f"120s", f"240s"][:max_retries],
+                        # Detailed API error telemetry
+                        **error_details
+                    )
+        
+        # All retries exhausted, raise the last exception
+        if last_exception is not None:
+            raise last_exception
+        else:
+            raise Exception(f"All {max_retries} retry attempts failed for {operation_name}")
+
+    def _extract_api_error_details(self, exception: Exception) -> dict:
+        """
+        Extract detailed error information from API exceptions for telemetry.
+        
+        Args:
+            exception: The exception from the API call
+            
+        Returns:
+            Dictionary with detailed error telemetry
+        """
+        error_details = {
+            'error_type': type(exception).__name__,
+            'error_message': str(exception),
+            'api_status_code': None,
+            'api_response_body': None,
+            'api_response_headers': None,
+            'api_error_type': 'unknown',
+            'is_retryable': True,  # Default to retryable unless we know otherwise
+            'failure_category': 'api_communication_error'
+        }
+        
+        # Check if it's an HTTP-related exception with response details
+        try:
+            if hasattr(exception, 'response') and getattr(exception, 'response', None) is not None:
+                response = getattr(exception, 'response')
+                
+                # Status code
+                if hasattr(response, 'status_code'):
+                    error_details['api_status_code'] = response.status_code
+                    
+                    # Categorize based on status code
+                    if 400 <= response.status_code < 500:
+                        error_details['api_error_type'] = 'client_error'
+                        error_details['is_retryable'] = response.status_code in [408, 429, 502, 503, 504]  # Only retry specific 4xx codes
+                    elif 500 <= response.status_code < 600:
+                        error_details['api_error_type'] = 'server_error'
+                        error_details['is_retryable'] = True  # Generally retry server errors
+                    else:
+                        error_details['api_error_type'] = 'http_error'
+                
+                # Response body (truncate if too long)
+                try:
+                    if hasattr(response, 'text'):
+                        response_text = str(response.text) if hasattr(response.text, '__call__') else str(response.text)
+                        if len(response_text) > 1000:  # Truncate long responses
+                            error_details['api_response_body'] = response_text[:1000] + "... (truncated)"
+                        else:
+                            error_details['api_response_body'] = response_text
+                    elif hasattr(response, 'content'):
+                        content = str(response.content)[:1000]
+                        error_details['api_response_body'] = content
+                except Exception:
+                    error_details['api_response_body'] = "Could not read response body"
+                
+                # Response headers (exclude sensitive ones)
+                try:
+                    if hasattr(response, 'headers'):
+                        safe_headers = {}
+                        headers = getattr(response, 'headers', {})
+                        if hasattr(headers, 'items'):
+                            for key, value in headers.items():
+                                # Exclude potentially sensitive headers
+                                if key.lower() not in ['authorization', 'cookie', 'set-cookie', 'x-api-key']:
+                                    safe_headers[key] = str(value)
+                        error_details['api_response_headers'] = safe_headers
+                except Exception:
+                    error_details['api_response_headers'] = {}
+        except Exception:
+            # If we can't read response details safely, just continue
+            pass
+        
+        # Handle timeout exceptions
+        if 'timeout' in str(exception).lower() or type(exception).__name__ in ['TimeoutError', 'ConnectTimeoutError', 'ReadTimeoutError']:
+            error_details['api_error_type'] = 'timeout_error'
+            error_details['is_retryable'] = True
+            error_details['failure_category'] = 'api_timeout_error'
+        
+        # Handle connection exceptions
+        elif 'connection' in str(exception).lower() or type(exception).__name__ in ['ConnectionError', 'ConnectError']:
+            error_details['api_error_type'] = 'connection_error'
+            error_details['is_retryable'] = True
+            error_details['failure_category'] = 'api_connection_error'
+        
+        # Handle DNS/network exceptions
+        elif any(term in str(exception).lower() for term in ['dns', 'network', 'host', 'resolve']):
+            error_details['api_error_type'] = 'network_error'
+            error_details['is_retryable'] = True
+            error_details['failure_category'] = 'api_network_error'
+        
+        # Add additional context
+        error_details['exception_module'] = getattr(type(exception), '__module__', 'unknown')
+        error_details['exception_class'] = type(exception).__name__
+        
+        return error_details
         
     async def process_queue_message(self, queue_message: QueueMessage) -> bool:
         """
@@ -59,9 +302,6 @@ class EvaluationEngine:
                     "evaluation_processing",
                     eval_run_id=eval_run_id,
                     metrics_configuration_id=metrics_configuration_id,
-                    enriched_dataset_id=queue_message.enriched_dataset_id,
-                    agent_id=queue_message.agent_id,
-                    dataset_id=queue_message.dataset_id,
                     priority=queue_message.priority
                 ) as main_span:
                     # Log evaluation start with complete context
@@ -70,12 +310,9 @@ class EvaluationEngine:
                     "evaluation_processing",
                     eval_run_id=eval_run_id,
                     metrics_configuration_id=metrics_configuration_id,
-                    enriched_dataset_id=queue_message.enriched_dataset_id,
-                    agent_id=queue_message.agent_id,
-                    dataset_id=queue_message.dataset_id,
                     priority=queue_message.priority,
                     requested_at=str(queue_message.requested_at)
-                )
+                    )
                 
                 add_span_event(main_span, "evaluation.started")
                 
@@ -96,15 +333,26 @@ class EvaluationEngine:
                     )
                     
                     try:
+                        # Fetch data with retry logic for both API calls
                         dataset_data, metrics_config_data = await asyncio.gather(
-                            self.api_client.fetch_enriched_dataset(eval_run_id),
-                            self.api_client.fetch_metrics_configuration(metrics_configuration_id)
+                            self._fetch_with_retry(
+                                self.api_client.fetch_enriched_dataset,
+                                eval_run_id,
+                                operation_name="fetch_enriched_dataset",
+                                eval_run_id_for_logging=eval_run_id
+                            ),
+                            self._fetch_with_retry(
+                                self.api_client.fetch_metrics_configuration,
+                                metrics_configuration_id,
+                                operation_name="fetch_metrics_configuration",
+                                eval_run_id_for_logging=eval_run_id
+                            )
                         )
                         
                         if not dataset_data:
-                            raise ValueError("API returned empty/null dataset response")
+                            raise ValueError("Dataset API returned empty/null dataset response")
                         if not metrics_config_data:
-                            raise ValueError("API returned empty/null metrics configuration response")
+                            raise ValueError("Metrics configuration API returned empty/null metrics configuration response")
                         
                         add_span_event(step1_span, "data.fetched", 
                                      dataset_size=len(str(dataset_data)) if dataset_data else 0,
@@ -115,12 +363,17 @@ class EvaluationEngine:
                         log_structured(
                             logger,
                             logging.INFO,
-                            f"Successfully fetched data from APIs",
+                            f"Successfully fetched data from APIs (with exponential backoff retry logic)",
                             eval_run_id=eval_run_id,
                             step_number=1,
                             dataset_response_size=len(str(dataset_data)) if dataset_data else 0,
                             metrics_config_response_size=len(str(metrics_config_data)) if metrics_config_data else 0,
-                            raw_metrics_config=metrics_config_data  # Log complete metrics config for debugging
+                            raw_metrics_config=metrics_config_data,  # Log complete metrics config for debugging
+                            retry_enabled=True,
+                            max_retries=3,
+                            base_retry_delay_seconds=60,
+                            backoff_strategy="exponential",
+                            retry_pattern="60s, 120s, 240s"
                         )
                         
                         steps_completed.append("fetch_data")
@@ -240,7 +493,13 @@ class EvaluationEngine:
                     )
                     
                     try:
-                        await self._update_evaluation_status(eval_run_id, "EvalRunStarted")
+                        await self._fetch_with_retry(
+                            self._update_evaluation_status,
+                            eval_run_id,
+                            "EvalRunStarted",
+                            operation_name="update_status_started",
+                            eval_run_id_for_logging=eval_run_id
+                        )
                         
                         add_span_event(step3_span, "status.updated", 
                                      new_status="EvalRunStarted")
@@ -433,7 +692,8 @@ class EvaluationEngine:
                             queue_message, 
                             results, 
                             metrics_response.metrics_configuration,
-                            execution_time
+                            execution_time,
+                            metrics_response
                         )
                         
                         add_span_event(step5_span, "summary.generated", 
@@ -478,49 +738,57 @@ class EvaluationEngine:
                         )
                         raise
                 
-                # Step 6: Store results
+                # Step 6: Post results to API
                 with trace_operation(
-                    "store_results_step",
+                    "post_results_step",
                     eval_run_id=eval_run_id,
                     step_number=6,
-                    step_name="store_results"
+                    step_name="post_results"
                 ) as step6_span:
                     
                     log_operation_start(
                         logger,
-                        "store_results_step",
+                        "post_results_step",
                         eval_run_id=eval_run_id,
                         step_number=6,
-                        step_name="store_results",
-                        agent_id=queue_message.agent_id
+                        step_name="post_results",
+                        agent_id=summary.agent_id
                     )
                     
                     try:
-                        await self._store_results(queue_message.agent_id, eval_run_id, summary, results)
+                        await self._fetch_with_retry(
+                            self._store_results,
+                            summary.agent_id,
+                            eval_run_id,
+                            summary,
+                            results,
+                            operation_name="post_results",
+                            eval_run_id_for_logging=eval_run_id
+                        )
                         
-                        add_span_event(step6_span, "results.stored", 
-                                     agent_id=queue_message.agent_id,
+                        add_span_event(step6_span, "results.posted", 
+                                     agent_id=summary.agent_id,
                                      results_count=len(results))
                         
                         log_structured(
                             logger,
                             logging.INFO,
-                            f"Successfully stored evaluation results",
+                            f"Successfully posted evaluation results to API",
                             eval_run_id=eval_run_id,
                             step_number=6,
-                            agent_id=queue_message.agent_id,
+                            agent_id=summary.agent_id,
                             results_count=len(results),
                             summary_generated=True
                         )
                         
-                        steps_completed.append("store_results")
+                        steps_completed.append("post_results")
                         set_span_status(step6_span, True)
                         log_operation_success(
                             logger, 
-                            "store_results_step", 
+                            "post_results_step", 
                             eval_run_id=eval_run_id, 
                             step_number=6,
-                            agent_id=queue_message.agent_id
+                            agent_id=summary.agent_id
                         )
                         
                     except Exception as e:
@@ -529,12 +797,12 @@ class EvaluationEngine:
                         
                         log_operation_error(
                             logger,
-                            "store_results_step",
+                            "post_results_step",
                             e,
                             eval_run_id=eval_run_id,
                             step_number=6,
-                            step_name="store_results",
-                            agent_id=queue_message.agent_id,
+                            step_name="post_results",
+                            agent_id=summary.agent_id,
                             error_details=str(e),
                             stack_trace=traceback.format_exc()
                         )
@@ -558,7 +826,13 @@ class EvaluationEngine:
                     )
                     
                     try:
-                        await self._update_evaluation_status(eval_run_id, "EvalRunCompleted")
+                        await self._fetch_with_retry(
+                            self._update_evaluation_status,
+                            eval_run_id,
+                            "EvalRunCompleted",
+                            operation_name="update_status_completed",
+                            eval_run_id_for_logging=eval_run_id
+                        )
                         
                         add_span_event(step7_span, "status.updated", 
                                      new_status="EvalRunCompleted")
@@ -574,8 +848,8 @@ class EvaluationEngine:
                         )
                         
                     except Exception as e:
-                        # Don't raise here - status update failure shouldn't prevent message deletion
-                        # if all other critical steps succeeded
+                        # Don't raise here for status updates - status update failure shouldn't prevent message deletion
+                        # if all other critical steps succeeded, but log it as an error
                         set_span_status(step7_span, False, str(e))
                         add_span_event(step7_span, "error.occurred", 
                                      error_type=type(e).__name__, 
@@ -593,14 +867,16 @@ class EvaluationEngine:
                             error_details=str(e),
                             severity="warning",
                             continue_processing=True,
-                            stack_trace=traceback.format_exc()
+                            stack_trace=traceback.format_exc(),
+                            retry_attempts_made=True,
+                            all_retries_failed=True
                         )
                 
                 # All steps completed - wrap up the evaluation
                 execution_time = time.time() - start_time
                 
                 # Return True only if all critical steps completed (status update is not critical)
-                critical_steps = ["fetch_data", "parse_data", "run_evaluations", "generate_summary", "store_results"]
+                critical_steps = ["fetch_data", "parse_data", "run_evaluations", "generate_summary", "post_results"]
                 all_critical_steps_completed = all(step in steps_completed for step in critical_steps)
                 
                 if all_critical_steps_completed:
@@ -645,7 +921,7 @@ class EvaluationEngine:
             except Exception as e:
                 # Handle any unhandled exceptions to ensure we always return a boolean
                 eval_run_id = getattr(queue_message, 'eval_run_id', 'unknown')
-                logger.error(f"❌ Unhandled exception in process_queue_message for {eval_run_id}: {str(e)}")
+                logger.error(f"[ERROR] Unhandled exception in process_queue_message for {eval_run_id}: {str(e)}")
                 logger.error(f"Exception type: {type(e).__name__}")
                 logger.error(f"Stack trace: {traceback.format_exc()}")
                 
@@ -938,7 +1214,8 @@ class EvaluationEngine:
         queue_message: QueueMessage,
         results: List[DatasetItemResult],
         metrics_config: List,
-        execution_time: float
+        execution_time: float,
+        metrics_response
     ) -> EvaluationSummary:
         """
         Generate evaluation summary with statistics.
@@ -999,9 +1276,12 @@ class EvaluationEngine:
         total_passed = sum(summary.passed_count for summary in metric_summaries)
         overall_pass_percentage = (total_passed / total_evaluations * 100) if total_evaluations > 0 else 0
         
+        # Use agent_id from metrics_response since queue_message no longer contains it
+        agent_id = metrics_response.agent_id
+        
         return EvaluationSummary(
             eval_run_id=queue_message.eval_run_id,
-            agent_id=queue_message.agent_id,
+            agent_id=agent_id,
             total_prompts=len(results),
             execution_time_seconds=execution_time,
             metric_summaries=metric_summaries,
@@ -1014,64 +1294,77 @@ class EvaluationEngine:
         eval_run_id: str,
         summary: EvaluationSummary,
         results: List[DatasetItemResult]
-    ) -> None:
+    ) -> bool:
         """
-        Store evaluation results in Azure Blob Storage.
+        Post evaluation results to the API instead of storing in Azure Blob Storage.
         
         Args:
-            agent_id: Agent ID for container
+            agent_id: Agent ID for the evaluation
             eval_run_id: Evaluation run ID
             summary: Evaluation summary
             results: Detailed results
+            
+        Returns:
+            bool: True if successful, raises exception if failed
         """
         try:
-            # Get blob service
-            blob_service = self.get_blob_service()
+            # Prepare results data for API according to swagger specification
+            # The C# API expects JsonElement types, which means we need to send actual JSON objects, not strings
             
-            # Store summary
-            summary_url = await blob_service.upload_evaluation_results(
-                agent_id, 
-                eval_run_id, 
-                summary.to_dict()
-            )
-            logger.info(f"Stored summary at: {summary_url}")
+            summary_dict = summary.to_dict()
+            detailed_results = [result.to_dict() for result in results]
             
-            # Store detailed dataset
-            detailed_data = {
-                'evalRunId': eval_run_id,
-                'agentId': agent_id,
-                'results': [result.to_dict() for result in results],
-                'timestamp': datetime.now().isoformat()
+            # Validate the data before sending
+            if not summary_dict:
+                raise ValueError("Summary dictionary is empty")
+            if not detailed_results:
+                raise ValueError("Detailed results list is empty")
+            
+            # Send JSON objects directly (not JSON strings) as required by JsonElement
+            results_data = {
+                'evaluationResultSummary': summary_dict,  # Send as dict/object, not string
+                'evaluationResultDataset': detailed_results  # Send as list/array, not string
             }
             
-            dataset_url = await blob_service.upload_detailed_dataset(
-                agent_id,
-                eval_run_id,
-                detailed_data
-            )
-            logger.info(f"Stored detailed dataset at: {dataset_url}")
+            logger.info(f"Prepared results data: summary_keys={list(summary_dict.keys())}, dataset_items={len(detailed_results)}")
+            
+            # Post results to API
+            logger.info(f"Posting evaluation results to API. Summary dict with {len(summary_dict)} keys, Dataset with {len(detailed_results)} items")
+            success = await self.api_client.post_evaluation_results(eval_run_id, results_data)
+            
+            if success:
+                logger.info(f"Successfully posted evaluation results to API for eval run: {eval_run_id}")
+                return True
+            else:
+                logger.error(f"API call returned False - check API response logs above for details")
+                raise Exception("Failed to post evaluation results to API")
             
         except Exception as e:
-            logger.error(f"Error storing results: {str(e)}")
+            logger.error(f"Error posting results to API: {str(e)}")
             raise
 
-    async def _update_evaluation_status(self, eval_run_id: str, status: str) -> None:
+    async def _update_evaluation_status(self, eval_run_id: str, status: str) -> bool:
         """
         Update evaluation run status via API.
         
         Args:
             eval_run_id: Evaluation run ID
             status: Status to update to (e.g., "EvalRunCompleted")
+            
+        Returns:
+            bool: True if successful, raises exception if failed
         """
         try:
             success = await self.api_client.update_evaluation_status(eval_run_id, status)
             if success:
                 logger.info(f"Successfully updated status to '{status}' for eval run: {eval_run_id}")
+                return True
             else:
                 logger.warning(f"Failed to update status for eval run: {eval_run_id}")
+                raise Exception(f"Failed to update status to '{status}' for eval run: {eval_run_id}")
         except Exception as e:
             logger.error(f"Error updating evaluation status: {str(e)}")
-            # Don't raise - we don't want to fail the entire evaluation just for a status update
+            raise
 
 
 # Global instance

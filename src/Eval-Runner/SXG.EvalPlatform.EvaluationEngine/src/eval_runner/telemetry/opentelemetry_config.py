@@ -27,7 +27,7 @@ class OpenTelemetryConfig:
             "service.name": service_name,
             "service.version": service_version,
             "service.instance.id": os.environ.get("HOSTNAME", "unknown"),
-            "deployment.environment": os.environ.get("ENVIRONMENT", "development")
+            "deployment.environment": os.environ.get("RUNTIME_ENVIRONMENT", "Local")
         })
         
         self.tracer_provider: Optional[TracerProvider] = None
@@ -54,16 +54,16 @@ class OpenTelemetryConfig:
             # Set up logging
             self._setup_logging(connection_string, enable_console)
             
-            print(f"✅ OpenTelemetry configured with Azure Monitor")
+            print(f"[SUCCESS] OpenTelemetry configured with Azure Monitor")
             
         except ImportError as e:
-            print(f"⚠️  Azure Monitor OpenTelemetry packages not installed: {e}")
+            print(f"[WARNING]  Azure Monitor OpenTelemetry packages not installed: {e}")
             print("   Run: pip install azure-monitor-opentelemetry-exporter")
             # Fall back to console-only setup
             self._setup_console_only()
             
         except Exception as e:
-            print(f"⚠️  Failed to configure OpenTelemetry: {e}")
+            print(f"[WARNING]  Failed to configure OpenTelemetry: {e}")
             self._setup_console_only()
     
     def _setup_tracing(self, connection_string: str) -> None:
@@ -130,7 +130,7 @@ class OpenTelemetryConfig:
     
     def _setup_console_only(self) -> None:
         """Fallback to console-only logging when Azure Monitor is not available."""
-        print("⚠️  Setting up console-only logging (Azure Monitor unavailable)")
+        print("[WARNING]  Setting up console-only logging (Azure Monitor unavailable)")
         
         root_logger = logging.getLogger()
         console_handler = logging.StreamHandler()

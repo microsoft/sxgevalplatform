@@ -35,7 +35,7 @@ function ConvertTo-AppSettings {
         [PSCustomObject]$JsonObject,
     
         [Parameter(Mandatory=$false)]
-  [string]$Prefix = ""
+        [string]$Prefix = ""
     )
     
     $settings = @()
@@ -50,7 +50,7 @@ function ConvertTo-AppSettings {
         }
         elseif ($value -is [Array]) {
          # Handle arrays
-  for ($i = 0; $i < $value.Count; $i++) {
+            for ($i = 0; $i -lt $value.Count; $i++) {
        if ($value[$i] -is [PSCustomObject]) {
       $settings += ConvertTo-AppSettings -JsonObject $value[$i] -Prefix "${key}__${i}"
         }
@@ -71,15 +71,17 @@ function ConvertTo-AppSettings {
 # Function to merge appsettings.json with environment-specific overrides
 function Get-MergedAppSettings {
     param (
-        [Parameter(Mandatory=$true)]
+      [Parameter(Mandatory=$true)]
         [string]$Environment,
     
    [Parameter(Mandatory=$true)]
-        [string]$StorageAccountName
+[string]$StorageAccountName
     )
     
- $baseSettingsPath = "../appsettings.json"
-    $envSettingsPath = "../appsettings.$Environment.json"
+    # Get script directory and construct paths relative to it
+ $scriptDir = Split-Path -Parent $PSCommandPath
+ $baseSettingsPath = Join-Path $scriptDir "..\appsettings.json"
+    $envSettingsPath = Join-Path $scriptDir "..\appsettings.$Environment.json"
     
     Write-Host "Reading base appsettings from: $baseSettingsPath" -ForegroundColor Cyan
     
@@ -87,7 +89,7 @@ function Get-MergedAppSettings {
 throw "Base appsettings.json not found at: $baseSettingsPath"
     }
     
-    # Read and parse base settings
+ # Read and parse base settings
     $baseSettings = Get-Content $baseSettingsPath -Raw | ConvertFrom-Json
     
     # Read and merge environment-specific settings if they exist
@@ -326,7 +328,8 @@ Write-Host ""
 
 # Step 5: Build Application
 Write-Host "[6/12] Building application..." -ForegroundColor Yellow
-$projectPath = "../SXG.EvalPlatform.API.csproj"
+$scriptDir = Split-Path -Parent $PSCommandPath
+$projectPath = Join-Path $scriptDir "..\SXG.EvalPlatform.API.csproj"
 
 if (-not (Test-Path $projectPath)) {
     Write-Host "? Project file not found: $projectPath" -ForegroundColor Red
@@ -351,7 +354,8 @@ Write-Host ""
 
 # Step 6: Publish Application
 Write-Host "[7/12] Publishing application..." -ForegroundColor Yellow
-$publishPath = "./publish-ppe"
+$scriptDir = Split-Path -Parent $PSCommandPath
+$publishPath = Join-Path $scriptDir "publish-ppe"
 if (Test-Path $publishPath) {
     Remove-Item $publishPath -Recurse -Force
 }
@@ -370,7 +374,7 @@ Write-Host ""
 
 # Step 7: Create Deployment Package
 Write-Host "[8/12] Creating deployment package..." -ForegroundColor Yellow
-$zipPath = ".\deploy-ppe.zip"
+$zipPath = Join-Path $scriptDir "deploy-ppe.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }

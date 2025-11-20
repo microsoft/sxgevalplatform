@@ -48,16 +48,16 @@ class AzureAIEvaluatorConfig:
     def credential(self) -> DefaultAzureCredential:
         """Get Azure credential for managed identity authentication."""
         if self._credential is None:
-            openai_config = app_settings.azure_openai
+            ai_config = app_settings.azure_ai
             
             # DefaultAzureCredential will automatically use the correct tenant
             # when running in Azure with managed identity
             self._credential = DefaultAzureCredential()
             
-            if openai_config.tenant_id:
-                print(f"✅ Configured Azure credential for tenant: {openai_config.tenant_id}")
+            if ai_config.tenant_id:
+                print(f"[SUCCESS] Configured Azure credential for tenant: {ai_config.tenant_id}")
             else:
-                print("✅ Configured Azure credential with default tenant")
+                print("[SUCCESS] Configured Azure credential with default tenant")
                 
         return self._credential
 
@@ -66,43 +66,49 @@ class AzureAIEvaluatorConfig:
         """Get Azure OpenAI model configuration for LLM-judge evaluators using managed identity."""
         if self._model_config is None:
             try:
-                openai_config = app_settings.azure_openai
+                ai_config = app_settings.azure_ai
                 
-                # Extract base endpoint from the full URL
+                # Extract base endpoint from the URL if it contains specific paths
                 # Convert: https://evalplatform.cognitive...com/openai/deployments/gpt-4.1/chat/completions?api-version=...
                 # To: https://evalplatform.cognitive...com/
-                endpoint_parts = openai_config.endpoint.split('/openai')
-                base_endpoint = endpoint_parts[0]
+                base_endpoint = ai_config.endpoint
+                if '/openai' in base_endpoint:
+                    endpoint_parts = base_endpoint.split('/openai')
+                    base_endpoint = endpoint_parts[0]
+                else:
+                    base_endpoint = base_endpoint.rstrip('/')
+                    
                 if not base_endpoint.endswith('/'):
                     base_endpoint += '/'
                 
-                if openai_config.use_managed_identity:
-                    # For managed identity - use basic config, authentication handled by environment
+                if ai_config.use_managed_identity:
+                    # For managed identity - use basic config, authentication handled by credential
                     self._model_config = {
                         "azure_endpoint": base_endpoint,
-                        "azure_deployment": openai_config.deployment_name,
-                        "api_version": openai_config.api_version,
+                        "azure_deployment": ai_config.deployment_name,
+                        "api_version": ai_config.api_version,
                     }
                     
-                    print(f"✅ Configured Azure OpenAI with managed identity:")
+                    print(f"[SUCCESS] Configured Azure OpenAI with managed identity:")
                     print(f"   - Endpoint: {base_endpoint}")
-                    print(f"   - Deployment: {openai_config.deployment_name}")
-                    print(f"   - API Version: {openai_config.api_version}")
-                    print(f"   - Tenant ID: {openai_config.tenant_id or 'Default'}")
+                    print(f"   - Deployment: {ai_config.deployment_name}")
+                    print(f"   - API Version: {ai_config.api_version}")
+                    print(f"   - Tenant ID: {ai_config.tenant_id or 'Default'}")
                     print(f"   - Authentication: Environment-based managed identity")
+                    print(f"   - Full config: {self._model_config}")
                 else:
                     # For API key authentication
                     self._model_config = {
                         "azure_endpoint": base_endpoint,
-                        "azure_deployment": openai_config.deployment_name,
-                        "api_version": openai_config.api_version,
-                        "api_key": openai_config.api_key,
+                        "azure_deployment": ai_config.deployment_name,
+                        "api_version": ai_config.api_version,
+                        "api_key": ai_config.api_key,
                     }
                     
-                    print(f"✅ Configured Azure OpenAI with API key:")
+                    print(f"[SUCCESS] Configured Azure OpenAI with API key:")
                     print(f"   - Endpoint: {base_endpoint}")
-                    print(f"   - Deployment: {openai_config.deployment_name}") 
-                    print(f"   - API Version: {openai_config.api_version}")
+                    print(f"   - Deployment: {ai_config.deployment_name}") 
+                    print(f"   - API Version: {ai_config.api_version}")
                     print(f"   - Authentication: API Key")
                 
             except Exception as e:
@@ -125,7 +131,7 @@ class AzureAIEvaluatorConfig:
                     "credential": self.credential  # Use the tenant-specific credential
                 }
                 
-                print(f"✅ Configured Azure AI Foundry project:")
+                print(f"[SUCCESS] Configured Azure AI Foundry project:")
                 print(f"   - Subscription: {ai_config.subscription_id}")
                 print(f"   - Resource Group: {ai_config.resource_group_name}")
                 print(f"   - Project: {ai_config.project_name}")

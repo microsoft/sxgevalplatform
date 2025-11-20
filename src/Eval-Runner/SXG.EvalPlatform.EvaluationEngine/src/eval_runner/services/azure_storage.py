@@ -87,7 +87,7 @@ class AzureQueueService:
                     logger.debug(f"Queue creation result for {queue_name}: {str(e)}")
                 
             self._initialized = True
-            logger.info(f"✅ Connected to queues: {self.queue_name}, {self.success_queue_name}, {self.failure_queue_name}")
+            logger.info(f"[SUCCESS] Connected to queues: {self.queue_name}, {self.success_queue_name}, {self.failure_queue_name}")
         except AzureError as e:
             logger.error(f"Failed to initialize queue service: {e}")
             raise
@@ -127,6 +127,8 @@ class AzureQueueService:
                             logging.INFO,
                             f"Received queue message from Azure Storage",
                             raw_message_content=message.content,
+                            message_content_type=type(message.content).__name__,
+                            message_content_length=len(str(message.content)),
                             message_id=getattr(message, 'id', 'unknown'),
                             message_pop_receipt=getattr(message, 'pop_receipt', 'unknown'),
                             message_dequeue_count=getattr(message, 'dequeue_count', 0),
@@ -135,7 +137,36 @@ class AzureQueueService:
                             queue_name=self.queue_name
                         )
                         
-                        queue_message = QueueMessage.from_json(message.content)
+                        # Try to handle potential double-JSON encoding issues and other corruptions
+                        message_content = message.content
+                        recovery_attempted = False
+                        
+                        if isinstance(message_content, str):
+                            # Method 1: Check if the content looks like double-encoded JSON
+                            if message_content.startswith('"') and message_content.endswith('"'):
+                                try:
+                                    # Attempt to decode once more in case of double-encoding
+                                    message_content = json.loads(message_content)
+                                    logger.warning(f"[WARNING]  Detected and fixed double-encoded JSON message for dequeue_count: {getattr(message, 'dequeue_count', 0)}")
+                                    recovery_attempted = True
+                                except json.JSONDecodeError:
+                                    # If that fails, use original content
+                                    pass
+                            
+                            # Method 2: Check if content appears to be base64 encoded
+                            elif len(message_content) > 50 and message_content.replace('+', '').replace('/', '').replace('=', '').isalnum():
+                                try:
+                                    import base64
+                                    decoded = base64.b64decode(message_content).decode('utf-8')
+                                    json.loads(decoded)  # Test if it's valid JSON
+                                    message_content = decoded
+                                    logger.warning(f"[WARNING]  Detected and fixed base64-encoded message for dequeue_count: {getattr(message, 'dequeue_count', 0)}")
+                                    recovery_attempted = True
+                                except:
+                                    # If base64 decoding fails, use original content
+                                    pass
+                        
+                        queue_message = QueueMessage.from_json(message_content)
                         
                         # Log parsed message details
                         log_structured(
@@ -144,9 +175,6 @@ class AzureQueueService:
                             f"Successfully parsed queue message for evaluation",
                             eval_run_id=queue_message.eval_run_id,
                             metrics_configuration_id=queue_message.metrics_configuration_id,
-                            enriched_dataset_id=queue_message.enriched_dataset_id,
-                            agent_id=queue_message.agent_id,
-                            dataset_id=queue_message.dataset_id,
                             requested_at=str(queue_message.requested_at),
                             priority=queue_message.priority
                         )
@@ -168,12 +196,12 @@ class AzureQueueService:
                         
                         # Force conversion to boolean to handle any null/None cases
                         if processing_successful_raw is None:
-                            logger.error(f"❌ CRITICAL: Message handler returned None for {queue_message.eval_run_id}! Forcing to False.")
+                            logger.error(f"[ERROR] CRITICAL: Message handler returned None for {queue_message.eval_run_id}! Forcing to False.")
                             processing_successful = False
                         elif isinstance(processing_successful_raw, bool):
                             processing_successful = processing_successful_raw
                         else:
-                            logger.warning(f"⚠️  Message handler returned non-boolean type {type(processing_successful_raw).__name__}: {processing_successful_raw}. Converting to boolean.")
+                            logger.warning(f"[WARNING]  Message handler returned non-boolean type {type(processing_successful_raw).__name__}: {processing_successful_raw}. Converting to boolean.")
                             processing_successful = bool(processing_successful_raw)
                         
                         # Final validation logging
@@ -199,15 +227,15 @@ class AzureQueueService:
                             
                             # Delete message only after ALL steps completed successfully
                             await self.queue_client.delete_message(message)
-                            logger.info(f"✅ All steps completed successfully. Deleted message: {queue_message.eval_run_id}")
+                            logger.info(f"[SUCCESS] All steps completed successfully. Deleted message: {queue_message.eval_run_id}")
                         else:
                             # Check message dequeue count to prevent infinite retries
                             dequeue_count = getattr(message, 'dequeue_count', 1)
                             max_retries = getattr(app_settings.evaluation, 'max_message_retries', 3)
                             
                             if dequeue_count is not None and dequeue_count >= max_retries:
-                                # Log failure to the failure queue for final failure
-                                await self.log_failure_message(queue_message, message.content, {
+                                # Maximum retries exhausted - update status to failed and log failure
+                                await self._handle_final_failure(queue_message, {
                                     "failure_reason": "exceeded_max_retries",
                                     "max_retries": max_retries,
                                     "final_dequeue_count": dequeue_count,
@@ -216,21 +244,36 @@ class AzureQueueService:
                                 })
                                 
                                 # Move to poison message handling - delete to prevent infinite loop
-                                logger.error(f"🚨 Message {queue_message.eval_run_id} exceeded max retries ({max_retries}). Deleting poison message.")
+                                logger.error(f"  Message {queue_message.eval_run_id} exceeded max retries ({max_retries}). Deleting poison message.")
                                 await self.queue_client.delete_message(message)
                             else:
                                 # Keep message in queue for retry (will become visible again after visibility timeout)
-                                logger.warning(f"⚠️  Processing failed for {queue_message.eval_run_id}. Message kept in queue for retry (attempt {dequeue_count}/{max_retries}).")
+                                logger.warning(f"[WARNING]  Processing failed for {queue_message.eval_run_id}. Message kept in queue for retry (attempt {dequeue_count}/{max_retries}).")
                         
                     except KeyError as e:
-                        # Log detailed parsing error with structured data
+                        # Enhanced KeyError handling - analyze what fields are available vs missing
+                        from ..utils.logging_helper import log_structured
+                        
+                        # Try to parse the JSON to see what fields are available
+                        try:
+                            if isinstance(message.content, str):
+                                parsed_data = json.loads(message.content)
+                            else:
+                                parsed_data = message.content
+                            available_keys = list(parsed_data.keys()) if isinstance(parsed_data, dict) else []
+                        except:
+                            parsed_data = message.content
+                            available_keys = []
+                        
                         log_structured(
                             logger,
                             logging.ERROR,
-                            f"Queue message parsing failed - missing required field",
+                            f"Queue message missing required field - analyzing message structure",
                             error_type="KeyError",
-                            error_message=str(e),
-                            raw_message_content=message.content,
+                            missing_field=str(e),
+                            available_keys=available_keys,
+                            raw_message_content=str(message.content)[:500] if len(str(message.content)) > 500 else message.content,
+                            parsed_message_type=type(parsed_data).__name__,
                             message_id=getattr(message, 'id', 'unknown'),
                             message_dequeue_count=getattr(message, 'dequeue_count', 0),
                             action_taken="message_kept_for_retry"
@@ -241,63 +284,88 @@ class AzureQueueService:
                         max_retries = getattr(app_settings.evaluation, 'max_message_retries', 3)
                         if dequeue_count >= max_retries:
                             try:
-                                # Create a minimal failure log for messages with missing fields
-                                failure_log = {
-                                    "status": "failure",
-                                    "timestamp": datetime.utcnow().isoformat(),
+                                # Handle final failure with status update
+                                await self._handle_final_failure(queue_message, {
                                     "failure_reason": "missing_required_field",
-                                    "error_message": str(e),
-                                    "raw_message_content": message.content,
-                                    "message_id": getattr(message, 'id', 'unknown'),
-                                    "dequeue_count": dequeue_count
-                                }
-                                if self.failure_queue_client:
-                                    await self.failure_queue_client.send_message(json.dumps(failure_log))
-                                    logger.info(f"❌ Logged KeyError failure to queue {self.failure_queue_name}")
+                                    "missing_field": str(e),
+                                    "available_keys": available_keys,
+                                    "dequeue_count": dequeue_count,
+                                    "eval_run_id": "unknown"  # Add eval_run_id to failure details
+                                })
+                                    
+                                # Delete the malformed message after max retries
+                                await self.queue_client.delete_message(message)
+                                logger.warning(f"   Deleted malformed message after max retries: {getattr(message, 'id', 'unknown')}")
+                                
                             except Exception as log_error:
                                 logger.error(f"Failed to log KeyError failure: {log_error}")
+                        else:
+                            logger.warning(f"[WARNING]  Missing required field {e} for message (attempt {dequeue_count}/{max_retries}). Will retry after visibility timeout.")
                         
                         # Don't delete message - invalid format might be temporary issue
                     except json.JSONDecodeError as e:
-                        # Log detailed JSON parsing error
+                        # Enhanced JSON parsing error handling
+                        dequeue_count = getattr(message, 'dequeue_count', 1)
+                        recovery_attempted = False  # Initialize recovery tracking variable
+                        
+                        # Log detailed JSON parsing error with content analysis
+                        from ..utils.logging_helper import log_structured
+                        
+                        # Try to detect common corruption patterns
+                        content_str = str(message.content)
+                        is_double_encoded = content_str.startswith('"') and content_str.endswith('"') and '\\' in content_str
+                        looks_like_base64 = len(content_str) > 50 and content_str.replace('+', '').replace('/', '').replace('=', '').isalnum()
+                        
                         log_structured(
                             logger,
                             logging.ERROR,
-                            f"Queue message JSON parsing failed",
+                            f"Queue message JSON parsing failed - analyzing content corruption",
                             error_type="JSONDecodeError",
                             error_message=str(e),
                             error_line_number=getattr(e, 'lineno', 'unknown'),
                             error_column=getattr(e, 'colno', 'unknown'),
                             raw_message_content=message.content,
+                            raw_message_content_type=type(message.content).__name__,
+                            raw_message_content_length=len(content_str),
+                            content_starts_with_quote=content_str.startswith('"'),
+                            content_ends_with_quote=content_str.endswith('"'),
+                            content_has_backslashes=('\\' in content_str),
+                            appears_double_encoded=is_double_encoded,
+                            appears_base64_encoded=looks_like_base64,
+                            content_first_100_chars=content_str[:100] if len(content_str) > 100 else content_str,
+                            content_last_50_chars=content_str[-50:] if len(content_str) > 50 else content_str,
                             message_id=getattr(message, 'id', 'unknown'),
-                            message_dequeue_count=getattr(message, 'dequeue_count', 0),
+                            message_dequeue_count=dequeue_count,
                             action_taken="message_kept_for_retry"
                         )
                         
                         # Log to failure queue if we can't parse after max retries
                         dequeue_count = getattr(message, 'dequeue_count', 1)
                         max_retries = getattr(app_settings.evaluation, 'max_message_retries', 3)
+                        
                         if dequeue_count >= max_retries:
                             try:
-                                # Create a minimal failure log for unparseable messages
-                                failure_log = {
-                                    "status": "failure", 
-                                    "timestamp": datetime.utcnow().isoformat(),
-                                    "failure_reason": "json_parsing_failed",
+                                # Handle final failure with status update
+                                await self._handle_final_failure(queue_message, {
+                                    "failure_reason": "json_parsing_failed_max_retries",
                                     "error_message": str(e),
-                                    "raw_message_content": message.content,
-                                    "message_id": getattr(message, 'id', 'unknown'),
-                                    "dequeue_count": dequeue_count
-                                }
-                                if self.failure_queue_client:
-                                    await self.failure_queue_client.send_message(json.dumps(failure_log))
-                                    logger.info(f"❌ Logged JSON parsing failure to queue {self.failure_queue_name}")
+                                    "dequeue_count": dequeue_count,
+                                    "recovery_attempted": recovery_attempted,
+                                    "eval_run_id": "unknown"  # Add eval_run_id to failure details
+                                })
+                                    
+                                # Delete the corrupted message to prevent infinite retry loops
+                                await self.queue_client.delete_message(message)
+                                logger.warning(f"   Deleted corrupted message after max retries: {getattr(message, 'id', 'unknown')}")
+                                
                             except Exception as log_error:
                                 logger.error(f"Failed to log JSON parsing failure: {log_error}")
-                        
-                        # Don't delete message - JSON parsing might be temporary issue
+                        else:
+                            logger.warning(f"[WARNING]  JSON parsing failed for message (attempt {dequeue_count}/{max_retries}). Will retry after visibility timeout.")
                     except Exception as e:
                         eval_run_id = queue_message.eval_run_id if queue_message else "unknown"
+                        # Import log_structured for this scope
+                        from ..utils.logging_helper import log_structured
                         # Log detailed unexpected error with full context
                         log_structured(
                             logger,
@@ -317,23 +385,16 @@ class AzureQueueService:
                         max_retries = getattr(app_settings.evaluation, 'max_message_retries', 3)
                         if dequeue_count >= max_retries:
                             try:
-                                # Create failure log for messages with processing errors
-                                failure_log = {
-                                    "status": "failure",
-                                    "timestamp": datetime.utcnow().isoformat(),
+                                # Handle final failure with status update
+                                await self._handle_final_failure(queue_message, {
                                     "failure_reason": "processing_error",
                                     "error_type": type(e).__name__,
                                     "error_message": str(e),
                                     "eval_run_id": eval_run_id,
-                                    "raw_message_content": message.content,
-                                    "message_id": getattr(message, 'id', 'unknown'),
                                     "dequeue_count": dequeue_count
-                                }
-                                if self.failure_queue_client:
-                                    await self.failure_queue_client.send_message(json.dumps(failure_log))
-                                    logger.info(f"❌ Logged processing failure to queue {self.failure_queue_name}")
+                                })
                             except Exception as log_error:
-                                logger.error(f"Failed to log processing failure: {log_error}")
+                                logger.error(f"Failed to handle final processing failure: {log_error}")
                         
                         # Don't delete message - let it retry after visibility timeout
                         
@@ -366,9 +427,6 @@ class AzureQueueService:
                 "original_message": {
                     "eval_run_id": queue_message.eval_run_id,
                     "metrics_configuration_id": queue_message.metrics_configuration_id,
-                    "enriched_dataset_id": queue_message.enriched_dataset_id,
-                    "agent_id": queue_message.agent_id,
-                    "dataset_id": queue_message.dataset_id,
                     "requested_at": queue_message.requested_at.isoformat() if queue_message.requested_at else None,
                     "priority": queue_message.priority
                 },
@@ -379,7 +437,7 @@ class AzureQueueService:
             message_content = json.dumps(success_log)
             await self.success_queue_client.send_message(message_content)
             
-            logger.info(f"✅ Logged success to queue {self.success_queue_name}: {queue_message.eval_run_id}")
+            logger.info(f"[SUCCESS] Logged success to queue {self.success_queue_name}: {queue_message.eval_run_id}")
             
         except Exception as e:
             logger.error(f"Failed to log success message to queue {self.success_queue_name}: {str(e)}")
@@ -408,9 +466,6 @@ class AzureQueueService:
                 "original_message": {
                     "eval_run_id": queue_message.eval_run_id,
                     "metrics_configuration_id": queue_message.metrics_configuration_id,
-                    "enriched_dataset_id": queue_message.enriched_dataset_id,
-                    "agent_id": queue_message.agent_id,
-                    "dataset_id": queue_message.dataset_id,
                     "requested_at": queue_message.requested_at.isoformat() if queue_message.requested_at else None,
                     "priority": queue_message.priority
                 },
@@ -421,10 +476,74 @@ class AzureQueueService:
             message_content = json.dumps(failure_log)
             await self.failure_queue_client.send_message(message_content)
             
-            logger.info(f"❌ Logged failure to queue {self.failure_queue_name}: {queue_message.eval_run_id}")
+            logger.info(f"[ERROR] Logged failure to queue {self.failure_queue_name}: {queue_message.eval_run_id}")
             
         except Exception as e:
             logger.error(f"Failed to log failure message to queue {self.failure_queue_name}: {str(e)}")
+    
+    async def _handle_final_failure(self, queue_message: Optional[QueueMessage], failure_details: Dict[str, Any]) -> None:
+        """
+        Handle final failure by updating status to EvalRunFailed and logging to failure queue.
+        
+        Args:
+            queue_message: The parsed original message that failed processing (None if parsing failed)
+            failure_details: Details about the failure
+        """
+        try:
+            # Extract eval_run_id from queue_message or failure_details
+            eval_run_id = None
+            if queue_message and hasattr(queue_message, 'eval_run_id'):
+                eval_run_id = queue_message.eval_run_id
+            elif 'eval_run_id' in failure_details:
+                eval_run_id = failure_details['eval_run_id']
+            
+            # Only update status if we have a valid eval_run_id
+            if eval_run_id and eval_run_id != 'unknown':
+                # First, update the evaluation run status to failed
+                from .http_client import get_api_client
+                api_client = get_api_client()
+                
+                logger.info(f"  Updating evaluation run {eval_run_id} status to EvalRunFailed due to exhausted retries")
+                
+                try:
+                    status_updated = await api_client.update_evaluation_status(eval_run_id, "EvalRunFailed")
+                    if status_updated:
+                        logger.info(f"[SUCCESS] Successfully updated status to EvalRunFailed for eval run: {eval_run_id}")
+                    else:
+                        logger.warning(f"[WARNING] Failed to update status to EvalRunFailed for eval run: {eval_run_id}")
+                except Exception as status_error:
+                    logger.error(f"[ERROR] Error updating status to EvalRunFailed for {eval_run_id}: {status_error}")
+            else:
+                logger.warning(f"[WARNING] Cannot update status to EvalRunFailed - no valid eval_run_id found")
+            
+            # Then, log the failure details to the failure queue
+            if queue_message:
+                await self.log_failure_message(queue_message, getattr(queue_message, '_raw_content', ''), failure_details)
+            else:
+                # Create a minimal failure log when we don't have a parsed queue message
+                failure_log = {
+                    "status": "failure",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    **failure_details
+                }
+                if self.failure_queue_client:
+                    await self.failure_queue_client.send_message(json.dumps(failure_log))
+                    logger.info(f"[ERROR] Logged unparseable message failure to queue {self.failure_queue_name}")
+            
+            logger.info(f"  Final failure handling completed for eval run: {eval_run_id or 'unknown'}")
+            
+        except Exception as e:
+            logger.error(f"[ERROR] Error in final failure handling: {str(e)}")
+            # Still try to log to failure queue even if status update failed
+            try:
+                if queue_message:
+                    await self.log_failure_message(queue_message, getattr(queue_message, '_raw_content', ''), failure_details)
+                else:
+                    failure_log = {"status": "failure", "timestamp": datetime.utcnow().isoformat(), **failure_details}
+                    if self.failure_queue_client:
+                        await self.failure_queue_client.send_message(json.dumps(failure_log))
+            except Exception as log_error:
+                logger.error(f"[ERROR] Failed to log final failure: {log_error}")
             # Don't raise - logging failure shouldn't break main processing
     
     async def close(self) -> None:

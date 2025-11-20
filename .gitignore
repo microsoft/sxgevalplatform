@@ -52,3 +52,5 @@ TestResults.xml
 /src/APIs/Sxg.EvalPlatform.API.UnitTests/bin/Debug/net8.0
 /src/APIs/Sxg.EvalPlatform.API.UnitTests/obj
 /src/APIs/.vs
+/src/APIs/SXG.EvalPlatform.API/deploy/publish-ppe
+/src/APIs/SXG.EvalPlatform.API/deploy/publish-dev

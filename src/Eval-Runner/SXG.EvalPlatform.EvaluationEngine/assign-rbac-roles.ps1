@@ -16,21 +16,21 @@ param(
     [string]$SubscriptionId
 )
 
-Write-Host "🔐 Configuring RBAC permissions for Container App managed identity..." -ForegroundColor Blue
+Write-Host "[RBAC] Configuring RBAC permissions for Container App managed identity..." -ForegroundColor Blue
 
 # Get the Container App's managed identity principal ID
 Write-Host "Getting Container App managed identity..." -ForegroundColor Yellow
 $principalId = az containerapp show --name $ContainerAppName --resource-group $ResourceGroup --query identity.principalId -o tsv
 
 if (-not $principalId -or $principalId -eq "null") {
-    Write-Host "❌ Failed to get managed identity principal ID. Ensure the Container App has system-assigned managed identity enabled." -ForegroundColor Red
+    Write-Host "[ERROR] Failed to get managed identity principal ID. Ensure the Container App has system-assigned managed identity enabled." -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ Found managed identity principal ID: $principalId" -ForegroundColor Green
+Write-Host "[SUCCESS] Found managed identity principal ID: $principalId" -ForegroundColor Green
 
 # Storage Account Permissions
-Write-Host "`n📦 Assigning Storage Account permissions..." -ForegroundColor Yellow
+Write-Host "`n[STORAGE] Assigning Storage Account permissions..." -ForegroundColor Yellow
 
 $storageScope = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Storage/storageAccounts/$StorageAccountName"
 
@@ -42,10 +42,10 @@ az role assignment create `
     --scope $storageScope
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Storage Queue Data Contributor role assigned" -ForegroundColor Green
+    Write-Host "[SUCCESS] Storage Queue Data Contributor role assigned" -ForegroundColor Green
 }
 else {
-    Write-Host "❌ Failed to assign Storage Queue Data Contributor role" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to assign Storage Queue Data Contributor role" -ForegroundColor Red
 }
 
 # Storage Blob Data Contributor
@@ -56,14 +56,14 @@ az role assignment create `
     --scope $storageScope
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Storage Blob Data Contributor role assigned" -ForegroundColor Green
+    Write-Host "[SUCCESS] Storage Blob Data Contributor role assigned" -ForegroundColor Green
 }
 else {
-    Write-Host "❌ Failed to assign Storage Blob Data Contributor role" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to assign Storage Blob Data Contributor role" -ForegroundColor Red
 }
 
 # Azure OpenAI Permissions
-Write-Host "`n🤖 Assigning Azure OpenAI permissions..." -ForegroundColor Yellow
+Write-Host "`n[OPENAI] Assigning Azure OpenAI permissions..." -ForegroundColor Yellow
 
 $openAiScope = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.CognitiveServices/accounts/$OpenAiAccountName"
 
@@ -75,20 +75,20 @@ az role assignment create `
     --scope $openAiScope
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Cognitive Services OpenAI User role assigned" -ForegroundColor Green
+    Write-Host "[SUCCESS] Cognitive Services OpenAI User role assigned" -ForegroundColor Green
 }
 else {
-    Write-Host "❌ Failed to assign Cognitive Services OpenAI User role" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to assign Cognitive Services OpenAI User role" -ForegroundColor Red
 }
 
 # Verify role assignments
-Write-Host "`n🔍 Verifying role assignments..." -ForegroundColor Yellow
+Write-Host "`n[VERIFY] Verifying role assignments..." -ForegroundColor Yellow
 $roleAssignments = az role assignment list --assignee $principalId --output table
 
 Write-Host "`nCurrent role assignments for managed identity:" -ForegroundColor Cyan
 Write-Host $roleAssignments
 
-Write-Host "`n✅ RBAC configuration completed!" -ForegroundColor Green
+Write-Host "`n[SUCCESS] RBAC configuration completed!" -ForegroundColor Green
 Write-Host "The Container App can now access:" -ForegroundColor Blue
 Write-Host "  • Azure Storage queues and blobs" -ForegroundColor White
 Write-Host "  • Azure OpenAI service" -ForegroundColor White

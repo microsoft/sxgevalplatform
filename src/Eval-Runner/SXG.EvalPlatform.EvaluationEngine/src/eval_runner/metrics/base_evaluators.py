@@ -129,12 +129,35 @@ class ModelBasedEvaluator(BaseAzureEvaluator):
     """Base class for model-based evaluators (LLM-judge)."""
     
     def _create_evaluator(self) -> Any:
-        """Create evaluator with model configuration."""
-        evaluator_class = self._get_evaluator_class()
-        return evaluator_class(
-            model_config=azure_ai_config.model_config,
-            threshold=int(self.threshold)
-        )
+        """Create evaluator with model configuration and credential."""
+        try:
+            evaluator_class = self._get_evaluator_class()
+            
+            # Get the raw model config dictionary
+            model_config_dict = azure_ai_config.model_config
+            
+            logger.info(f"Creating {self.name} evaluator with config: {model_config_dict}")
+            
+            # Create AzureOpenAIModelConfiguration - it might be a TypedDict
+            model_config = AzureOpenAIModelConfiguration(
+                azure_endpoint=model_config_dict["azure_endpoint"],
+                azure_deployment=model_config_dict["azure_deployment"], 
+                api_version=model_config_dict["api_version"]
+            )
+            
+            logger.info(f"Created AzureOpenAIModelConfiguration for {self.name}: endpoint={model_config_dict['azure_endpoint']}, deployment={model_config_dict['azure_deployment']}")
+            
+            # Create evaluator with model config and credential for managed identity
+            return evaluator_class(
+                model_config=model_config,
+                credential=azure_ai_config.credential,
+                threshold=int(self.threshold)
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create {self.name} evaluator: {e}")
+            logger.error(f"Model config dict: {azure_ai_config.model_config}")
+            raise
     
     @abstractmethod
     def _get_evaluator_class(self) -> Type[Any]:
