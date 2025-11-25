@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Services;
 using System.Text.Json;
 using static SXG.EvalPlatform.Common.CommonConstants;
 
@@ -22,6 +23,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IMapper _mapper;
         private readonly IConfigHelper _configHelper;
         private readonly ICacheManager _cacheManager;
+        private readonly IMessagePublisher _messagePublisher;
 
         public EvaluationResultRequestHandler(
             IAzureBlobStorageService blobService,
@@ -31,7 +33,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             ILogger<EvaluationResultRequestHandler> logger,
             IConfigHelper configHelper,
             IMapper mapper,
-            ICacheManager cacheManager)
+            ICacheManager cacheManager,
+            IMessagePublisher messagePublisher)
         {
             _blobService = blobService;
             _evalRunTableService = evalRunTableService;
@@ -41,6 +44,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _cacheManager = cacheManager;
             _metricsConfigTableService = metricsConfigTableService;
             _dataSetTableService = dataSetTableService;
+            _messagePublisher = messagePublisher;
         }
 
         /// <summary>
@@ -91,6 +95,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
                     evalRunId, $"{containerName}/{evalSummaryFileName}");
+
+                //Write the same to service bus
+                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
+                
+                _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
+                    evalRunId);
 
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
