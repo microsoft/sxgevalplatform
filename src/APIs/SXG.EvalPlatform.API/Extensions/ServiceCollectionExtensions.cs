@@ -1,17 +1,19 @@
+using AutoMapper;
+using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.Exporter;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Extensions.Azure;
+using Microsoft.OpenApi.Models;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Azure.Monitor.OpenTelemetry.Exporter;
 using Sxg.EvalPlatform.API.Storage;
-using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.Extensions;
+using Sxg.EvalPlatform.API.Storage.Services;
+using Sxg.EvalPlatform.API.Storage.Validators;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
-using Microsoft.OpenApi.Models;
 using System.Reflection;
-using AutoMapper;
-using Sxg.EvalPlatform.API.Storage.Validators;
-using Microsoft.ApplicationInsights.Extensibility;
 
 namespace SxgEvalPlatformApi.Extensions;
 
@@ -229,6 +231,42 @@ public static class ServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.Add("User-Agent", "SXG-EvalPlatform-API/1.0");
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configure Service Bus client services
+    /// </summary>
+    public static IServiceCollection AddServiceBus(this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddAzureClients(clients =>
+        {
+            //var managedIdentityClientId = configuration["AZURE_CLIENT_ID"];
+            //var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
+
+            Azure.Core.TokenCredential credential;
+            //if (string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase))
+            //{
+                credential = new DefaultAzureCredential(); // CodeQL [SM05137] This is non-production testing code which is not deployed.
+            //}
+            //else
+            //{
+            //    credential = string.IsNullOrEmpty(managedIdentityClientId)
+            //        ? new ManagedIdentityCredential()
+            //        : new ManagedIdentityCredential(managedIdentityClientId);
+            //}
+            _ = clients.AddServiceBusClientWithNamespace(configuration.GetSection("ServiceBus")
+                .GetValue<string>("EventBusConnection"))
+            //.AddServiceBusClient(configuration.GetSection("ServiceBus")
+            //    .GetValue<string>("ConnectionString"))
+                .WithCredential(credential);
+            _ = clients.ConfigureDefaults(configuration.GetSection("AzureDefaults"));
+        });
+        _ = services.AddScoped<IMessagePublisher, MessagePublisher>();
+        //_ = services.AddSingleton<IMessageProducer, QueueStateMessageTracker>();
+        //_ = services.AddScoped<IEventBus, SimpleEventBus>();
 
         return services;
     }

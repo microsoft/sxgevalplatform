@@ -54,3 +54,6 @@ TestResults.xml
 /src/APIs/.vs
 /src/APIs/SXG.EvalPlatform.API/deploy/publish-ppe
 /src/APIs/SXG.EvalPlatform.API/deploy/publish-dev
+/src/APIs/Sxg.EvalPlatform.API.IntegrationTests/bin/Release/net8.0
+/src/APIs/SXG.EvalPlatform.API/appsettings.Development.json
+/src/APIs/SXG.EvalPlatform.API/appsettings.Local.json
