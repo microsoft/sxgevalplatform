@@ -96,16 +96,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
                     evalRunId, $"{containerName}/{evalSummaryFileName}");
 
-                //Write the same to service bus
-                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
-                
-                _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
-                    evalRunId);
-
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
                 _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
                     evalRunId, $"{containerName}/{evalDatasetFileName}");
+
+                //Write the same to service bus
+                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
+
+                _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
+                    evalRunId);
 
                 return (new EvaluationResultSaveResponseDto
                 {
