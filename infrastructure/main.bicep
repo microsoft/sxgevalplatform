@@ -57,26 +57,6 @@ module managedIdentity 'templates/bicep/ManagedIdentity/main.module.bicep' = {
   params: {
     name: 'sxg-eval-managedIdentity-${environment}'
     location: location
-    // serviceName: serviceName
-    // environment: environment
-    // componentId: componentId
-  }
-}
-
-// App Insights
-module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
-  name: 'appInsightsDeploy-${releaseNumber}'
-  dependsOn: [
-    //resourceNames
-    // logAnalytics
-    // keyVault
-  ]
-  params: {
-    name: 'sxg-eval-appInsights-${environment}'
-    location: location
-    serviceName: serviceName
-    environment: environment
-    componentId: componentId
   }
 }
 
@@ -89,6 +69,41 @@ module logAnalytics 'templates/bicep/LogAnalytics/main.module.bicep' = {
   params: {
     name: 'sxg-eval-logAnalytics-${environment}'
     location: location
+  }
+}
+
+// Key Vault
+module keyVault 'templates/bicep/KeyVault/main.module.bicep' = {
+  name: 'keyVaultDeploy-${releaseNumber}'
+  dependsOn: [
+    managedIdentity
+    logAnalytics
+  ]
+  params: {
+    name: 'sxg-eval-kv-${environment}'
+    location: location
+    managedIdentityName: 'sxg-eval-managedIdentity-${environment}'
+    logAnalyticsName: 'sxg-eval-logAnalytics-${environment}'
+    //actionGroupId: '' // You'll need to provide an action group ID for alerts
+    environment: environment
+    serviceName: serviceName
+  }
+}
+
+// App Insights
+module appInsights 'templates/bicep/ApplicationInsights/main.module.bicep' = {
+  name: 'appInsightsDeploy-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+     logAnalytics
+     keyVault
+  ]
+  params: {
+    name: 'sxg-eval-appInsights-${environment}'
+    location: location
+    serviceName: serviceName
+    environment: environment
+    componentId: componentId
   }
 }
 
@@ -106,6 +121,7 @@ module storageAccount 'templates/bicep/StorageAccount/main.module.bicep' = {
     serviceName: serviceName
     environment: environment
     componentId: componentId
+    managedIdentityId: managedIdentity.outputs.managedIdentityId
   }
 }
 
@@ -122,5 +138,6 @@ module serviceBus 'templates/bicep/ServiceBus/main.module.bicep' = {
     componentId: componentId
     queueName: 'evalResults'
     storageAccountId: storageAccount.outputs.storageAccountId
+    managedIdentityId: managedIdentity.outputs.managedIdentityId
   }
 }

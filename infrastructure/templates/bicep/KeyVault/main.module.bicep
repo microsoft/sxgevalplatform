@@ -13,8 +13,8 @@ param logAnalyticsName string
 @description('Unique release number for this deployment. Defaults to the current date.')
 param releaseNumber string = utcNow('yyyyMMdd.HHmm')
 
-@description('Alert Action Group Id. Required.')
-param actionGroupId string
+//@description('Alert Action Group Id. Required.')
+//param actionGroupId string
 
 @description('Environment into which to deploy resources. Required.')
 param environment string
@@ -62,37 +62,20 @@ resource keyVaultResource 'Microsoft.KeyVault/vaults@2023-07-01' = {
           ]
         }
       }
-      {
-        tenantId: tenant().tenantId
-        objectId: environment == 'int' ? 'f8daea97-62e7-4026-becf-13c2ea98e8b4' : 'b453993d-81d4-41a7-be3a-549bc2435ffa' // Microsoft Azure App Service
-        permissions: {
-          certificates: [
-            'get'
-          ]
-          keys: [
-          ]
-          secrets: [
-            'get'
-          ]
-        }
-      }
-      {
-        tenantId: tenant().tenantId
-        objectId: environment == 'int' ? 'ed47c2a1-bd23-4341-b39c-f4fd69138dd3' : 'c9eeec44-4409-4f15-a21a-f99466bc9695' // Microsoft.Azure.CertificateRegistration
-        permissions: {
-          certificates: [
-            'get'
-            'list'
-          ]
-          keys: [
-          ]
-          secrets: [
-            'get'
-            'list'
-            'delete'
-          ]
-        }
-      }
+      // {
+      //   tenantId: tenant().tenantId
+      //   objectId: environment == 'dev' ? 'f8daea97-62e7-4026-becf-13c2ea98e8b4' : 'b453993d-81d4-41a7-be3a-549bc2435ffa' // Microsoft Azure App Service
+      //   permissions: {
+      //     certificates: [
+      //       'get'
+      //     ]
+      //     keys: [
+      //     ]
+      //     secrets: [
+      //       'get'
+      //     ]
+      //   }
+      // }
     ]
   }
 }
@@ -122,16 +105,16 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
 }
 
 // Alerts
-module alerts 'alerts.module.bicep' = {
-  name: 'keyVaultAlertsDeploy-${releaseNumber}'
-  dependsOn: []
-  params: {
-    location: location
-    actionGroupId: actionGroupId
-    keyVaultResourceId: keyVaultResource.id
-	  environment: environment
-    serviceName: serviceName
-  }
-}
+// module alerts 'alerts.module.bicep' = {
+//   name: 'keyVaultAlertsDeploy-${releaseNumber}'
+//   dependsOn: []
+//   params: {
+//     location: location
+//     //actionGroupId: actionGroupId
+//     keyVaultResourceId: keyVaultResource.id
+// 	  environment: environment
+//     serviceName: serviceName
+//   }
+// }
 
 output keyVaultResourceId string = keyVaultResource.id

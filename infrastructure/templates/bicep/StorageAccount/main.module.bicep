@@ -7,6 +7,9 @@ param location string
 @description('Name of the Log Analytics Workspace to upload diagnostic logs to. Required.')
 param logAnalyticsWorkspaceName string
 
+@description('Managed Identity Id for the service.Required.')
+param managedIdentityId string
+
 @description('Environment into which to deploy resources. Required.')
 param environment string
 
@@ -174,6 +177,21 @@ resource tableDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-
         enabled: true
       }
     ]
+  }
+}
+
+var roleDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+)
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, managedIdentityId, roleDefinitionId)
+  scope: storageAccount
+   properties: {
+    roleDefinitionId: roleDefinitionId
+    principalId: managedIdentityId
+    principalType: 'ServicePrincipal'
   }
 }
 

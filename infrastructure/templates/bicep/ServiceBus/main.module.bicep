@@ -19,6 +19,9 @@ param skuName string = 'Standard' // Options: Basic, Standard, Premium
 @description('storage account for diagnosticSetting.Required.')
 param storageAccountId string
 
+@description('Managed Identity for the resource.Required.')
+param managedIdentityId string
+
 resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2021-11-01' = {
   name: name
   location: location
@@ -85,3 +88,14 @@ resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2021-11-01' = {
     requiresDuplicateDetection: false
   }
 }
+
+resource senderAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(serviceBusNamespace.id, managedIdentityId, 'roleIdDataSender')
+  scope: serviceBusNamespace
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'roleIdDataSender')
+    principalId: managedIdentityId
+    principalType: 'ServicePrincipal'
+  }
+}
+

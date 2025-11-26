@@ -8,3 +8,5 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-
   name: name
   location: location
 }
+
+output managedIdentityId string = managedIdentity.id
