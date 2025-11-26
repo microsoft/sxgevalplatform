@@ -122,6 +122,7 @@ Both logging destinations can run simultaneously or independently based on your 
   - `cr890_agentschemaname` - Agent schema name (string)
   - `cr890_status` - Status (Choice field with integer values)
   - `cr890_dataset` - Dataset JSON data (Multi Line Text)
+  - `cr890_datasetfile` - Dataset File (File column - **required for UpdateDatasetAsFile plugin**)
 
 ### Status Values
 
@@ -247,6 +248,54 @@ Publishes enriched dataset to external API.
     "timestamp": "2024-01-15T10:40:00.000Z"
 }
 ```
+
+### 5. UpdateDatasetAsFile (NEW - DLP-Compliant File Storage)
+
+Updates evaluation run with dataset from external API and stores as file in Dataverse file column.
+
+**Request:**
+```json
+{
+    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd",
+    "datasetId": "35ea4b87-9dd2-4bda-a968-60bf4c5464c9"
+}
+```
+
+**Process:**
+1. Updates external status to "EnrichingDataset"
+2. Fetches dataset from external API
+3. Uploads dataset as file to `cr890_datasetfile` column using Dataverse File Blocks API
+4. Sets status to "Updated"
+
+**Key Features:**
+- **DLP-Compliant**: Uses only 1st party Dataverse SDK connections
+- **No Direct Uploads**: Files are not uploaded directly from external sources
+- **File Storage**: Stores JSON as downloadable `.json` file
+- **Large File Support**: Handles files up to 128MB using block upload
+- **Automatic Naming**: Files named as `dataset_{datasetId}_{timestamp}.json`
+
+**Schema Requirement:**
+You must add a **File** column named `cr890_datasetfile` to the `cr890_evalrun` table.
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Dataset updated successfully",
+    "timestamp": "2024-01-15T10:35:00.000Z"
+}
+```
+
+**Comparison with UpdateDataset:**
+
+| Feature | UpdateDataset | UpdateDatasetAsFile |
+|---------|--------------|---------------------|
+| Storage | Text column | File column |
+| Size Limit | ~1 MB | 128 MB (configurable) |
+| Retrieval | Direct field access | File download API |
+| DLP Compliance | Yes | Yes |
+
+**For detailed documentation, see:** [UpdateDatasetAsFile_README.md](Plugins/UpdateDatasetAsFile_README.md)
 
 ## Development
 
