@@ -102,164 +102,274 @@ class EvaluationApiClient:
                 await self._connector.close()
                 self._connector = None
         
-    async def fetch_enriched_dataset(self, eval_run_id: str) -> Optional[Dict[str, Any]]:
+    async def fetch_enriched_dataset(self, eval_run_id: str) -> Dict[str, Any]:
         """
         Fetch enriched dataset from existing API.
+        Raises exceptions on failures to enable retry logic.
         
         Args:
             eval_run_id: The evaluation run ID
             
         Returns:
-            Enriched dataset response data or None if failed
+            Enriched dataset response data (validated to have non-empty dataset)
+            
+        Raises:
+            ValueError: If response is empty or dataset field is missing/empty
+            aiohttp.ClientError: On HTTP errors
+            asyncio.TimeoutError: On timeout
         """
         endpoint = app_settings.api_endpoints.enriched_dataset_endpoint.replace('{EvalRunId}', eval_run_id)
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        url = f"{self.base_url}{endpoint}"
         
         # Start telemetry timing
         start_time = time.time()
         
-        logger.info(f"Starting API call: fetch_enriched_dataset")
-        logger.info(f"[LOCATION] Endpoint: {endpoint}")
-        logger.info(f"[LINK] Full URL: {url}")
-        logger.info(f"[CLIPBOARD] Eval Run ID: {eval_run_id}")
+        # Enhanced telemetry - log request details
+        logger.info(f"[API_REQUEST] Starting API call: fetch_enriched_dataset")
+        logger.info(f"[API_METHOD] GET")
+        logger.info(f"[API_URL] {url}")
+        logger.info(f"[API_ENDPOINT] {endpoint}")
+        logger.info(f"[API_PARAMETER] eval_run_id={eval_run_id}")
+        logger.info(f"[API_BASE_URL] {self.base_url}")
+        
+        session = await self._get_session()
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        logger.info(f"[API_HEADERS] {headers}")
+        logger.info(f"[API_PAYLOAD] None (GET request)")
+        
+        # Validate session is not closed before making request
+        if session.closed:
+            logger.error(f"[API_ERROR] Session is closed before request")
+            logger.error(f"[API_ERROR_URL] {url}")
+            raise RuntimeError(f"HTTP session is closed before making request to {url}")
         
         try:
-            session = await self._get_session()
-            headers = {
-                'Content-Type': 'application/json'
-            }
-            
-            logger.debug(f"[OUTBOX] Request headers: {headers}")
-            
             async with session.get(url, headers=headers) as response:
                 response_time = time.time() - start_time
                 response_text = await response.text()
                 
-                # Log response details
-                logger.info(f"[INBOX] Response status: {response.status}")
-                logger.info(f"[TIMER] Response time: {response_time:.3f}s")
-                logger.debug(f"[PAGE] Response headers: {dict(response.headers)}")
-                logger.debug(f"[MEMO] Response body length: {len(response_text)} characters")
+                # Enhanced telemetry - log response details
+                logger.info(f"[API_RESPONSE_STATUS] {response.status}")
+                logger.info(f"[API_RESPONSE_TIME] {response_time:.3f}s")
+                logger.info(f"[API_RESPONSE_HEADERS] {dict(response.headers)}")
+                logger.info(f"[API_RESPONSE_BODY_LENGTH] {len(response_text)} characters")
+                logger.info(f"[API_RESPONSE_BODY] {response_text[:1000]}{'...' if len(response_text) > 1000 else ''}")
                 
-                if response.status == 200:
-                    try:
-                        data = await response.json()
-                        # Handle both camelCase and PascalCase field names
-                        enriched_data = data.get('enrichedDataset') or data.get('EnrichedDataset', [])
-                        dataset_count = len(enriched_data)
+                if response.status != 200:
+                    error_msg = f"HTTP {response.status} error fetching dataset"
+                    logger.error(f"[API_ERROR] {error_msg}")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_STATUS] {response.status}")
+                    logger.error(f"[API_ERROR_RESPONSE] {response_text}")
+                    logger.error(f"[API_ERROR_HEADERS] {dict(response.headers)}")
+                    raise ValueError(f"{error_msg}: {response_text}")
+                
+                # Parse JSON response
+                try:
+                    data = await response.json()
+                except Exception as parse_error:
+                    logger.error(f"[API_ERROR] JSON parsing failed: {str(parse_error)}")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_RESPONSE] {response_text[:500]}")
+                    raise ValueError(f"Failed to parse JSON response: {str(parse_error)}")
+                
+                # Validate response has dataset field and is not empty
+                enriched_data = data.get('enrichedDataset') or data.get('EnrichedDataset')
+                
+                if enriched_data is None:
+                    logger.error(f"[API_ERROR] Dataset field missing from response")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_RESPONSE_KEYS] {list(data.keys())}")
+                    logger.error(f"[API_ERROR_RESPONSE_BODY] {response_text[:500]}")
+                    raise ValueError(f"Response missing 'enrichedDataset' or 'EnrichedDataset' field. Keys: {list(data.keys())}")
+                
+                if not isinstance(enriched_data, list):
+                    logger.error(f"[API_ERROR] Dataset field is not a list")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_DATASET_TYPE] {type(enriched_data).__name__}")
+                    logger.error(f"[API_ERROR_DATASET_VALUE] {str(enriched_data)[:200]}")
+                    raise ValueError(f"Dataset field is not a list: {type(enriched_data).__name__}")
+                
+                if len(enriched_data) == 0:
+                    logger.error(f"[API_ERROR] Dataset is empty (0 items)")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_RESPONSE_KEYS] {list(data.keys())}")
+                    logger.error(f"[API_ERROR_RESPONSE_BODY] {response_text[:500]}")
+                    raise ValueError("Dataset API returned empty dataset (0 items)")
+                
+                dataset_count = len(enriched_data)
+                logger.info(f"[API_SUCCESS] Successfully fetched dataset with {dataset_count} items")
+                logger.info(f"[API_SUCCESS_DATASET_COUNT] {dataset_count}")
+                logger.info(f"[API_SUCCESS_RESPONSE_KEYS] {list(data.keys())}")
+                logger.info(f"[API_SUCCESS_DURATION] {response_time:.3f}s")
+                
+                return data
                         
-                        logger.info(f"[SUCCESS] Successfully fetched dataset with {dataset_count} items")
-                        logger.info(f"  Dataset structure: {list(data.keys()) if isinstance(data, dict) else 'Non-dict response'}")
-                        
-                        return data
-                    except Exception as parse_error:
-                        logger.error(f"[ERROR] JSON parsing failed: {str(parse_error)}")
-                        logger.error(f"[PAGE] Raw response (first 500 chars): {response_text[:500]}")
-                        return None
-                else:
-                    logger.error(f"[ERROR] API call failed - Status: {response.status}")
-                    logger.error(f"[LINK] Failed URL: {url}")
-                    logger.error(f"[PAGE] Error response: {response_text}")
-                    logger.error(f"[TIMER] Failed after: {response_time:.3f}s")
-                    return None
-                        
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as timeout_error:
             response_time = time.time() - start_time
-            logger.error(f"[TIMEOUT] Timeout fetching enriched dataset - took {response_time:.3f}s")
-            logger.error(f"[LINK] Timeout URL: {url}")
-            logger.error(f"[CLIPBOARD] Eval Run ID: {eval_run_id}")
-            return None
+            logger.error(f"[API_TIMEOUT] Request timed out after {response_time:.3f}s")
+            logger.error(f"[API_TIMEOUT_URL] {url}")
+            logger.error(f"[API_TIMEOUT_DURATION] {response_time:.3f}s")
+            logger.error(f"[API_TIMEOUT_PARAMETER] eval_run_id={eval_run_id}")
+            raise asyncio.TimeoutError(f"Timeout fetching dataset after {response_time:.3f}s: {url}")
+        except ValueError:
+            # Re-raise ValueError (validation errors)
+            raise
         except Exception as e:
             response_time = time.time() - start_time
-            logger.error(f"[CRASH] Unexpected error fetching enriched dataset: {str(e)}")
-            logger.error(f"[LINK] Error URL: {url}")
-            logger.error(f"[CLIPBOARD] Eval Run ID: {eval_run_id}")
-            logger.error(f"[TIMER] Failed after: {response_time:.3f}s")
-            logger.error(f"[BUG] Error type: {type(e).__name__}")
-            return None
+            logger.error(f"[API_EXCEPTION] Unexpected error: {str(e)}")
+            logger.error(f"[API_EXCEPTION_URL] {url}")
+            logger.error(f"[API_EXCEPTION_TYPE] {type(e).__name__}")
+            logger.error(f"[API_EXCEPTION_DURATION] {response_time:.3f}s")
+            logger.error(f"[API_EXCEPTION_PARAMETER] eval_run_id={eval_run_id}")
+            import traceback
+            logger.error(f"[API_EXCEPTION_TRACE] {traceback.format_exc()}")
+            raise
     
-    async def fetch_metrics_configuration(self, metrics_configuration_id: str) -> Optional[Any]:
+    async def fetch_metrics_configuration(self, metrics_configuration_id: str) -> Any:
         """
         Fetch metrics configuration from existing API.
+        Raises exceptions on failures to enable retry logic.
         
         Args:
             metrics_configuration_id: The metrics configuration ID
 
         Returns:
-            Metrics configuration data or None if failed
+            Metrics configuration data (validated to be non-empty)
+            
+        Raises:
+            ValueError: If response is empty or metrics field is missing/empty
+            aiohttp.ClientError: On HTTP errors
+            asyncio.TimeoutError: On timeout
         """
         endpoint = app_settings.api_endpoints.metrics_configuration_endpoint.replace('{MetricsConfigurationId}', metrics_configuration_id)
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        url = f"{self.base_url}{endpoint}"
         
         # Start telemetry timing
         start_time = time.time()
         
-        logger.info(f"[WEB] Starting API call: fetch_metrics_configuration")
-        logger.info(f"[LOCATION] Endpoint: {endpoint}")
-        logger.info(f"[LINK] Full URL: {url}")
-        logger.info(f"[CLIPBOARD] Metrics Config ID: {metrics_configuration_id}")
+        # Enhanced telemetry - log request details
+        logger.info(f"[API_REQUEST] Starting API call: fetch_metrics_configuration")
+        logger.info(f"[API_METHOD] GET")
+        logger.info(f"[API_URL] {url}")
+        logger.info(f"[API_ENDPOINT] {endpoint}")
+        logger.info(f"[API_PARAMETER] metrics_configuration_id={metrics_configuration_id}")
+        logger.info(f"[API_BASE_URL] {self.base_url}")
+        
+        session = await self._get_session()
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        logger.info(f"[API_HEADERS] {headers}")
+        logger.info(f"[API_PAYLOAD] None (GET request)")
+        
+        # Validate session is not closed before making request
+        if session.closed:
+            logger.error(f"[API_ERROR] Session is closed before request")
+            logger.error(f"[API_ERROR_URL] {url}")
+            raise RuntimeError(f"HTTP session is closed before making request to {url}")
         
         try:
-            session = await self._get_session()
-            headers = {
-                'Content-Type': 'application/json'
-            }
-            
-            logger.debug(f"[OUTBOX] Request headers: {headers}")
-            
             async with session.get(url, headers=headers) as response:
                 response_time = time.time() - start_time
                 response_text = await response.text()
                 
-                # Log response details
-                logger.info(f"[INBOX] Response status: {response.status}")
-                logger.info(f"[TIMER] Response time: {response_time:.3f}s")
-                logger.debug(f"[PAGE] Response headers: {dict(response.headers)}")
-                logger.debug(f"[MEMO] Response body length: {len(response_text)} characters")
+                # Enhanced telemetry - log response details
+                logger.info(f"[API_RESPONSE_STATUS] {response.status}")
+                logger.info(f"[API_RESPONSE_TIME] {response_time:.3f}s")
+                logger.info(f"[API_RESPONSE_HEADERS] {dict(response.headers)}")
+                logger.info(f"[API_RESPONSE_BODY_LENGTH] {len(response_text)} characters")
+                logger.info(f"[API_RESPONSE_BODY] {response_text[:1000]}{'...' if len(response_text) > 1000 else ''}")
                 
-                if response.status == 200:
-                    try:
-                        data = await response.json()
-                        
-                        # Handle new array format or old nested format
-                        if isinstance(data, list):
-                            # New format: direct array of metrics
-                            metrics_count = len(data)
-                            logger.info(f"[SUCCESS] Successfully fetched metrics configuration with {metrics_count} metrics (array format)")
-                            logger.debug(f"  Metrics array structure: {[type(item).__name__ for item in data[:3]]}")  # Show first 3 types
-                        else:
-                            # Old format: nested object
-                            metrics_config = data.get('metricsConfiguration') or data.get('MetricsConfiguration', [])
-                            metrics_count = len(metrics_config)
-                            logger.info(f"[SUCCESS] Successfully fetched metrics configuration with {metrics_count} metrics (nested format)")
-                            logger.debug(f"  Nested structure keys: {list(data.keys()) if isinstance(data, dict) else 'Non-dict response'}")
-                        
-                        return data
-                    except Exception as parse_error:
-                        logger.error(f"[ERROR] JSON parsing failed: {str(parse_error)}")
-                        logger.error(f"[PAGE] Raw response (first 500 chars): {response_text[:500]}")
-                        return None
+                if response.status != 200:
+                    error_msg = f"HTTP {response.status} error fetching metrics configuration"
+                    logger.error(f"[API_ERROR] {error_msg}")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_STATUS] {response.status}")
+                    logger.error(f"[API_ERROR_RESPONSE] {response_text}")
+                    logger.error(f"[API_ERROR_HEADERS] {dict(response.headers)}")
+                    raise ValueError(f"{error_msg}: {response_text}")
+                
+                # Parse JSON response
+                try:
+                    data = await response.json()
+                except Exception as parse_error:
+                    logger.error(f"[API_ERROR] JSON parsing failed: {str(parse_error)}")
+                    logger.error(f"[API_ERROR_URL] {url}")
+                    logger.error(f"[API_ERROR_RESPONSE] {response_text[:500]}")
+                    raise ValueError(f"Failed to parse JSON response: {str(parse_error)}")
+                
+                # Validate response content
+                if isinstance(data, list):
+                    # New format: direct array of metrics
+                    if len(data) == 0:
+                        logger.error(f"[API_ERROR] Metrics configuration is empty (0 metrics)")
+                        logger.error(f"[API_ERROR_URL] {url}")
+                        logger.error(f"[API_ERROR_RESPONSE] {response_text[:500]}")
+                        raise ValueError("Metrics configuration API returned empty array (0 metrics)")
+                    
+                    metrics_count = len(data)
+                    logger.info(f"[API_SUCCESS] Successfully fetched {metrics_count} metrics (array format)")
+                    logger.info(f"[API_SUCCESS_METRICS_COUNT] {metrics_count}")
+                    logger.info(f"[API_SUCCESS_FORMAT] array")
+                    logger.info(f"[API_SUCCESS_SAMPLE] {[type(item).__name__ for item in data[:3]]}")
                 else:
-                    logger.error(f"[ERROR] API call failed - Status: {response.status}")
-                    logger.error(f"[LINK] Failed URL: {url}")
-                    logger.error(f"[PAGE] Error response: {response_text}")
-                    logger.error(f"[TIMER] Failed after: {response_time:.3f}s")
-                    return None
+                    # Old format: nested object
+                    metrics_config = data.get('metricsConfiguration') or data.get('MetricsConfiguration')
+                    
+                    if metrics_config is None:
+                        logger.error(f"[API_ERROR] Metrics configuration field missing from response")
+                        logger.error(f"[API_ERROR_URL] {url}")
+                        logger.error(f"[API_ERROR_RESPONSE_KEYS] {list(data.keys())}")
+                        logger.error(f"[API_ERROR_RESPONSE] {response_text[:500]}")
+                        raise ValueError(f"Response missing 'metricsConfiguration' or 'MetricsConfiguration' field. Keys: {list(data.keys())}")
+                    
+                    if not isinstance(metrics_config, list):
+                        logger.error(f"[API_ERROR] Metrics configuration field is not a list")
+                        logger.error(f"[API_ERROR_URL] {url}")
+                        logger.error(f"[API_ERROR_CONFIG_TYPE] {type(metrics_config).__name__}")
+                        raise ValueError(f"Metrics configuration field is not a list: {type(metrics_config).__name__}")
+                    
+                    if len(metrics_config) == 0:
+                        logger.error(f"[API_ERROR] Metrics configuration is empty (0 metrics)")
+                        logger.error(f"[API_ERROR_URL] {url}")
+                        logger.error(f"[API_ERROR_RESPONSE_KEYS] {list(data.keys())}")
+                        logger.error(f"[API_ERROR_RESPONSE] {response_text[:500]}")
+                        raise ValueError("Metrics configuration API returned empty metrics array (0 metrics)")
+                    
+                    metrics_count = len(metrics_config)
+                    logger.info(f"[API_SUCCESS] Successfully fetched {metrics_count} metrics (nested format)")
+                    logger.info(f"[API_SUCCESS_METRICS_COUNT] {metrics_count}")
+                    logger.info(f"[API_SUCCESS_FORMAT] nested")
+                    logger.info(f"[API_SUCCESS_RESPONSE_KEYS] {list(data.keys())}")
+                
+                logger.info(f"[API_SUCCESS_DURATION] {response_time:.3f}s")
+                return data
                         
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as timeout_error:
             response_time = time.time() - start_time
-            logger.error(f"[TIMEOUT] Timeout fetching metrics configuration - took {response_time:.3f}s")
-            logger.error(f"[LINK] Timeout URL: {url}")
-            logger.error(f"[CLIPBOARD] Metrics Config ID: {metrics_configuration_id}")
-            return None
+            logger.error(f"[API_TIMEOUT] Request timed out after {response_time:.3f}s")
+            logger.error(f"[API_TIMEOUT_URL] {url}")
+            logger.error(f"[API_TIMEOUT_DURATION] {response_time:.3f}s")
+            logger.error(f"[API_TIMEOUT_PARAMETER] metrics_configuration_id={metrics_configuration_id}")
+            raise asyncio.TimeoutError(f"Timeout fetching metrics configuration after {response_time:.3f}s: {url}")
+        except ValueError:
+            # Re-raise ValueError (validation errors)
+            raise
         except Exception as e:
             response_time = time.time() - start_time
-            logger.error(f"[CRASH] Unexpected error fetching metrics configuration: {str(e)}")
-            logger.error(f"[LINK] Error URL: {url}")
-            logger.error(f"[CLIPBOARD] Metrics Config ID: {metrics_configuration_id}")
-            logger.error(f"[TIMER] Failed after: {response_time:.3f}s")
-            logger.error(f"[BUG] Error type: {type(e).__name__}")
-            return None
+            logger.error(f"[API_EXCEPTION] Unexpected error: {str(e)}")
+            logger.error(f"[API_EXCEPTION_URL] {url}")
+            logger.error(f"[API_EXCEPTION_TYPE] {type(e).__name__}")
+            logger.error(f"[API_EXCEPTION_DURATION] {response_time:.3f}s")
+            logger.error(f"[API_EXCEPTION_PARAMETER] metrics_configuration_id={metrics_configuration_id}")
+            import traceback
+            logger.error(f"[API_EXCEPTION_TRACE] {traceback.format_exc()}")
+            raise
     
     async def update_evaluation_status(self, eval_run_id: str, status: str) -> bool:
         """
@@ -274,10 +384,8 @@ class EvaluationApiClient:
         """
         endpoint = app_settings.api_endpoints.update_status.replace('{evalRunId}', eval_run_id)
         url = f"{self.base_url}{endpoint}"
-        
-        payload = {"status": status}
-        
-        # Start telemetry timing
+
+        payload = {"status": status}        # Start telemetry timing
         start_time = time.time()
         
         logger.info(f"[WEB] Starting API call: update_evaluation_status")

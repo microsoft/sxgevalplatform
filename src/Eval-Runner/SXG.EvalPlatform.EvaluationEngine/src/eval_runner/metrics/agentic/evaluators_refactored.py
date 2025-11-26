@@ -26,10 +26,12 @@ class IntentResolutionEvaluator(ModelBasedEvaluator):
         return AzureIntentResolutionEvaluator
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract intent resolution evaluation results."""
+        """Extract intent resolution evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("intent_resolution", 0.0))
         reasoning = str(azure_result.get("intent_resolution_reason", "No reasoning provided"))
-        passed = azure_result.get("intent_resolution_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -56,12 +58,11 @@ class ToolCallAccuracyEvaluator(ModelBasedEvaluator):
             tool_definitions = item.metadata.get('tool_definitions', [])
         
         if not tool_calls:
-            # Return a neutral result if no tool calls are available
-            return {
-                "tool_call_accuracy": 3.0,
-                "tool_call_accuracy_reason": "No tool calls detected in the response. Agent may not have needed tools for this query.",
-                "tool_call_accuracy_result": "pass"
-            }
+            raise ValueError(
+                f"ToolCallAccuracyEvaluator requires tool calls for evaluation. "
+                f"No tool calls found in kwargs or metadata. "
+                f"Please provide tool_calls data for meaningful tool call accuracy evaluation."
+            )
         
         return evaluator(
             query=item.prompt,
@@ -70,10 +71,12 @@ class ToolCallAccuracyEvaluator(ModelBasedEvaluator):
         )
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract tool call accuracy evaluation results."""
+        """Extract tool call accuracy evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("tool_call_accuracy", 0.0))
         reasoning = str(azure_result.get("tool_call_accuracy_reason", "No reasoning provided"))
-        passed = azure_result.get("tool_call_accuracy_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -90,9 +93,11 @@ class TaskAdherenceEvaluator(ModelBasedEvaluator):
         return AzureTaskAdherenceEvaluator
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract task adherence evaluation results."""
+        """Extract task adherence evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("task_adherence", 0.0))
         reasoning = str(azure_result.get("task_adherence_reason", "No reasoning provided"))
-        passed = azure_result.get("task_adherence_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed

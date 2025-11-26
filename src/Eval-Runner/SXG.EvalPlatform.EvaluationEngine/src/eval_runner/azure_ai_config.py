@@ -122,21 +122,20 @@ class AzureAIEvaluatorConfig:
         if self._azure_ai_project is None:
             try:
                 ai_config = app_settings.azure_ai
-                # Use the full project ID if available, otherwise build from components
-                # Always use the component format as required by Azure AI SDK
+                # Use the official Azure AI SDK format from Microsoft samples
+                # Reference: https://github.com/Azure/azure-sdk-for-python/blob/main/sdk/evaluation/azure-ai-evaluation/samples/evaluation_samples_safety_evaluation.py
                 self._azure_ai_project = {
                     "subscription_id": ai_config.subscription_id,
                     "resource_group_name": ai_config.resource_group_name,
                     "project_name": ai_config.project_name,
-                    "credential": self.credential  # Use the tenant-specific credential
+                    "credential": self.credential
                 }
                 
                 print(f"[SUCCESS] Configured Azure AI Foundry project:")
                 print(f"   - Subscription: {ai_config.subscription_id}")
                 print(f"   - Resource Group: {ai_config.resource_group_name}")
                 print(f"   - Project: {ai_config.project_name}")
-                if hasattr(ai_config, 'project_id') and ai_config.project_id:
-                    print(f"   - Project ID: {ai_config.project_id}")
+                print(f"   - Azure AI Foundry Endpoint: https://{ai_config.resource_name}.services.ai.azure.com/api/projects/{ai_config.project_name}")
                 print(f"   - Tenant ID: {ai_config.tenant_id or 'Default'}")
                 print(f"   - Using managed identity authentication")
                 

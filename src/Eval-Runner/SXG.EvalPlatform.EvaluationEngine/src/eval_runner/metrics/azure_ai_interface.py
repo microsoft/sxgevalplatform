@@ -69,11 +69,23 @@ class MetricAdapter:
             result = self.evaluator.evaluate(item)
             
             # Convert EvaluationResult to MetricScore
+            # Use evaluator-specific fallback logic if passed determination not provided
+            if result.details and "passed" in result.details:
+                passed = result.details["passed"]
+            else:
+                # Fallback logic based on evaluator type
+                if any(safety_name in self.name.lower() for safety_name in ['violence', 'sexual', 'self_harm', 'hate_unfairness']):
+                    # Safety evaluators: higher normalized score = safer (inverted scale)
+                    passed = result.score >= 0.5
+                else:
+                    # Model-based and statistical evaluators: higher score = better
+                    passed = result.score >= 0.5
+            
             return MetricScore(
                 metric_name=self.name,
                 score=result.score,
                 reason=result.reasoning,
-                passed=result.details.get("passed", result.score >= 0.5) if result.details else result.score >= 0.5,
+                passed=passed,
                 details=result.details or {}
             )
             

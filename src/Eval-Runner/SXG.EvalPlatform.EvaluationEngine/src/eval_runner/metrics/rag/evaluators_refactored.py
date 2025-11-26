@@ -39,13 +39,16 @@ class GroundednessEvaluator(ModelBasedEvaluator):
         if not context:
             context = getattr(item, 'retrieved_documents', '') or getattr(item, 'context', '')
         
+        # If still no context, fallback to ground truth as reference material
+        if not context and item.ground_truth:
+            context = item.ground_truth
+        
         if not context:
-            # Return a neutral result if no context is available
-            return {
-                "groundedness": 3.0,
-                "groundedness_reason": "No context available for groundedness evaluation",
-                "groundedness_result": "pass"
-            }
+            raise ValueError(
+                f"GroundednessEvaluator requires context for evaluation. "
+                f"No context found in kwargs, metadata, item attributes, or ground_truth. "
+                f"Please provide context data or ground truth for meaningful groundedness evaluation."
+            )
         
         return evaluator(
             query=item.prompt,
@@ -54,10 +57,12 @@ class GroundednessEvaluator(ModelBasedEvaluator):
         )
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract groundedness evaluation results."""
+        """Extract groundedness evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("groundedness", 0.0))
         reasoning = str(azure_result.get("groundedness_reason", "No reasoning provided"))
-        passed = azure_result.get("groundedness_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -85,13 +90,16 @@ class RelevanceEvaluator(ModelBasedEvaluator):
         if not context:
             context = getattr(item, 'retrieved_documents', '') or getattr(item, 'context', '')
         
+        # If still no context, fallback to ground truth as reference material
+        if not context and item.ground_truth:
+            context = item.ground_truth
+        
         if not context:
-            # Return a neutral result if no context is available
-            return {
-                "relevance": 3.0,
-                "relevance_reason": "No context available for relevance evaluation",
-                "relevance_result": "pass"
-            }
+            raise ValueError(
+                f"RelevanceEvaluator requires context for evaluation. "
+                f"No context found in kwargs, metadata, item attributes, or ground_truth. "
+                f"Please provide context data or ground truth for meaningful relevance evaluation."
+            )
         
         return evaluator(
             query=item.prompt,
@@ -100,10 +108,12 @@ class RelevanceEvaluator(ModelBasedEvaluator):
         )
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract relevance evaluation results."""
+        """Extract relevance evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("relevance", 0.0))
         reasoning = str(azure_result.get("relevance_reason", "No reasoning provided"))
-        passed = azure_result.get("relevance_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -119,11 +129,42 @@ class CoherenceEvaluator(ModelBasedEvaluator):
         """Get the Azure AI evaluator class."""
         return AzureCoherenceEvaluator
     
+    def _call_evaluator(self, evaluator: Any, item: DatasetItem, **kwargs) -> Dict[str, Any]:
+        """Call coherence evaluator with context if available."""
+        # Extract context from kwargs or metadata
+        context = kwargs.get('context')
+        
+        if not context and item.metadata:
+            context = item.metadata.get('context', '')
+        
+        # If no context is available, use the retrieved documents or similar
+        if not context:
+            context = getattr(item, 'retrieved_documents', '') or getattr(item, 'context', '')
+        
+        # If still no context, fallback to ground truth as reference material
+        if not context and item.ground_truth:
+            context = item.ground_truth
+        
+        # Coherence can work without context (evaluates internal consistency)
+        if context:
+            return evaluator(
+                query=item.prompt,
+                response=item.actual_response,
+                context=context
+            )
+        else:
+            return evaluator(
+                query=item.prompt,
+                response=item.actual_response
+            )
+    
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract coherence evaluation results."""
+        """Extract coherence evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("coherence", 0.0))
         reasoning = str(azure_result.get("coherence_reason", "No reasoning provided"))
-        passed = azure_result.get("coherence_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -139,11 +180,42 @@ class FluencyEvaluator(ModelBasedEvaluator):
         """Get the Azure AI evaluator class."""
         return AzureFluencyEvaluator
     
+    def _call_evaluator(self, evaluator: Any, item: DatasetItem, **kwargs) -> Dict[str, Any]:
+        """Call fluency evaluator with context if available."""
+        # Extract context from kwargs or metadata
+        context = kwargs.get('context')
+        
+        if not context and item.metadata:
+            context = item.metadata.get('context', '')
+        
+        # If no context is available, use the retrieved documents or similar
+        if not context:
+            context = getattr(item, 'retrieved_documents', '') or getattr(item, 'context', '')
+        
+        # If still no context, fallback to ground truth as reference material
+        if not context and item.ground_truth:
+            context = item.ground_truth
+        
+        # Fluency can work without context (evaluates language quality)
+        if context:
+            return evaluator(
+                query=item.prompt,
+                response=item.actual_response,
+                context=context
+            )
+        else:
+            return evaluator(
+                query=item.prompt,
+                response=item.actual_response
+            )
+    
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract fluency evaluation results."""
+        """Extract fluency evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("fluency", 0.0))
         reasoning = str(azure_result.get("fluency_reason", "No reasoning provided"))
-        passed = azure_result.get("fluency_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
@@ -179,9 +251,11 @@ class ResponseCompletenessEvaluator(ModelBasedEvaluator):
             return evaluator(conversation=conversation)
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract response completeness evaluation results."""
+        """Extract response completeness evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("response_completeness", 0.0))
         reasoning = str(azure_result.get("response_completeness_reason", "No reasoning provided"))
-        passed = azure_result.get("response_completeness_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed

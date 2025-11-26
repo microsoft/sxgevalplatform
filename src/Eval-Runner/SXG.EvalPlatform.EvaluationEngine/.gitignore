@@ -115,6 +115,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+deployment-*.log
 
 # Azure specific
 .azure/
@@ -129,6 +130,8 @@ appsettings.development.json
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.backup
 
 # Test and development files
 test_*.ipynb

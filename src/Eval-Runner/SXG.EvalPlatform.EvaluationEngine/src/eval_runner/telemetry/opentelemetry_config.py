@@ -54,6 +54,9 @@ class OpenTelemetryConfig:
             # Set up logging
             self._setup_logging(connection_string, enable_console)
             
+            # Set up HTTP instrumentation for dependency tracking
+            self._setup_http_instrumentation()
+            
             print(f"[SUCCESS] OpenTelemetry configured with Azure Monitor")
             
         except ImportError as e:
@@ -155,6 +158,37 @@ class OpenTelemetryConfig:
             self.meter_provider.shutdown()
         if self.logger_provider:
             self.logger_provider.shutdown()
+    
+    def _setup_http_instrumentation(self) -> None:
+        """
+        Set up HTTP client instrumentation for dependency tracking.
+        This captures Azure OpenAI API calls as dependencies in Application Insights.
+        """
+        try:
+            # Import HTTP instrumentors
+            from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+            from opentelemetry.instrumentation.requests import RequestsInstrumentor
+            from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
+            from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+            
+            # Instrument HTTP clients
+            AioHttpClientInstrumentor().instrument()
+            RequestsInstrumentor().instrument()
+            URLLib3Instrumentor().instrument()
+            HTTPXClientInstrumentor().instrument()
+            
+            print(f"[SUCCESS] HTTP client instrumentation enabled for dependency tracking")
+            print(f"   - aiohttp: Azure AI SDK internal HTTP calls will be tracked")
+            print(f"   - requests: Standard HTTP library calls will be tracked")
+            print(f"   - urllib3: Low-level HTTP calls will be tracked")
+            print(f"   - httpx: Modern async HTTP calls will be tracked")
+            
+        except ImportError as e:
+            print(f"[WARNING] HTTP instrumentation packages not available: {e}")
+            print("   Azure OpenAI dependencies may not appear in Application Insights")
+            print("   Install with: pip install -r requirements.txt")
+        except Exception as e:
+            print(f"[WARNING] Failed to set up HTTP instrumentation: {e}")
 
 
 # Global OpenTelemetry instance

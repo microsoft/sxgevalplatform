@@ -114,6 +114,7 @@ class EvaluationEngine:
                     retry_delay = base_delay * (2 ** attempt)
                     
                     # Log retry attempt with comprehensive telemetry
+                    # Note: error_details dict is logged separately to avoid KeyError from unpacking
                     log_operation_error(
                         logger,
                         f"{operation_name}_attempt",
@@ -127,8 +128,10 @@ class EvaluationEngine:
                         error_details=str(e),
                         call_duration_seconds=call_duration,
                         backoff_strategy="exponential",
-                        # Detailed API error telemetry
-                        **error_details
+                        api_error_type=error_details.get('error_type', 'unknown'),
+                        api_status_code=error_details.get('api_status_code'),
+                        api_response_body=error_details.get('api_response_body'),
+                        is_retryable=error_details.get('is_retryable', True)
                     )
                     
                     # Enhanced logging with exponential backoff info
@@ -157,6 +160,7 @@ class EvaluationEngine:
                     await asyncio.sleep(retry_delay)
                 else:
                     # Log final failure with comprehensive telemetry
+                    # Note: error_details dict is logged separately to avoid KeyError from unpacking
                     log_operation_error(
                         logger,
                         f"{operation_name}_final_failure",
@@ -171,8 +175,10 @@ class EvaluationEngine:
                         call_duration_seconds=call_duration,
                         backoff_strategy="exponential",
                         retry_history=[f"60s", f"120s", f"240s"][:max_retries],
-                        # Detailed API error telemetry
-                        **error_details
+                        api_error_type=error_details.get('error_type', 'unknown'),
+                        api_status_code=error_details.get('api_status_code'),
+                        api_response_body=error_details.get('api_response_body'),
+                        is_retryable=error_details.get('is_retryable', True)
                     )
         
         # All retries exhausted, raise the last exception
@@ -333,26 +339,32 @@ class EvaluationEngine:
                     )
                     
                     try:
-                        # Fetch data with retry logic for both API calls
-                        dataset_data, metrics_config_data = await asyncio.gather(
-                            self._fetch_with_retry(
-                                self.api_client.fetch_enriched_dataset,
-                                eval_run_id,
-                                operation_name="fetch_enriched_dataset",
-                                eval_run_id_for_logging=eval_run_id
-                            ),
-                            self._fetch_with_retry(
-                                self.api_client.fetch_metrics_configuration,
-                                metrics_configuration_id,
-                                operation_name="fetch_metrics_configuration",
-                                eval_run_id_for_logging=eval_run_id
-                            )
+                        # Fetch data with retry logic - SEQUENTIAL to avoid session race conditions
+                        # Note: HTTP client methods now validate and raise exceptions on failures,
+                        # so retry logic will automatically trigger on empty/invalid responses
+                        # Changed from parallel (asyncio.gather) to sequential to eliminate
+                        # race condition where both requests share the same HTTP session
+                        
+                        logger.info("Fetching dataset and metrics configuration sequentially to avoid session conflicts")
+                        
+                        # Fetch dataset first
+                        dataset_data = await self._fetch_with_retry(
+                            self.api_client.fetch_enriched_dataset,
+                            eval_run_id,
+                            operation_name="fetch_enriched_dataset",
+                            eval_run_id_for_logging=eval_run_id
                         )
                         
-                        if not dataset_data:
-                            raise ValueError("Dataset API returned empty/null dataset response")
-                        if not metrics_config_data:
-                            raise ValueError("Metrics configuration API returned empty/null metrics configuration response")
+                        # Then fetch metrics configuration
+                        metrics_config_data = await self._fetch_with_retry(
+                            self.api_client.fetch_metrics_configuration,
+                            metrics_configuration_id,
+                            operation_name="fetch_metrics_configuration",
+                            eval_run_id_for_logging=eval_run_id
+                        )
+                        
+                        # Validation is now handled inside HTTP client methods
+                        # If we reach this point, both responses are valid and non-empty
                         
                         add_span_event(step1_span, "data.fetched", 
                                      dataset_size=len(str(dataset_data)) if dataset_data else 0,
@@ -1173,8 +1185,12 @@ class EvaluationEngine:
             # Run metric evaluation
             score = metric.evaluate(item)
             
-            # Determine pass/fail based on threshold
-            passed = score.score >= threshold
+            # Trust the evaluator's own passed determination - don't override!
+            # Different evaluator types use different threshold logic:
+            # - Safety: raw_score <= threshold (0-7 scale, lower = safer)
+            # - Model-based: score >= threshold (1-5 Likert, higher = better) 
+            # - Statistical: score >= threshold (0-1 scale, higher = better)
+            passed = score.passed
             
             # Update score with pass/fail info
             return MetricScore(

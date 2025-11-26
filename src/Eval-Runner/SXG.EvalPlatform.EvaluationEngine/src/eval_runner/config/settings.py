@@ -65,14 +65,13 @@ class EvaluationConfig:
 class AzureAIConfig:
     """Configuration for Azure AI services (both OpenAI and AI Foundry)."""
     # Required parameters (no defaults)
-    endpoint: str
-    project_id: str
-    project_name: str
     subscription_id: str
     resource_group_name: str
     resource_name: str
+    project_name: str
     
     # Optional parameters with defaults must come last
+    endpoint: str = ""  # Optional for backward compatibility
     deployment_name: str = "gpt-4.1"
     api_version: str = "2025-01-01-preview"
     tenant_id: Optional[str] = None
@@ -82,11 +81,7 @@ class AzureAIConfig:
     api_key: Optional[str] = None
     
     def validate(self) -> None:
-        """Validate Azure AI configuration."""
-        # OpenAI endpoint validation
-        if not self.endpoint or self.endpoint == "https://your-openai-endpoint.openai.azure.com/":
-            raise ConfigurationError("Azure OpenAI endpoint must be configured")
-        
+        """Validate Azure AI configuration."""        
         # Authentication validation
         if self.use_managed_identity:
             if self.tenant_id and self.tenant_id == "your-tenant-id":
@@ -207,7 +202,7 @@ class AppSettings:
             base_url=api_config.get('BaseUrl', ''),
             enriched_dataset_endpoint=api_config.get('EnrichedDatasetEndpoint', ''),
             metrics_configuration_endpoint=api_config.get('MetricsConfigurationEndpoint', ''),
-            update_status=api_config.get('UpdateStatus', ''),  # Fixed: changed from 'UpdateStatusEndpoint' to match JSON config
+            update_status=api_config.get('UpdateStatusEndpoint', ''),  # Fixed: using correct key from JSON config
             post_results_endpoint=api_config.get('PostResultsEndpoint', '')
         )
     
@@ -249,21 +244,18 @@ class AppSettings:
         openai_config = self._config_data.get('AzureOpenAI', {})
         ai_config = self._config_data.get('AzureAI', {})
         
-        # Use the original working structure: AzureOpenAI for OpenAI config, AzureAI for project config
+        # Use simplified structure matching Azure AI SDK samples
         return AzureAIConfig(
-            # OpenAI configuration from AzureOpenAI section
-            endpoint=openai_config.get('Endpoint', 'https://your-openai-endpoint.openai.azure.com/'),
-            deployment_name=openai_config.get('DeploymentName', 'gpt-4.1'),
-            api_version=openai_config.get('ApiVersion', '2025-01-01-preview'),
-            
-            # AI Foundry project configuration from AzureAI section
-            project_id=ai_config.get('ProjectId', 'your-azure-ai-project-id'),
-            project_name=ai_config.get('ProjectName', 'your-project-name'),
-            
-            # Shared Azure configuration (prefer AzureAI values, fallback to AzureOpenAI)
+            # Core Azure AI Foundry project configuration
             subscription_id=ai_config.get('SubscriptionId', openai_config.get('SubscriptionId', 'your-azure-subscription-id')),
             resource_group_name=ai_config.get('ResourceGroupName', openai_config.get('ResourceGroupName', 'your-resource-group-name')),
             resource_name=ai_config.get('ResourceName', openai_config.get('ResourceName', 'your-azure-resource-name')),
+            project_name=ai_config.get('ProjectName', 'your-project-name'),
+            
+            # Optional OpenAI configuration for backward compatibility
+            endpoint=openai_config.get('Endpoint', ''),
+            deployment_name=openai_config.get('DeploymentName', 'gpt-4.1'),
+            api_version=openai_config.get('ApiVersion', '2025-01-01-preview'),
             tenant_id=ai_config.get('TenantId', openai_config.get('TenantId')),
             
             # Authentication (check both sections, prefer AzureAI)

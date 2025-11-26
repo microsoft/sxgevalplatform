@@ -38,10 +38,12 @@ class SimilarityEvaluator(ModelBasedEvaluator):
         )
     
     def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
-        """Extract similarity evaluation results."""
+        """Extract similarity evaluation results using Microsoft's Likert scale logic."""
         score = float(azure_result.get("similarity", 0.0))
         reasoning = str(azure_result.get("similarity_reason", "No reasoning provided"))
-        passed = azure_result.get("similarity_result", "fail") == "pass"
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
         
         return score, reasoning, passed
 
