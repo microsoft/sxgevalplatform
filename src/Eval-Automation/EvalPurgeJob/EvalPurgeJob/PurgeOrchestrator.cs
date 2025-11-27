@@ -23,15 +23,6 @@ namespace EvalPurgeJob
         [Function("EvalPurgeOrchestrator")]
         public  async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx)
         {
-            //var outputs = new List<string>();
-
-            //// Replace "hello" with the name of your Durable Activity Function.
-            //outputs.Add(await context.CallActivityAsync<string>(nameof(SayHello), "Tokyo"));
-            //outputs.Add(await context.CallActivityAsync<string>(nameof(SayHello), "Seattle"));
-            //outputs.Add(await context.CallActivityAsync<string>(nameof(SayHello), "London"));
-
-            //// returns ["Hello Tokyo!", "Hello Seattle!", "Hello London!"]
-            //return outputs;
 
             var retentionDays = _config.GetValue<int>("Purge:RetentionDays", 3);
 
