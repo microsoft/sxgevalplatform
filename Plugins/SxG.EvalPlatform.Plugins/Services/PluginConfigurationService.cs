@@ -71,14 +71,10 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <param name="evalRunId">Optional eval run ID to append</param>
         /// <returns>Full eval runs API URL</returns>
-        public string GetEvalRunsApiUrl(string evalRunId = null)
+        public string GetEvalRunsStatusApiUrl(string evalRunId)
         {
             string baseUrl = GetEvalApiBaseUrl();
-            if (string.IsNullOrWhiteSpace(evalRunId))
-            {
-                return $"{baseUrl}/api/v1/eval/runs";
-            }
-            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}";
+            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}/status";
         }
 
         /// <summary>

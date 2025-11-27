@@ -88,6 +88,7 @@
         <Compile Include="Plugins\PostEvalRun.cs" />
         <Compile Include="Plugins\PublishEnrichedDataset.cs" />
         <Compile Include="Plugins\UpdateDataset.cs" />
+    <Compile Include="Plugins\UpdateFailedState.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Framework\PluginBase.cs" />
         <Compile Include="Services\IPluginConfigurationService.cs" />

@@ -23,7 +23,7 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <param name="evalRunId">Optional eval run ID to append</param>
         /// <returns>Full eval runs API URL</returns>
-        string GetEvalRunsApiUrl(string evalRunId = null);
+        string GetEvalRunsStatusApiUrl(string evalRunId);
 
         /// <summary>
         /// Gets the full URL for enriched dataset publish API
