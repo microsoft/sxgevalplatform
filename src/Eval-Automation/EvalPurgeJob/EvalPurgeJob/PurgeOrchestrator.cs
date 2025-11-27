@@ -36,8 +36,10 @@ namespace EvalPurgeJob
             var recentEntities = await tableStorageHelper.GetEntitiesModifiedAfterAsync(cutoff);
             _logger.LogInformation("Fetched {count} table entities with ModifiedDate > {cutoff}", recentEntities.Count, cutoff);
 
+            // now get he agentid from each entity and call the purge activity for data set file of that agentid
+
         }
-    
-       
+
+
     }
 }
