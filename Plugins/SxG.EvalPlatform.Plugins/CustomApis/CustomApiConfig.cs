@@ -148,6 +148,39 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
         }
 
         /// <summary>
+        /// UpdateFailedState Custom API configuration
+        /// </summary>
+        public static class UpdateFailedState
+        {
+            public const string ApiName = "cr890_UpdateFailedState";
+            public const string DisplayName = "Update Failed State";
+            public const string Description = "Updates eval run status to Failed in Dataverse and external API";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.UpdateFailedState";
+            public const string ExecutePrivilegeName = "cr890_UpdateFailedState";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for UpdateFailedState API (only evalRunId)
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string EvalRunId = "evalRunId";
+            }
+
+            /// <summary>
+            /// Response properties for UpdateFailedState API (standardized format)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+            }
+        }
+
+        /// <summary>
         /// HttpCall Custom API configuration
         /// </summary>
         public static class HttpCall

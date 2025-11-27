@@ -5,8 +5,8 @@ namespace SxG.EvalPlatform.Plugins
     using System.Net;
     using System.Text;
     using Microsoft.Xrm.Sdk;
+    using SxG.EvalPlatform.Plugins.Common;
     using SxG.EvalPlatform.Plugins.Common.Framework;
-    using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
@@ -32,6 +32,7 @@ namespace SxG.EvalPlatform.Plugins
             var loggingService = localContext.LoggingService;
             var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
+            var managedIdentityService = localContext.ManagedIdentityService;
 
             try
             {
@@ -62,8 +63,12 @@ namespace SxG.EvalPlatform.Plugins
 
                 loggingService.Trace($"{nameof(UpdateDataset)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
+                // Get authentication token for external API calls
+                string apiScope = configService.GetApiScope();
+                string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
+
                 // Update external status to "EnrichingDataset" before fetching dataset
-                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", loggingService, configService);
+                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", authToken, loggingService, configService);
                 if (!statusUpdateSuccess)
                 {
                     loggingService.Trace($"{nameof(UpdateDataset)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch", TraceSeverity.Warning);
@@ -71,7 +76,7 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 // Call external dataset API to get dataset data using datasetId
-                var datasetJson = CallExternalDatasetApi(request.DatasetId, loggingService, configService);
+                var datasetJson = CallExternalDatasetApi(request.DatasetId, authToken, loggingService, configService);
                 if (datasetJson == null)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
@@ -90,11 +95,11 @@ namespace SxG.EvalPlatform.Plugins
 
                 // Log event to Application Insights
                 loggingService.LogEvent("UpdateDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
-      {
-   { "EvalRunId", request.EvalRunId },
-          { "DatasetId", request.DatasetId },
-        { "DatasetSize", datasetJson?.Length.ToString() ?? "0" }
-       });
+                {
+                    { "EvalRunId", request.EvalRunId },
+                    { "DatasetId", request.DatasetId },
+                    { "DatasetSize", datasetJson?.Length.ToString() ?? "0" }
+                });
 
                 // Create success response
                 var response = UpdateDatasetResponse.CreateSuccess();
@@ -148,21 +153,25 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval Run ID</param>
         /// <param name="status">Status to set (e.g., "EnrichingDataset")</param>
+        /// <param name="authToken">Authentication bearer token</param>
         /// <param name="loggingService">Logging service</param>
         /// <param name="configService">Configuration service</param>
         /// <returns>True if update successful, false otherwise</returns>
-        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
             {
-                string url = $"{configService.GetEvalRunsApiUrl(evalRunId)}/status";
+                string url = $"{configService.GetEvalRunsStatusApiUrl(evalRunId)}";
                 loggingService.Trace($"{nameof(UpdateDataset)}: Calling external status API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
                 httpWebRequest.Method = "PUT";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 // Prepare request body
                 string requestBody = $"{{\"status\":\"{status}\"}}";
@@ -215,10 +224,11 @@ namespace SxG.EvalPlatform.Plugins
         /// Calls external dataset API to retrieve dataset data
         /// </summary>
         /// <param name="datasetId">Dataset ID</param>
+        /// <param name="authToken">Authentication bearer token</param>
         /// <param name="loggingService">Logging service</param>
         /// <param name="configService">Configuration service</param>
         /// <returns>Dataset JSON string or null if failed</returns>
-        private string CallExternalDatasetApi(string datasetId, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        private string CallExternalDatasetApi(string datasetId, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
@@ -230,6 +240,9 @@ namespace SxG.EvalPlatform.Plugins
                 httpWebRequest.Method = "GET";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {

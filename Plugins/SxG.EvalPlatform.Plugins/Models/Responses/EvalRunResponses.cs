@@ -301,4 +301,55 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
             };
         }
     }
+
+    /// <summary>
+    /// Response model for UpdateFailedState Custom API (standardized format)
+    /// </summary>
+    public class UpdateFailedStateResponse
+    {
+        /// <summary>
+        /// Indicates if the operation was successful
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// Message describing the result
+        /// </summary>
+        public string Message { get; set; }
+
+        /// <summary>
+        /// Timestamp of the operation
+        /// </summary>
+        public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// Creates a successful response
+        /// </summary>
+        /// <returns>Success response</returns>
+        public static UpdateFailedStateResponse CreateSuccess()
+        {
+            return new UpdateFailedStateResponse
+            {
+                Success = true,
+                Message = "Eval run status updated to Failed successfully",
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// Creates an error response
+        /// </summary>
+        /// <param name="message">Error message</param>
+        /// <param name="evalRunId">Eval run ID</param>
+        /// <returns>Error response</returns>
+        public static UpdateFailedStateResponse CreateError(string message, string evalRunId = null)
+        {
+            return new UpdateFailedStateResponse
+            {
+                Success = false,
+                Message = message,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+    }
 }
