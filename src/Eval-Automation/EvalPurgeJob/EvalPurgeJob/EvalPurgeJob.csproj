@@ -16,7 +16,7 @@
 
     <!-- Durable Functions (isolated only) -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask" Version="1.3.2" />
-    <PackageReference Include="Microsoft.DurableTask.Worker.Grpc" Version="1.0.0" />
+
 
     <!-- Azure SDK libraries -->
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />

@@ -1,6 +1,7 @@
-﻿//using Microsoft.Azure.WebJobs;
-//using Microsoft.Azure.WebJobs.Extensions.DurableTask;
+﻿//using Microsoft.Azure.Functions.Worker;
 //using Microsoft.Extensions.Logging;
+//using System;
+//using System.Threading.Tasks;
 //namespace EvalPurgeJob
 //{
 //    public class PurgeBlobsActivity
@@ -12,18 +13,18 @@
 //            _logger = loggerFactory.CreateLogger<PurgeBlobsActivity>();
 //        }
 
-//        [FunctionName("DeleteBlobsActivity")]
+//        [Function("PurgeDataSetFiles")]
 //        public async Task Run(
-//            [ActivityTrigger] object input,
+//            [ActivityTrigger] Tuple<string, DateTimeOffset> input,
+//            [ActivityTrigger] DateTimeOffset cutoff,
 //            ILogger log)
 //        {
-//            //var container = BlobStorageService.GetContainerClient();
-//            //var names = new List<string>();
-
-//            //await foreach (var blob in container.GetBlobsAsync())
-//            //    names.Add(blob.Name);
-
-//            //return names;
+//            log.LogInformation("Purging dataset files for agent {agentId} older than {cutoff}", input.Item1, input.Item2);
+//            var blobServiceUrl = Environment.GetEnvironmentVariable("BlobServiceUrl");
+//            var containerName = input.Item1.ToLower();
+//            var managedIdentityClientId = Environment.GetEnvironmentVariable("ManagedIdentityClientId");
+//            var blobStorageHelper = new BlobStorageHelper(blobServiceUrl, containerName, managedIdentityClientId);
+//            await blobStorageHelper.DeleteBlobsNewerThanAsync(input.Item2);
 //        }
 //    }
 //}

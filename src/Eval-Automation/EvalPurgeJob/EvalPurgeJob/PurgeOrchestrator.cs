@@ -5,12 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace EvalPurgeJob
 {
-    public  class EvalPurgeOrchestrator
+    public class EvalPurgeOrchestrator
     {
         private readonly ILogger _logger;
         private readonly IConfiguration _config;
@@ -21,23 +22,36 @@ namespace EvalPurgeJob
             _config = config;
         }
         [Function("EvalPurgeOrchestrator")]
-        public  async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx)
+        public async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx)
         {
 
             var retentionDays = _config.GetValue<int>("Purge:RetentionDays", 3);
 
             var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-          
+
             var tableStorageHelper = new TableStorageHelper(
                 _config["TableServiceUri"],
                 _config["TableName"],
                 _logger
             );
             var recentEntities = await tableStorageHelper.GetEntitiesModifiedAfterAsync(cutoff);
-            _logger.LogInformation("Fetched {count} table entities with ModifiedDate > {cutoff}", recentEntities.Count, cutoff);
+            _logger.LogInformation("Fetched {count} table entities with LastUpdatedOn > {cutoff}", recentEntities.Count, cutoff);
+
+
 
             // now get he agentid from each entity and call the purge activity for data set file of that agentid
 
+            //var uniqueAgentIds = recentEntities
+            //                       .Select(e => e.GetString("AgentId"))
+            //                      .Where(id => !string.IsNullOrEmpty(id))
+            //                      .Distinct()
+            //                      .ToList();
+
+            //foreach (var agentId in uniqueAgentIds)
+            //{
+            //    var input = new Tuple<string, DateTimeOffset>(agentId, cutoff);
+            //    await ctx.CallActivityAsync("PurgeDataSetFiles", input);
+            //}
         }
 
 
