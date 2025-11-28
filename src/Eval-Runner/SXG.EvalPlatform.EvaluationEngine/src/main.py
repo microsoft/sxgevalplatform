@@ -3,9 +3,11 @@ Main application entry point for the evaluation runner.
 """
 
 import asyncio
+import concurrent.futures
 import logging
 import signal
 import sys
+import time
 from typing import Any
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
@@ -13,6 +15,7 @@ import json
 
 from eval_runner.config.settings import app_settings
 from eval_runner.core.evaluation_engine import evaluation_engine
+from eval_runner.core.diagnostics import get_diagnostics_service, HealthStatus
 from eval_runner.services.azure_storage import get_queue_service
 from eval_runner.models.eval_models import QueueMessage
 
@@ -32,6 +35,8 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
                 self._handle_health_check()
             elif self.path == '/ready':
                 self._handle_readiness_check()
+            elif self.path == '/diagnostics':
+                self._handle_diagnostics_check()
             else:
                 self._send_response(404, {'error': 'Not found'})
         except Exception as e:
@@ -41,9 +46,10 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def _handle_health_check(self):
         """Handle liveness probe."""
         # Basic health check - service is alive
+        import time
         health_status = {
             'status': 'healthy',
-            'timestamp': str(asyncio.get_event_loop().time()),
+            'timestamp': str(time.time()),
             'version': '1.0.0'
         }
         self._send_response(200, health_status)
@@ -57,9 +63,10 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         )
         
         if is_ready:
+            import time
             readiness_status = {
                 'status': 'ready',
-                'timestamp': str(asyncio.get_event_loop().time()),
+                'timestamp': str(time.time()),
                 'services': {
                     'queue_service': 'connected',
                     'evaluation_engine': 'ready'
@@ -67,12 +74,101 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
             }
             self._send_response(200, readiness_status)
         else:
+            import time
             readiness_status = {
                 'status': 'not_ready',
-                'timestamp': str(asyncio.get_event_loop().time()),
+                'timestamp': str(time.time()),
                 'reason': 'Application is starting up'
             }
             self._send_response(503, readiness_status)
+    
+    def _handle_diagnostics_check(self):
+        """Handle detailed diagnostics endpoint."""
+        try:
+            # Run diagnostics in thread-safe way
+            import asyncio
+            import concurrent.futures
+            import time
+            
+            def run_diagnostics_sync():
+                """Run diagnostics in a thread with its own event loop."""
+                try:
+                    # Check if there's already a running loop in this thread
+                    try:
+                        current_loop = asyncio.get_running_loop()
+                        # If we get here, there's already a loop running
+                        # Use a thread pool to run diagnostics
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(self._run_diagnostics_in_new_thread)
+                            return future.result(timeout=60)  # 60 second timeout
+                    except RuntimeError:
+                        # No running loop, safe to create one
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            return loop.run_until_complete(
+                                self.app_instance.diagnostics_service.run_all_checks(include_deep_checks=True)
+                            )
+                        finally:
+                            loop.close()
+                            asyncio.set_event_loop(None)
+                except Exception as e:
+                    logger.error(f"[DIAGNOSTICS_THREAD] Error in diagnostics sync wrapper: {e}")
+                    raise
+            
+            diagnostics_result = run_diagnostics_sync()
+            
+            import time
+            # Convert diagnostics result to JSON-serializable format
+            diagnostics_response = {
+                'overall_status': diagnostics_result.overall_status.value,
+                'timestamp': str(time.time()),
+                'summary': {
+                    'total_checks': len(diagnostics_result.checks),
+                    'healthy_count': diagnostics_result.healthy_count,
+                    'unhealthy_count': diagnostics_result.unhealthy_count,
+                    'total_duration_ms': diagnostics_result.total_duration_ms
+                },
+                'checks': [
+                    {
+                        'service_name': check.service_name,
+                        'status': check.status.value,
+                        'message': check.message,
+                        'duration_ms': check.duration_ms,
+                        'details': check.details,
+                        'error': str(check.error) if check.error else None
+                    }
+                    for check in diagnostics_result.checks
+                ]
+            }
+            
+            status_code = 200 if diagnostics_result.overall_status == HealthStatus.HEALTHY else 503
+            self._send_response(status_code, diagnostics_response)
+            
+        except Exception as e:
+            logger.error(f"[DIAGNOSTICS_ENDPOINT] Error during full diagnostics: {e}")
+            import time
+            error_response = {
+                'overall_status': 'error',
+                'timestamp': str(time.time()),
+                'error': f'Diagnostics check failed: {str(e)}'
+            }
+            self._send_response(500, error_response)
+    
+    def _run_diagnostics_in_new_thread(self):
+        """Helper method to run diagnostics in a completely separate thread."""
+        import asyncio
+        
+        # Create fresh event loop in new thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(
+                self.app_instance.diagnostics_service.run_all_checks(include_deep_checks=True)
+            )
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
     
     def _send_response(self, status_code: int, data: dict):
         """Send JSON response."""
@@ -92,6 +188,7 @@ class EvaluationApp:
         """Initialize the application."""
         self.queue_service = get_queue_service()
         self.evaluation_engine = evaluation_engine
+        self.diagnostics_service = get_diagnostics_service()  # Keep for /diagnostics endpoint only
         self.running = False
         self._shutdown_event = asyncio.Event()
         self.health_server = None
@@ -107,7 +204,41 @@ class EvaluationApp:
         # Start health check server
         self._start_health_server()
         
-        # Initialize services
+        # Run comprehensive startup diagnostics before initializing services
+        logger.info("[STARTUP_DIAGNOSTICS] Starting comprehensive dependency validation...")
+        try:
+            diagnostics_result = await self.diagnostics_service.run_all_checks(include_deep_checks=True)
+            
+            if diagnostics_result.overall_status != HealthStatus.HEALTHY:
+                logger.error("[STARTUP_DIAGNOSTICS] ❌ Failed - Application will start with degraded functionality")
+                logger.error(f"[STARTUP_DIAGNOSTICS] Failed checks: {diagnostics_result.unhealthy_count}/{len(diagnostics_result.checks)}")
+                
+                # Log details of failed checks but don't crash
+                for check in diagnostics_result.checks:
+                    if check.status == HealthStatus.UNHEALTHY:
+                        logger.error(f"[STARTUP_DIAGNOSTICS] ❌ {check.service_name}: {check.message}")
+                        if check.error:
+                            logger.error(f"[STARTUP_DIAGNOSTICS] Error details: {str(check.error)}")
+                
+                # Log warning but continue startup instead of crashing
+                logger.warning(f"[STARTUP_DIAGNOSTICS] ⚠️ Starting application despite {diagnostics_result.unhealthy_count} failed checks")
+                logger.warning(f"[STARTUP_DIAGNOSTICS] Monitor application behavior - some features may not work correctly")
+            else:
+                logger.info("[STARTUP_DIAGNOSTICS] ✅ All checks passed successfully!")
+                logger.info(f"[STARTUP_DIAGNOSTICS] {diagnostics_result.healthy_count}/{len(diagnostics_result.checks)} checks passed in {diagnostics_result.total_duration_ms:.1f}ms")
+                
+                # Log summary of what was validated
+                validated_services = [check.service_name for check in diagnostics_result.checks if check.status == HealthStatus.HEALTHY]
+                logger.info(f"[STARTUP_DIAGNOSTICS] Validated services: {', '.join(validated_services)}")
+            
+        except Exception as e:
+            logger.error(f"[STARTUP_DIAGNOSTICS] ❌ Crashed: {str(e)}")
+            logger.warning("[STARTUP_DIAGNOSTICS] Diagnostics failed - starting application with unknown dependency status")
+            logger.warning("[STARTUP_DIAGNOSTICS] Monitor application behavior closely for issues")
+            # Continue startup instead of crashing - telemetry preservation is critical
+        
+        # Initialize services (now that we know dependencies are healthy)
+        logger.info("Initializing application services...")
         await self.queue_service.initialize()
         
         self.running = True
