@@ -23,7 +23,7 @@ namespace EvalPurgeJob
 
         [Function("EvalPurgeStarter")]
         public async Task RunPurge(
-            [TimerTrigger("0 0 17 * * *")] TimerInfo myTimer,
+            [TimerTrigger("0 0 9 * * *")] TimerInfo myTimer,
             [DurableClient] DurableTaskClient client)
         {
             await client.ScheduleNewOrchestrationInstanceAsync("EvalPurgeOrchestrator");

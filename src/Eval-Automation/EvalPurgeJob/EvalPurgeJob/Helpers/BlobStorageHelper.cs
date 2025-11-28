@@ -31,17 +31,29 @@ namespace EvalPurgeJob
             var blobServiceClient = new BlobServiceClient(new Uri(blobServiceUrl), credential);
             _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
-
-        public async Task DeleteBlobsNewerThanAsync(DateTimeOffset cutoffDate)
+        public async Task<List<BlobItem>> GetBlobsNewerThanAsync(DateTimeOffset cutoffDate)
         {
-            await foreach (BlobItem blobItem in _containerClient.GetBlobsAsync(prefix:"evaluation-results")) // to do make this configurable
+            var result = new List<BlobItem>();
+            await foreach (BlobItem blobItem in _containerClient.GetBlobsAsync(prefix: "evaluation-results")) // to do make this configurable
             {
                 if ((!string.IsNullOrEmpty(blobItem.Name) && blobItem.Name.Contains("_dataset.json")) && blobItem.Properties.LastModified.HasValue &&
-                    blobItem.Properties.LastModified.Value > cutoffDate)
+                    blobItem.Properties.LastModified.Value >= cutoffDate)
                 {
-                    await _containerClient.DeleteBlobIfExistsAsync(blobItem.Name);
+                    result.Add(blobItem);
                 }
             }
+            return result;
         }
+        //public async Task DeleteBlobsNewerThanAsync(DateTimeOffset cutoffDate)
+        //{
+        //    await foreach (BlobItem blobItem in _containerClient.GetBlobsAsync(prefix:"evaluation-results")) // to do make this configurable
+        //    {
+        //        if ((!string.IsNullOrEmpty(blobItem.Name) && blobItem.Name.Contains("_dataset.json")) && blobItem.Properties.LastModified.HasValue &&
+        //            blobItem.Properties.LastModified.Value > cutoffDate)
+        //        {
+        //            await _containerClient.DeleteBlobIfExistsAsync(blobItem.Name);
+        //        }
+        //    }
+        //}
     }
 }

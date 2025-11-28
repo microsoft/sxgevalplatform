@@ -31,19 +31,7 @@ namespace EvalPurgeJob
             var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
 
             await ctx.CallActivityAsync<string>("PurgeDataSetFiles", cutoff);
-            // now get he agentid from each entity and call the purge activity for data set file of that agentid
-
-            //var uniqueAgentIds = recentEntities
-            //                       .Select(e => e.GetString("AgentId"))
-            //                      .Where(id => !string.IsNullOrEmpty(id))
-            //                      .Distinct()
-            //                      .ToList();
-
-            //foreach (var agentId in uniqueAgentIds)
-            //{
-            //    var input = new Tuple<string, DateTimeOffset>(agentId, cutoff);
-            //    await ctx.CallActivityAsync("PurgeDataSetFiles", input);
-            //}
+          
         }
 
 

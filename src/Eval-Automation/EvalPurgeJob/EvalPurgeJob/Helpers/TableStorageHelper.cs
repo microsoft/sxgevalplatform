@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using TableEntity = Azure.Data.Tables.TableEntity;
 
@@ -26,14 +27,14 @@ public class TableStorageHelper
         );
     }
 
-    public async Task<List<TableEntity>> GetEntitiesModifiedAfterAsync(DateTimeOffset cutoffDate)
+    public async Task<List<IDictionary<string, object?>>> GetEntitiesModifiedAfterAsync(DateTimeOffset cutoffDate)
     {
-        var results = new List<TableEntity>();
+        var results = new List<IDictionary<string, object?>>();
         string filter = TableClient.CreateQueryFilter($"LastUpdatedOn gt {cutoffDate}");
         var tableClient = _tableServiceClient.GetTableClient(_tableName);
         await foreach (var entity in tableClient.QueryAsync<TableEntity>(filter))
         {
-            results.Add(entity);
+            results.Add(entity.ToDictionary());
         }
         return results;
     }
