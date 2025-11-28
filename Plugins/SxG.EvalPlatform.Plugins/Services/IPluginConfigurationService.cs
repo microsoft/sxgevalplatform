@@ -23,7 +23,7 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <param name="evalRunId">Optional eval run ID to append</param>
         /// <returns>Full eval runs API URL</returns>
-        string GetEvalRunsApiUrl(string evalRunId = null);
+        string GetEvalRunsStatusApiUrl(string evalRunId);
 
         /// <summary>
         /// Gets the full URL for enriched dataset publish API
@@ -67,5 +67,11 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <returns>Maximum depth to log, 0 means no limit</returns>
         int GetMaxTelemetryDepth();
+
+        /// <summary>
+        /// Gets the OAuth scope for external API authentication
+        /// </summary>
+        /// <returns>OAuth scope (e.g., "443bbe62-c474-49f7-884c-d1b5a23eb735/.default")</returns>
+        string GetApiScope();
     }
 }

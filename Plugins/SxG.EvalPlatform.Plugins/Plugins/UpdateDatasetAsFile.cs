@@ -167,7 +167,7 @@ namespace SxG.EvalPlatform.Plugins
             var startTime = DateTimeOffset.UtcNow;
             try
             {
-                string url = $"{configService.GetEvalRunsApiUrl(evalRunId)}/status";
+                string url = $"{configService.GetEvalRunsStatusApiUrl(evalRunId)}";
                 loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Calling external status API: {url}");
 
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
