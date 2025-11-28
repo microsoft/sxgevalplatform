@@ -25,20 +25,12 @@ namespace EvalPurgeJob
         public async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx)
         {
 
+
             var retentionDays = _config.GetValue<int>("Purge:RetentionDays", 3);
 
             var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
 
-            var tableStorageHelper = new TableStorageHelper(
-                _config["TableServiceUri"],
-                _config["TableName"],
-                _logger
-            );
-            var recentEntities = await tableStorageHelper.GetEntitiesModifiedAfterAsync(cutoff);
-            _logger.LogInformation("Fetched {count} table entities with LastUpdatedOn > {cutoff}", recentEntities.Count, cutoff);
-
-
-
+            await ctx.CallActivityAsync<string>("PurgeDataSetFiles", cutoff);
             // now get he agentid from each entity and call the purge activity for data set file of that agentid
 
             //var uniqueAgentIds = recentEntities

@@ -1,28 +1,14 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.DurableTask.Worker;
-using Microsoft.DurableTask.Worker.Grpc;
+using Microsoft.Extensions.Hosting;
 
-var host = new HostBuilder()
-    .ConfigureAppConfiguration(config =>
-    {
-        config.AddJsonFile("local.settings.json", optional: true, reloadOnChange: true);
-        config.AddEnvironmentVariables();
-    })
-    .ConfigureFunctionsWorkerDefaults()
-    .ConfigureServices(services =>
-    {
-        // Durable Functions worker
-        services.AddDurableTaskWorker(builder =>
-        {
-            builder.UseGrpc(); 
-        });
+var builder = FunctionsApplication.CreateBuilder(args);
 
-        // Optional: Application Insights
-        services.AddApplicationInsightsTelemetryWorkerService();
-    })
-    .Build();
+builder.ConfigureFunctionsWebApplication();
 
-host.Run();
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
+
+builder.Build().Run();
