@@ -56,3 +56,10 @@ TestResults.xml
 /src/APIs/SXG.EvalPlatform.API/deploy/publish-dev
 /src/APIs/Sxg.EvalPlatform.API.PerfTests/bin/Debug/net8.0
 /src/APIs/Sxg.EvalPlatform.API.PerfTests/obj
+/src/APIs/Sample-ClientApps/EvalPlatform.AppToApp.Client/.vs
+/src/APIs/Sample-ClientApps/EvalPlatform.AppToApp.Client/bin/Debug/net9.0
+/src/APIs/Sample-ClientApps/EvalPlatform.AppToApp.Client/obj
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/.vs
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/bin/Debug/net9.0
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/obj
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/obj/Debug/net9.0/compressed/0urgra2c59-c2jlpeoesf.gz

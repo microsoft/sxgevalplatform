@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Optional, Dict, Any, List
 from ..config.settings import app_settings
+from .auth_token_provider import AuthTokenProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,41 @@ class EvaluationApiClient:
         self._session_created_at: Optional[float] = None
         self._session_lock: Optional[asyncio.Lock] = None
         
+        # Authentication token provider
+        auth_config = app_settings.api_authentication
+        self._auth_provider: Optional[AuthTokenProvider] = None
+        if auth_config.use_managed_identity or auth_config.client_id:
+            self._auth_provider = AuthTokenProvider(
+                client_id=auth_config.client_id,
+                tenant_id=auth_config.tenant_id,
+                scope=auth_config.scope,
+                use_managed_identity=auth_config.use_managed_identity,
+                enable_caching=auth_config.enable_token_caching,
+                refresh_buffer_seconds=auth_config.token_refresh_buffer_seconds
+            )
+            logger.info("✅ Authentication provider initialized for Eval API")
+        else:
+            logger.warning("⚠️  No authentication configured for Eval API - requests will be unauthenticated")
+        
+    async def _get_auth_headers(self) -> Dict[str, str]:
+        """
+        Get authentication headers for API requests.
+        
+        Returns:
+            Dictionary with authentication headers (Authorization: Bearer <token>)
+        """
+        if self._auth_provider is None:
+            return {}
+        
+        try:
+            auth_headers = await self._auth_provider.get_auth_header()
+            logger.debug("✅ Retrieved authentication header")
+            return auth_headers
+        except Exception as e:
+            logger.error(f"❌ Failed to get authentication token: {str(e)}")
+            logger.error(f"Auth error type: {type(e).__name__}")
+            raise
+    
     def _get_connector(self) -> aiohttp.TCPConnector:
         """Get or create HTTP connector with connection pooling."""
         if self._connector is None:
@@ -106,6 +142,14 @@ class EvaluationApiClient:
     
     async def close(self):
         """Close the HTTP session and cleanup resources."""
+        # Close authentication provider
+        if self._auth_provider is not None:
+            try:
+                await self._auth_provider.close()
+                logger.debug("Closed authentication provider")
+            except Exception as e:
+                logger.warning(f"Error closing authentication provider: {e}")
+        
         if self._session_lock is not None:
             async with self._session_lock:
                 if self._session and not self._session.closed:
@@ -163,7 +207,16 @@ class EvaluationApiClient:
             'Content-Type': 'application/json'
         }
         
-        logger.info(f"[API_HEADERS] {headers}")
+        # Add authentication headers
+        try:
+            auth_headers = await self._get_auth_headers()
+            headers.update(auth_headers)
+            logger.info(f"[AUTH] Successfully added authentication header to request")
+        except Exception as auth_error:
+            logger.error(f"[AUTH_ERROR] Failed to get authentication: {str(auth_error)}")
+            raise
+        
+        logger.info(f"[API_HEADERS] {list(headers.keys())}")  # Log header keys only (don't log token)
         logger.info(f"[API_PAYLOAD] None (GET request)")
         
         try:
@@ -284,7 +337,16 @@ class EvaluationApiClient:
             'Content-Type': 'application/json'
         }
         
-        logger.info(f"[API_HEADERS] {headers}")
+        # Add authentication headers
+        try:
+            auth_headers = await self._get_auth_headers()
+            headers.update(auth_headers)
+            logger.info(f"[AUTH] Successfully added authentication header to request")
+        except Exception as auth_error:
+            logger.error(f"[AUTH_ERROR] Failed to get authentication: {str(auth_error)}")
+            raise
+        
+        logger.info(f"[API_HEADERS] {list(headers.keys())}")  # Log header keys only (don't log token)
         logger.info(f"[API_PAYLOAD] None (GET request)")
         
         try:
@@ -415,7 +477,16 @@ class EvaluationApiClient:
                 'Content-Type': 'application/json'
             }
             
-            logger.debug(f"[OUTBOX] Request headers: {headers}")
+            # Add authentication headers
+            try:
+                auth_headers = await self._get_auth_headers()
+                headers.update(auth_headers)
+                logger.info(f"[AUTH] Successfully added authentication header to request")
+            except Exception as auth_error:
+                logger.error(f"[AUTH_ERROR] Failed to get authentication: {str(auth_error)}")
+                raise
+            
+            logger.debug(f"[OUTBOX] Request headers: {list(headers.keys())}")  # Log header keys only (don't log token)
             
             # Make request with lock held for entire HTTP operation
             response_text, status, response_headers = await self._make_request('put', url, headers=headers, json=payload)
@@ -534,7 +605,16 @@ class EvaluationApiClient:
                 'Content-Type': 'application/json'
             }
             
-            logger.debug(f"[OUTBOX] Request headers: {headers}")
+            # Add authentication headers
+            try:
+                auth_headers = await self._get_auth_headers()
+                headers.update(auth_headers)
+                logger.info(f"[AUTH] Successfully added authentication header to request")
+            except Exception as auth_error:
+                logger.error(f"[AUTH_ERROR] Failed to get authentication: {str(auth_error)}")
+                raise
+            
+            logger.debug(f"[OUTBOX] Request headers: {list(headers.keys())}")  # Log header keys only (don't log token)
             
             # Make request with lock held for entire HTTP operation
             response_text, status, response_headers = await self._make_request('post', url, headers=headers, json=results_data)

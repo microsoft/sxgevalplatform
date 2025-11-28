@@ -42,6 +42,31 @@ class ApiEndpointsConfig:
     post_results_endpoint: str
 
 @dataclass
+class ApiAuthenticationConfig:
+    """Configuration for API authentication."""
+    # Client app registration details
+    client_id: str = "17bf598d-3033-4395-ae51-4799394c84c7"  # SXG-EvalPlatform-EvalRunnerApp
+    tenant_id: str = "72f988bf-86f1-41af-91ab-2d7cd011db47"
+    
+    # API resource details
+    resource_app_id: str = "ac2b08ba-4232-438f-b333-0300df1de14d"  # SXG-EvalPlatform-API-PPE
+    scope: str = "api://ac2b08ba-4232-438f-b333-0300df1de14d/.default"  # Use .default for app permissions
+    
+    # Authentication options
+    use_managed_identity: bool = True
+    enable_token_caching: bool = True
+    token_refresh_buffer_seconds: int = 300  # Refresh token 5 minutes before expiry
+    
+    def validate(self) -> None:
+        """Validate authentication configuration."""
+        if not self.client_id:
+            raise ConfigurationError("API authentication client_id must be configured")
+        if not self.tenant_id:
+            raise ConfigurationError("API authentication tenant_id must be configured")
+        if not self.scope:
+            raise ConfigurationError("API authentication scope must be configured")
+
+@dataclass
 class EvaluationConfig:
     """Configuration for evaluation execution."""
     max_parallel_prompts: int = 10
@@ -122,6 +147,9 @@ class LoggingConfig:
     default_level: str = "Information"
     system_level: str = "Warning"
     microsoft_level: str = "Warning"
+    azure_core_level: str = "Warning"
+    azure_monitor_level: str = "Warning"
+    azure_identity_level: str = "Warning"
 
 class AppSettings:
     """Application settings manager."""
@@ -144,6 +172,7 @@ class AppSettings:
         # Load configurations
         self.azure_storage = self._load_azure_storage_config()
         self.api_endpoints = self._load_api_endpoints_config()
+        self.api_authentication = self._load_api_authentication_config()
         self.evaluation = self._load_evaluation_config()
         self.application_insights = self._load_application_insights_config()
         self.logging = self._load_logging_config()
@@ -206,6 +235,19 @@ class AppSettings:
             post_results_endpoint=api_config.get('PostResultsEndpoint', '')
         )
     
+    def _load_api_authentication_config(self) -> ApiAuthenticationConfig:
+        """Load API authentication configuration."""
+        auth_config = self._config_data.get('ApiAuthentication', {})
+        return ApiAuthenticationConfig(
+            client_id=auth_config.get('ClientId', '17bf598d-3033-4395-ae51-4799394c84c7'),
+            tenant_id=auth_config.get('TenantId', '72f988bf-86f1-41af-91ab-2d7cd011db47'),
+            resource_app_id=auth_config.get('ResourceAppId', 'ac2b08ba-4232-438f-b333-0300df1de14d'),
+            scope=auth_config.get('Scope', 'api://ac2b08ba-4232-438f-b333-0300df1de14d/.default'),
+            use_managed_identity=auth_config.get('UseManagedIdentity', True),
+            enable_token_caching=auth_config.get('EnableTokenCaching', True),
+            token_refresh_buffer_seconds=auth_config.get('TokenRefreshBufferSeconds', 300)
+        )
+    
     def _load_evaluation_config(self) -> EvaluationConfig:
         """Load evaluation configuration."""
         eval_config = self._config_data.get('Evaluation', {})
@@ -235,7 +277,10 @@ class AppSettings:
         return LoggingConfig(
             default_level=log_levels.get('Default', 'Information'),
             system_level=log_levels.get('System', 'Warning'),
-            microsoft_level=log_levels.get('Microsoft', 'Warning')
+            microsoft_level=log_levels.get('Microsoft', 'Warning'),
+            azure_core_level=log_levels.get('azure.core.pipeline.policies.http_logging_policy', 'Warning'),
+            azure_monitor_level=log_levels.get('azure.monitor.opentelemetry.exporter', 'Warning'),
+            azure_identity_level=log_levels.get('azure.identity', 'Warning')
         )
     
     def _load_azure_ai_config(self) -> AzureAIConfig:
@@ -334,6 +379,14 @@ class AppSettings:
         # Set specific logger levels
         logging.getLogger('System').setLevel(level_map.get(self.logging.system_level.upper(), logging.WARNING))
         logging.getLogger('Microsoft').setLevel(level_map.get(self.logging.microsoft_level.upper(), logging.WARNING))
+        
+        # Set Azure SDK logger levels from configuration
+        logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(
+            level_map.get(self.logging.azure_core_level.upper(), logging.WARNING))
+        logging.getLogger('azure.monitor.opentelemetry.exporter').setLevel(
+            level_map.get(self.logging.azure_monitor_level.upper(), logging.WARNING))
+        logging.getLogger('azure.identity').setLevel(
+            level_map.get(self.logging.azure_identity_level.upper(), logging.WARNING))
     
     def shutdown_telemetry(self):
         """Shutdown telemetry providers gracefully."""

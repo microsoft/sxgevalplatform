@@ -115,7 +115,10 @@ class AzureQueueService:
                     visibility_timeout=app_settings.evaluation.queue_visibility_timeout_seconds
                 )
                 
+                # Count messages received
+                message_count = 0
                 async for message in messages:
+                    message_count += 1
                     queue_message = None
                     try:
                         # Parse message content and log complete message to telemetry
@@ -397,6 +400,9 @@ class AzureQueueService:
                                 logger.error(f"Failed to handle final processing failure: {log_error}")
                         
                         # Don't delete message - let it retry after visibility timeout
+                        
+                # Log message count after processing all messages in this batch
+                logger.info(f"Received {message_count} message(s) from queue {self.queue_name}")
                         
             except Exception as e:
                 logger.error(f"Error receiving messages: {str(e)}")

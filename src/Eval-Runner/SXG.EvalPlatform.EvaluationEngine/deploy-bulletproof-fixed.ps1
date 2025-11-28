@@ -135,12 +135,14 @@ README*
     Write-Log "Updated .dockerignore with comprehensive exclusions" "INFO"
     
     # Also try to remove any obviously problematic files
+    # CRITICAL: Exclude venv/ directory to prevent virtual environment corruption
     $problematicPatterns = @("*.md", "*.ps1", "*.sh", "*.log", "*backup*", "*temp*")
     foreach ($pattern in $problematicPatterns) {
         $files = Get-ChildItem -Path . -Filter $pattern -Recurse -ErrorAction SilentlyContinue
         foreach ($file in $files) {
             try {
-                if ($file.FullName -notmatch "node_modules|\.git") {
+                # Exclude: node_modules, .git, and VENV directory (prevents venv corruption)
+                if ($file.FullName -notmatch "node_modules|\.git|\\venv\\|/venv/") {
                     Write-Log "Temporarily moving problematic file: $($file.Name)" "INFO"
                     $backupName = "$($file.FullName).bak"
                     Move-Item $file.FullName $backupName -ErrorAction SilentlyContinue
@@ -309,6 +311,21 @@ function Update-ContainerApp {
         Write-Log "Failed to update container app: $_" "ERROR"
         throw
     }
+}
+
+function Update-ScalingRules {
+    param([string]$Environment)
+    
+    Write-Log "Skipping auto-scaling configuration - configure manually in Azure Portal" "INFO"
+    Write-Log "Manual scaling configuration required:" "INFO"
+    Write-Log "  - Min replicas: 1" "INFO"
+    Write-Log "  - Max replicas: 100" "INFO"
+    Write-Log "  - Rule type: Azure queue" "INFO"
+    Write-Log "  - Queue name: eval-processing-requests" "INFO"
+    Write-Log "  - Queue length: 2" "INFO"
+    Write-Log "  - Authentication: Managed Identity (checkbox must be checked)" "INFO"
+    
+    return $true
 }
 
 function Test-Deployment {
@@ -493,6 +510,9 @@ try {
     
     # Step 5: Update Container App
     Update-ContainerApp $imageTag $envVars
+    
+    # Step 5.5: Configure auto-scaling rules with managed identity
+    Update-ScalingRules -Environment $Environment
     
     # Step 6: Wait for deployment to stabilize
     Write-Log "Waiting for deployment to stabilize..." "INFO"
