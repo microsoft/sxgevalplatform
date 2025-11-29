@@ -4,6 +4,7 @@ Logging helper utilities for the evaluation runner with OpenTelemetry support.
 
 import logging
 import time
+import uuid
 from typing import Dict, Any, Optional
 from contextlib import contextmanager
 
@@ -49,6 +50,11 @@ except ImportError:
     StatusCode = MockStatusCode
     OPENTELEMETRY_AVAILABLE = False
 
+# Eval run context tracking
+_current_eval_run_id: Optional[str] = None
+_current_step_name: Optional[str] = None
+_current_operation_id: Optional[str] = None
+
 def log_structured(logger: logging.Logger, level: int, message: str, **kwargs):
     """
     Log a structured message with additional properties and OpenTelemetry context.
@@ -59,6 +65,14 @@ def log_structured(logger: logging.Logger, level: int, message: str, **kwargs):
         message: Primary log message
         **kwargs: Additional structured properties
     """
+    # Automatically add eval run context if available
+    if _current_eval_run_id:
+        kwargs.setdefault('evalRunId', _current_eval_run_id)
+    if _current_step_name:
+        kwargs.setdefault('stepName', _current_step_name)
+    if _current_operation_id:
+        kwargs.setdefault('operationId', _current_operation_id)
+    
     # Add OpenTelemetry trace context if available
     if OPENTELEMETRY_AVAILABLE:
         span = trace.get_current_span()
@@ -74,6 +88,101 @@ def log_structured(logger: logging.Logger, level: int, message: str, **kwargs):
     }
     
     logger.log(level, message, extra=extra_props)
+
+
+# Eval run context management functions
+def set_eval_run_context(eval_run_id: str) -> None:
+    """Set the global eval run context for all subsequent logs."""
+    global _current_eval_run_id
+    _current_eval_run_id = eval_run_id
+
+
+def clear_eval_run_context() -> None:
+    """Clear the global eval run context."""
+    global _current_eval_run_id, _current_step_name, _current_operation_id
+    _current_eval_run_id = None
+    _current_step_name = None
+    _current_operation_id = None
+
+
+def get_eval_run_context() -> Optional[str]:
+    """Get the current eval run ID."""
+    return _current_eval_run_id
+
+
+@contextmanager
+def eval_workflow_step(step_name: str, step_position: str = None, operation_id: str = None):
+    """
+    Context manager for tracking evaluation workflow steps.
+    Logs only once at the end with final status.
+    
+    Args:
+        step_name: Name of the workflow step
+        step_position: Position in workflow (e.g., "1/7")
+        operation_id: Unique operation identifier
+    """
+    global _current_step_name, _current_operation_id
+    
+    # Generate operation ID if not provided
+    if not operation_id:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        operation_id = f"op_{step_name}_{timestamp}_{uuid.uuid4().hex[:8]}"
+    
+    # Store previous context
+    prev_step = _current_step_name
+    prev_op_id = _current_operation_id
+    
+    # Set new context
+    _current_step_name = step_name
+    _current_operation_id = operation_id
+    
+    logger = logging.getLogger(__name__)
+    step_status = "Completed"
+    
+    try:
+        yield operation_id
+        
+    except Exception as e:
+        step_status = "Failed"
+        # Log step failure with icon and desired format
+        log_structured(
+            logger, 
+            logging.ERROR, 
+            f"❌ [EVAL_WORKFLOW_STEP] - {step_name}: {step_status}",
+            stepStatus="failure",
+            workflowPosition=step_position,
+            errorMessage=str(e),
+            errorType=type(e).__name__,
+            timestamp=time.time()
+        )
+        raise
+        
+    else:
+        # Log step success with icon and desired format
+        log_structured(
+            logger, 
+            logging.INFO, 
+            f"✅ [EVAL_WORKFLOW_STEP] - {step_name}: {step_status}",
+            stepStatus="success",
+            workflowPosition=step_position,
+            timestamp=time.time()
+        )
+        
+    finally:
+        # Restore previous context
+        _current_step_name = prev_step
+        _current_operation_id = prev_op_id
+
+
+def log_eval_run(logger: logging.Logger, level: int, message: str, **kwargs):
+    """
+    Convenience function for logging with [EVAL_RUN] prefix.
+    Automatically includes evalRunId in custom dimensions.
+    """
+    if not message.startswith("[EVAL_RUN]"):
+        message = f"[EVAL_RUN] {message}"
+    
+    log_structured(logger, level, message, **kwargs)
 
 def log_operation_start(logger: logging.Logger, operation_name: str, **properties):
     """Log the start of an operation with tracking properties."""

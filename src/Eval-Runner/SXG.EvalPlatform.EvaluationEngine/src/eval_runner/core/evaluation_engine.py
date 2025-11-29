@@ -17,7 +17,7 @@ from ..models.eval_models import (
 from ..metrics.simple_interface import registry
 from ..utils.logging_helper import (
     log_operation_start, log_operation_success, log_operation_error, log_evaluation_result,
-    trace_operation, add_span_event, set_span_status
+    log_eval_run, set_eval_run_context, clear_eval_run_context, eval_workflow_step
 )
 
 logger = logging.getLogger(__name__)
@@ -88,12 +88,10 @@ class EvaluationEngine:
                     )
                 else:
                     # Log successful first attempt
-                    from ..utils.logging_helper import log_structured
-                    log_structured(
+                    log_eval_run(
                         logger,
                         logging.INFO,
                         f"{operation_name} succeeded on first attempt",
-                        eval_run_id=eval_run_id_for_logging,
                         operation=operation_name,
                         call_duration_seconds=call_duration,
                         attempt=1,
@@ -135,12 +133,10 @@ class EvaluationEngine:
                     )
                     
                     # Enhanced logging with exponential backoff info
-                    from ..utils.logging_helper import log_structured
-                    log_structured(
+                    log_eval_run(
                         logger,
                         logging.WARNING,
                         f"{operation_name} attempt {attempt + 1} failed, retrying with exponential backoff",
-                        eval_run_id=eval_run_id_for_logging,
                         operation=operation_name,
                         attempt=attempt + 1,
                         max_attempts=max_retries + 1,
@@ -299,44 +295,36 @@ class EvaluationEngine:
             metrics_configuration_id = queue_message.metrics_configuration_id; 
             start_time = time.time()
             
+            # Set eval run context for all subsequent logs
+            set_eval_run_context(eval_run_id)
+            
             # Step tracking
             steps_completed = []
             
             try:
-                # Start distributed tracing for the entire evaluation
-                with trace_operation(
-                    "evaluation_processing",
-                    eval_run_id=eval_run_id,
-                    metrics_configuration_id=metrics_configuration_id,
-                    priority=queue_message.priority
-                ) as main_span:
-                    # Log evaluation start with complete context
-                    log_operation_start(
+                # Log evaluation start with complete context
+                log_eval_run(
+                    logger,
+                    logging.INFO,
+                    f"Starting evaluation processing for eval_run_id: {eval_run_id}",
+                    metricsConfigurationId=metrics_configuration_id,
+                    priority=queue_message.priority,
+                    requestedAt=str(queue_message.requested_at),
+                    processingStartTime=start_time
+                )
+                
+                # Log evaluation start with complete context
+                log_operation_start(
                     logger,
                     "evaluation_processing",
                     eval_run_id=eval_run_id,
                     metrics_configuration_id=metrics_configuration_id,
                     priority=queue_message.priority,
                     requested_at=str(queue_message.requested_at)
-                    )
-                
-                add_span_event(main_span, "evaluation.started")
+                )
                 
                 # Step 1: Fetch dataset and metrics configuration
-                with trace_operation(
-                    "fetch_data_step",
-                    eval_run_id=eval_run_id,
-                    step_number=1,
-                    step_name="fetch_dataset_and_metrics"
-                ) as step1_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "fetch_data_step",
-                        eval_run_id=eval_run_id,
-                        step_number=1,
-                        step_name="fetch_dataset_and_metrics"
-                    )
+                with eval_workflow_step("fetch_dataset_and_config", "1/7") as op_id:
                     
                     try:
                         # Fetch data with retry logic - SEQUENTIAL to avoid session race conditions
@@ -366,74 +354,41 @@ class EvaluationEngine:
                         # Validation is now handled inside HTTP client methods
                         # If we reach this point, both responses are valid and non-empty
                         
-                        add_span_event(step1_span, "data.fetched", 
-                                     dataset_size=len(str(dataset_data)) if dataset_data else 0,
-                                     metrics_config_size=len(str(metrics_config_data)) if metrics_config_data else 0)
-                        
                         # Log successful data fetch with details
-                        from ..utils.logging_helper import log_structured
-                        log_structured(
+                        log_eval_run(
                             logger,
                             logging.INFO,
                             f"Successfully fetched data from APIs (with exponential backoff retry logic)",
-                            eval_run_id=eval_run_id,
-                            step_number=1,
-                            dataset_response_size=len(str(dataset_data)) if dataset_data else 0,
-                            metrics_config_response_size=len(str(metrics_config_data)) if metrics_config_data else 0,
-                            raw_metrics_config=metrics_config_data,  # Log complete metrics config for debugging
-                            retry_enabled=True,
-                            max_retries=3,
-                            base_retry_delay_seconds=60,
-                            backoff_strategy="exponential",
-                            retry_pattern="60s, 120s, 240s"
+                            datasetResponseSize=len(str(dataset_data)) if dataset_data else 0,
+                            metricsConfigResponseSize=len(str(metrics_config_data)) if metrics_config_data else 0,
+                            rawMetricsConfig=metrics_config_data,  # Log complete metrics config for debugging
+                            retryEnabled=True,
+                            maxRetries=3,
+                            baseRetryDelaySeconds=60,
+                            backoffStrategy="exponential",
+                            retryPattern="60s, 120s, 240s"
                         )
                         
                         steps_completed.append("fetch_data")
-                        set_span_status(step1_span, True)
-                        log_operation_success(logger, "fetch_data_step", eval_run_id=eval_run_id, step_number=1)
                         
                     except Exception as e:
                         # Log detailed step failure
-                        set_span_status(step1_span, False, str(e))
-                        add_span_event(step1_span, "error.occurred", error_type=type(e).__name__, error_message=str(e))
-                        
-                        log_operation_error(
+                        log_eval_run(
                             logger,
-                            "fetch_data_step",
-                            e,
-                            eval_run_id=eval_run_id,
-                            step_number=1,
-                            step_name="fetch_dataset_and_metrics",
-                            metrics_configuration_id=metrics_configuration_id,
-                            error_details=str(e),
-                            stack_trace=traceback.format_exc()
+                            logging.ERROR,
+                            f"Failed to fetch dataset and metrics configuration: {str(e)}",
+                            errorType=type(e).__name__,
+                            errorMessage=str(e),
+                            stackTrace=traceback.format_exc()
                         )
                         raise
                 
                 # Step 2: Parse the data
-                with trace_operation(
-                    "parse_data_step",
-                    eval_run_id=eval_run_id,
-                    step_number=2,
-                    step_name="parse_dataset_and_metrics"
-                ) as step2_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "parse_data_step",
-                        eval_run_id=eval_run_id,
-                        step_number=2,
-                        step_name="parse_dataset_and_metrics"
-                    )
-                    
+                with eval_workflow_step("parse_data", "2/7") as op_id:
                     try:
                         enriched_dataset_response = EnrichedDatasetResponse.from_json(dataset_data)
                         dataset = enriched_dataset_response.to_dataset()
                         metrics_response = MetricsConfigurationResponse.from_json(metrics_config_data)
-                        
-                        add_span_event(step2_span, "data.parsed", 
-                                     dataset_items=len(dataset.items),
-                                     metrics_count=len(metrics_response.metrics_configuration))
                         
                         # Log detailed parsing results
                         parsed_metrics = []
@@ -446,11 +401,10 @@ class EvaluationEngine:
                                 'threshold': config.threshold
                             })
                         
-                        log_structured(
+                        log_eval_run(
                             logger,
                             logging.INFO,
                             f"Successfully parsed evaluation data",
-                            eval_run_id=eval_run_id,
                             step_number=2,
                             dataset_items_count=len(dataset.items),
                             metrics_count=len(metrics_response.metrics_configuration),
@@ -458,7 +412,6 @@ class EvaluationEngine:
                         )
                         
                         steps_completed.append("parse_data")
-                        set_span_status(step2_span, True)
                         log_operation_success(
                             logger, 
                             "parse_data_step", 
@@ -470,9 +423,6 @@ class EvaluationEngine:
                             
                     except Exception as e:
                         # Log detailed parsing failure with data context
-                        set_span_status(step2_span, False, str(e))
-                        add_span_event(step2_span, "error.occurred", error_type=type(e).__name__, error_message=str(e))
-                        
                         log_operation_error(
                             logger,
                             "parse_data_step",
@@ -488,22 +438,7 @@ class EvaluationEngine:
                         raise
                 
                 # Step 3: Update status to EvalRunStarted
-                with trace_operation(
-                    "update_status_started_step",
-                    eval_run_id=eval_run_id,
-                    step_number=3,
-                    step_name="update_status_started"
-                ) as step3_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "update_status_started_step",
-                        eval_run_id=eval_run_id,
-                        step_number=3,
-                        step_name="update_status_started",
-                        target_status="EvalRunStarted"
-                    )
-                    
+                with eval_workflow_step("update_status_started", "3/7") as op_id:
                     try:
                         await self._fetch_with_retry(
                             self._update_evaluation_status,
@@ -513,11 +448,7 @@ class EvaluationEngine:
                             eval_run_id_for_logging=eval_run_id
                         )
                         
-                        add_span_event(step3_span, "status.updated", 
-                                     new_status="EvalRunStarted")
-                        
                         steps_completed.append("update_status_started")
-                        set_span_status(step3_span, True)
                         log_operation_success(
                             logger, 
                             "update_status_started_step", 
@@ -527,11 +458,6 @@ class EvaluationEngine:
                         )
                         
                     except Exception as e:
-                        set_span_status(step3_span, False, str(e))
-                        add_span_event(step3_span, "error.occurred", 
-                                     error_type=type(e).__name__, 
-                                     error_message=str(e))
-                        
                         log_operation_error(
                             logger,
                             "update_status_started_step",
@@ -546,28 +472,9 @@ class EvaluationEngine:
                         raise
                 
                 # Step 4: Run evaluations
-                with trace_operation(
-                    "run_evaluations_step",
-                    eval_run_id=eval_run_id,
-                    step_number=4,
-                    step_name="run_evaluations"
-                ) as step4_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "run_evaluations_step",
-                        eval_run_id=eval_run_id,
-                        step_number=4,
-                        step_name="run_evaluations",
-                        items_to_evaluate=len(dataset.items),
-                        metrics_to_run=len(metrics_response.metrics_configuration)
-                    )
-                    
+                with eval_workflow_step("run_evaluations", "4/7") as op_id:
                     try:
                         results = await self._run_evaluations(dataset, metrics_response.metrics_configuration)
-                        
-                        add_span_event(step4_span, "evaluations.completed", 
-                                     items_processed=len(results))
                         
                         # Count successful evaluations and collect failure details
                         successful_evaluations = 0
@@ -601,11 +508,10 @@ class EvaluationEngine:
                         step_successful = successful_evaluations > 0
                         
                         if step_successful:
-                            log_structured(
+                            log_eval_run(
                                 logger,
                                 logging.INFO,
                                 f"Evaluation execution completed successfully - at least one metric succeeded",
-                                eval_run_id=eval_run_id,
                                 step_number=4,
                                 total_items_processed=len(results),
                                 total_scores_computed=total_scores,
@@ -617,7 +523,6 @@ class EvaluationEngine:
                             )
                             
                             steps_completed.append("run_evaluations")
-                            set_span_status(step4_span, True)
                             log_operation_success(
                                 logger, 
                                 "run_evaluations_step", 
@@ -629,11 +534,10 @@ class EvaluationEngine:
                             )
                         else:
                             # All metrics failed - mark step as failed
-                            log_structured(
+                            log_eval_run(
                                 logger,
                                 logging.ERROR,
                                 f"Evaluation execution failed - ALL metrics failed",
-                                eval_run_id=eval_run_id,
                                 step_number=4,
                                 total_items_processed=len(results),
                                 total_scores_computed=total_scores,
@@ -644,11 +548,6 @@ class EvaluationEngine:
                             )
                             
                             # Don't add to steps_completed - this will mark the step as failed
-                            set_span_status(step4_span, False, f"All {len(failed_metrics_details)} metrics failed")
-                            add_span_event(step4_span, "all_metrics_failed", 
-                                         failed_metrics_count=len(failed_metrics_details),
-                                         failed_metrics_details=failed_metrics_details)
-                            
                             log_operation_error(
                                 logger,
                                 "run_evaluations_step",
@@ -665,9 +564,6 @@ class EvaluationEngine:
                         
                     except Exception as e:
                         # Log detailed evaluation failure
-                        set_span_status(step4_span, False, str(e))
-                        add_span_event(step4_span, "error.occurred", error_type=type(e).__name__, error_message=str(e))
-                        
                         log_operation_error(
                             logger,
                             "run_evaluations_step",
@@ -683,21 +579,7 @@ class EvaluationEngine:
                         raise
                 
                 # Step 5: Generate summary
-                with trace_operation(
-                    "generate_summary_step",
-                    eval_run_id=eval_run_id,
-                    step_number=5,
-                    step_name="generate_summary"
-                ) as step5_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "generate_summary_step",
-                        eval_run_id=eval_run_id,
-                        step_number=5,
-                        step_name="generate_summary"
-                    )
-                    
+                with eval_workflow_step("generate_summary", "5/7") as op_id:
                     try:
                         execution_time = time.time() - start_time
                         summary = self._generate_summary(
@@ -708,16 +590,11 @@ class EvaluationEngine:
                             metrics_response
                         )
                         
-                        add_span_event(step5_span, "summary.generated", 
-                                     execution_time=execution_time,
-                                     metrics_count=len(summary.metric_summaries))
-                        
                         # Log summary generation details
-                        log_structured(
+                        log_eval_run(
                             logger,
                             logging.INFO,
                             f"Successfully generated evaluation summary",
-                            eval_run_id=eval_run_id,
                             step_number=5,
                             execution_time_seconds=execution_time,
                             summary_metrics_count=len(summary.metric_summaries),
@@ -725,7 +602,6 @@ class EvaluationEngine:
                         )
                         
                         steps_completed.append("generate_summary")
-                        set_span_status(step5_span, True)
                         log_operation_success(
                             logger, 
                             "generate_summary_step", 
@@ -735,9 +611,6 @@ class EvaluationEngine:
                         )
                         
                     except Exception as e:
-                        set_span_status(step5_span, False, str(e))
-                        add_span_event(step5_span, "error.occurred", error_type=type(e).__name__, error_message=str(e))
-                        
                         log_operation_error(
                             logger,
                             "generate_summary_step",
@@ -751,22 +624,7 @@ class EvaluationEngine:
                         raise
                 
                 # Step 6: Post results to API
-                with trace_operation(
-                    "post_results_step",
-                    eval_run_id=eval_run_id,
-                    step_number=6,
-                    step_name="post_results"
-                ) as step6_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "post_results_step",
-                        eval_run_id=eval_run_id,
-                        step_number=6,
-                        step_name="post_results",
-                        agent_id=summary.agent_id
-                    )
-                    
+                with eval_workflow_step("post_results", "6/7") as op_id:
                     try:
                         await self._fetch_with_retry(
                             self._store_results,
@@ -778,15 +636,10 @@ class EvaluationEngine:
                             eval_run_id_for_logging=eval_run_id
                         )
                         
-                        add_span_event(step6_span, "results.posted", 
-                                     agent_id=summary.agent_id,
-                                     results_count=len(results))
-                        
-                        log_structured(
+                        log_eval_run(
                             logger,
                             logging.INFO,
                             f"Successfully posted evaluation results to API",
-                            eval_run_id=eval_run_id,
                             step_number=6,
                             agent_id=summary.agent_id,
                             results_count=len(results),
@@ -794,7 +647,6 @@ class EvaluationEngine:
                         )
                         
                         steps_completed.append("post_results")
-                        set_span_status(step6_span, True)
                         log_operation_success(
                             logger, 
                             "post_results_step", 
@@ -804,9 +656,6 @@ class EvaluationEngine:
                         )
                         
                     except Exception as e:
-                        set_span_status(step6_span, False, str(e))
-                        add_span_event(step6_span, "error.occurred", error_type=type(e).__name__, error_message=str(e))
-                        
                         log_operation_error(
                             logger,
                             "post_results_step",
@@ -821,22 +670,7 @@ class EvaluationEngine:
                         raise
                 
                 # Step 7: Update status to completed
-                with trace_operation(
-                    "update_status_step",
-                    eval_run_id=eval_run_id,
-                    step_number=7,
-                    step_name="update_status"
-                ) as step7_span:
-                    
-                    log_operation_start(
-                        logger,
-                        "update_status_step",
-                        eval_run_id=eval_run_id,
-                        step_number=7,
-                        step_name="update_status",
-                        target_status="EvalRunCompleted"
-                    )
-                    
+                with eval_workflow_step("update_status_completed", "7/7") as op_id:
                     try:
                         await self._fetch_with_retry(
                             self._update_evaluation_status,
@@ -846,11 +680,7 @@ class EvaluationEngine:
                             eval_run_id_for_logging=eval_run_id
                         )
                         
-                        add_span_event(step7_span, "status.updated", 
-                                     new_status="EvalRunCompleted")
-                        
                         steps_completed.append("update_status")
-                        set_span_status(step7_span, True)
                         log_operation_success(
                             logger, 
                             "update_status_step", 
@@ -862,12 +692,6 @@ class EvaluationEngine:
                     except Exception as e:
                         # Don't raise here for status updates - status update failure shouldn't prevent message deletion
                         # if all other critical steps succeeded, but log it as an error
-                        set_span_status(step7_span, False, str(e))
-                        add_span_event(step7_span, "error.occurred", 
-                                     error_type=type(e).__name__, 
-                                     error_message=str(e),
-                                     severity="warning")
-                        
                         log_operation_error(
                             logger,
                             "update_status_step",
@@ -893,10 +717,6 @@ class EvaluationEngine:
                 
                 if all_critical_steps_completed:
                     # Log overall success with complete telemetry
-                    add_span_event(main_span, "evaluation.completed_successfully", 
-                                 total_steps=len(steps_completed),
-                                 execution_time=execution_time)
-                    
                     log_operation_success(
                         logger,
                         "evaluation_processing",
@@ -907,14 +727,9 @@ class EvaluationEngine:
                         status_update_completed="update_status" in steps_completed,
                         total_execution_time_seconds=execution_time
                     )
-                    
-                    set_span_status(main_span, True)
                 else:
                     # Log partial failure
                     missing_steps = [step for step in critical_steps if step not in steps_completed]
-                    add_span_event(main_span, "evaluation.partially_completed", 
-                                 completed_steps=len(steps_completed),
-                                 missing_steps=missing_steps)
                     
                     log_operation_error(
                         logger,
@@ -925,12 +740,13 @@ class EvaluationEngine:
                         missing_critical_steps=missing_steps,
                         execution_time_seconds=execution_time
                     )
-
-                    set_span_status(main_span, False, f"Missing steps: {missing_steps}")
                 
                 return all_critical_steps_completed
             
             except Exception as e:
+                # Clear eval run context on unhandled exceptions
+                clear_eval_run_context()
+                
                 # Handle any unhandled exceptions to ensure we always return a boolean
                 eval_run_id = getattr(queue_message, 'eval_run_id', 'unknown')
                 logger.error(f"[ERROR] Unhandled exception in process_queue_message for {eval_run_id}: {str(e)}")
@@ -938,20 +754,22 @@ class EvaluationEngine:
                 logger.error(f"Stack trace: {traceback.format_exc()}")
                 
                 # Log structured error for debugging
-                from ..utils.logging_helper import log_structured
-                log_structured(
+                log_eval_run(
                     logger,
                     logging.ERROR,
                     f"Unhandled exception in evaluation processing",
-                    eval_run_id=eval_run_id,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
-                    stack_trace=traceback.format_exc(),
-                    critical_failure=True
+                    errorType=type(e).__name__,
+                    errorMessage=str(e),
+                    stackTrace=traceback.format_exc(),
+                    criticalFailure=True
                 )
                 
                 # Always return False for unhandled exceptions
                 return False
+            
+            finally:
+                # Always clear eval run context when processing completes
+                clear_eval_run_context()
     
     async def _run_evaluations(
         self, 
