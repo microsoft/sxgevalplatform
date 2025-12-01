@@ -22,7 +22,7 @@ namespace Sxg.EvalPlatform.API.PerfTests
             AgentId = "dummy_4e5f6g7h8i9j0k1l2m3n4o5p",
             DataSetId = Guid.Parse("caf253ce-7da6-43e1-a64b-2856eed332ed"), // Replace with valid dataset ID
             MetricsConfigurationId = Guid.Parse("d47b89bc-024d-42e2-9b84-7db4fc225e64"), // Replace with valid metrics config ID
-            Type = "Performance Test",
+            Type = "MCS",
             EnvironmentId = "948a58e0-a265e26e-bbd0-3d0cf7978511",
             AgentSchemaName = "crb32_sxGDriCopilot",
             EvalRunName = "Performance Test Run"
