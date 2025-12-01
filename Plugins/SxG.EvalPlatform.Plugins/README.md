@@ -166,68 +166,16 @@ The OAuth scope is configured via the `cr890_ApiScope` environment variable:
 
 ## Entity Structure
 
-### EvalRun Entity (`cr890_evalrun`)
-
-**Type:** Elastic Table (Dataverse NoSQL/Cosmos DB)
-
-**Primary Key:** `cr890_evalrunid` (GUID)  
-**Primary Name:** `cr890_id` (String - same value as Primary Key)
-
-**Fields:**
-- `cr890_datasetid` - Dataset identifier (GUID stored as string)
-- `cr890_agentid` - Agent identifier (string)
-- `cr890_environmentid` - Environment identifier (GUID as string)
-- `cr890_agentschemaname` - Agent schema name (string)
-- `cr890_status` - Status (Choice field with integer values)
-- `cr890_dataset` - Dataset JSON data (Multi Line Text)
-- `ownerid` - Owner (required for Elastic tables)
-- `partitionid` - Partition ID (Elastic table field)
-- `ttlinseconds` - Time to live (Elastic table field)
-
-### Early-Bound Entity
-
-The plugin uses a PAC CLI-generated early-bound entity class for Read operations and late-bound `Entity` class for Create/Update operations to avoid serialization issues with Elastic tables in Custom API plugins.
-
-**Entity Class:** `EvalRun` (generated via `pac modelbuilder build`)
-
-### Request Model Inheritance
-
-All request models inherit from a base `EvalRunRequest` class:
-
-```csharp
-// Base class - all eval run requests require EvalRunId
-public abstract class EvalRunRequest
-{
-    public string EvalRunId { get; set; }
-    public virtual bool IsValid() { ... }
-    public virtual string GetValidationError() { ... }
-}
-
-// Derived classes
-public class GetEvalRunRequest : EvalRunRequest { }
-public class PublishEnrichedDatasetRequest : EvalRunRequest { }
-public class UpdateFailedStateRequest : EvalRunRequest { }
-
-public class PostEvalRunRequest : EvalRunRequest
-{
-    public string DatasetId { get; set; }
-    public string AgentId { get; set; }
-    public string EnvironmentId { get; set; }
-    public string AgentSchemaName { get; set; }
-}
-
-public class UpdateDatasetRequest : EvalRunRequest
-{
-    public string DatasetId { get; set; }
-    public override bool IsValid() { ... } // Validates both EvalRunId and DatasetId
-}
-```
-
-**Benefits:**
-- ? Code reusability - Common validation logic in base class
-- ? Consistency - All requests validated the same way
-- ? Maintainability - Changes to base validation apply to all
-- ? Type safety - Compiler enforces required fields
+**EvalRun Entity (`cr890_evalrun`)**
+- Primary Key: `cr890_evalrunid` (GUID)
+- Primary Name: `cr890_id` (String - same value as Primary Key)
+- Fields:
+  - `cr890_datasetid` - Dataset identifier (GUID stored as string)
+  - `cr890_agentid` - Agent identifier (string)
+  - `cr890_environmentid` - Environment identifier (GUID as string)
+  - `cr890_agentschemaname` - Agent schema name (string)
+  - `cr890_status` - Status (Choice field with integer values)
+  - `cr890_dataset` - Dataset JSON data (Multi Line Text)
 
 ### Status Values
 

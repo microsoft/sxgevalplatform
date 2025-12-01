@@ -57,6 +57,18 @@ namespace SxG.EvalPlatform.Plugins.Services
         string GetAppInsightsConnectionString();
 
         /// <summary>
+        /// Gets whether to log telemetry for nested plugin calls (depth > 1)
+        /// </summary>
+        /// <returns>True if nested calls should be logged, false otherwise</returns>
+        bool ShouldLogNestedCalls();
+
+        /// <summary>
+        /// Gets the maximum depth to log (0 = all depths)
+        /// </summary>
+        /// <returns>Maximum depth to log, 0 means no limit</returns>
+        int GetMaxTelemetryDepth();
+
+        /// <summary>
         /// Gets the OAuth scope for external API authentication
         /// </summary>
         /// <returns>OAuth scope (e.g., "443bbe62-c474-49f7-884c-d1b5a23eb735/.default")</returns>

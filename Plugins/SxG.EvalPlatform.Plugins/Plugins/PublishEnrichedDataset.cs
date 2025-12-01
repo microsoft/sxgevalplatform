@@ -132,7 +132,7 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Retrieves dataset from eval run record
+        /// Retrieves dataset from eval run record's file column
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="organizationService">Organization service</param>
@@ -149,17 +149,82 @@ namespace SxG.EvalPlatform.Plugins
                     return null;
                 }
 
-                // Retrieve using early-bound entity
-                var evalRunRecord = organizationService.Retrieve(EvalRun.EntityLogicalName, evalRunGuid, new ColumnSet("cr890_dataset")).ToEntity<EvalRun>();
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Retrieving dataset file from cr890_datasetfile column");
 
-                string dataset = evalRunRecord.cr890_Dataset;
-                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from eval run record");
+                // Download the dataset file from cr890_datasetfile column using file blocks API
+                string dataset = DownloadDatasetFile(evalRunGuid, organizationService, loggingService);
+                
+                if (string.IsNullOrEmpty(dataset))
+                {
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: No dataset file found in cr890_datasetfile column", TraceSeverity.Warning);
+                    return null;
+                }
 
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from file column, length: {dataset.Length}");
                 return dataset;
             }
             catch (Exception ex)
             {
                 loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception retrieving dataset from eval run record");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Downloads dataset file from Dataverse file column using file blocks API
+        /// </summary>
+        private string DownloadDatasetFile(Guid evalRunGuid, IOrganizationService organizationService, IPluginLoggingService loggingService)
+        {
+            try
+            {
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Starting file download process for EvalRunId: {evalRunGuid}");
+
+                var initializeRequest = new OrganizationRequest("InitializeFileBlocksDownload")
+                {
+                    ["Target"] = new EntityReference("cr890_evalrun", evalRunGuid),
+                    ["FileAttributeName"] = "cr890_datasetfile"
+                };
+
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Initializing file blocks download");
+                var initializeResponse = organizationService.Execute(initializeRequest);
+                string fileContinuationToken = (string)initializeResponse["FileContinuationToken"];
+                long fileSize = (long)initializeResponse["FileSizeInBytes"];
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: File blocks download initialized, size: {fileSize} bytes");
+
+                const int blockSize = 4 * 1024 * 1024; // 4MB block size
+                var fileBytes = new System.Collections.Generic.List<byte>();
+                long offset = 0;
+
+                while (offset < fileSize)
+                {
+                    long currentBlockSize = Math.Min(blockSize, fileSize - offset);
+
+                    var downloadBlockRequest = new OrganizationRequest("DownloadBlock")
+                    {
+                        ["Offset"] = offset,
+                        ["BlockLength"] = currentBlockSize,
+                        ["FileContinuationToken"] = fileContinuationToken
+                    };
+
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Downloading block at offset {offset}, size: {currentBlockSize} bytes");
+                    var downloadBlockResponse = organizationService.Execute(downloadBlockRequest);
+                    byte[] blockData = (byte[])downloadBlockResponse["Data"];
+                    fileBytes.AddRange(blockData);
+
+                    offset += currentBlockSize;
+                }
+
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: All blocks downloaded, total size: {fileBytes.Count} bytes");
+
+                // Convert byte array to string
+                string datasetJson = Encoding.UTF8.GetString(fileBytes.ToArray());
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Dataset file downloaded and converted to string");
+
+                return datasetJson;
+            }
+            catch (Exception ex)
+            {
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception downloading dataset file");
                 return null;
             }
         }

@@ -16,6 +16,8 @@ namespace SxG.EvalPlatform.Plugins.Services
         private const string EnableAppInsightsLoggingKey = "cr890_EnableAppInsightsLogging";
         private const string EnableAuditLoggingKey = "cr890_EnableAuditLogging";
         private const string AppInsightsConnectionStringKey = "cr890_AppInsightsConnectionString";
+        private const string EnableNestedCallLoggingKey = "cr890_EnableNestedCallLogging";
+        private const string MaxTelemetryDepthKey = "cr890_MaxTelemetryDepth";
         private const string ApiScopeKey = "cr890_ApiScope";
 
         // Default values
@@ -152,6 +154,40 @@ namespace SxG.EvalPlatform.Plugins.Services
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether to log telemetry for nested plugin calls (depth > 1)
+        /// </summary>
+        /// <returns>True if nested calls should be logged, false otherwise</returns>
+        public bool ShouldLogNestedCalls()
+        {
+            try
+            {
+                return _environmentVariableService.GetBool(EnableNestedCallLoggingKey);
+            }
+            catch
+            {
+                // Default to enabled for complete telemetry
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Gets the maximum depth to log (0 = all depths)
+        /// </summary>
+        /// <returns>Maximum depth to log, 0 means no limit</returns>
+        public int GetMaxTelemetryDepth()
+        {
+            try
+            {
+                return (int)_environmentVariableService.GetDecimal(MaxTelemetryDepthKey);
+            }
+            catch
+            {
+                // 0 = no limit, log all depths
+                return 0;
             }
         }
 
