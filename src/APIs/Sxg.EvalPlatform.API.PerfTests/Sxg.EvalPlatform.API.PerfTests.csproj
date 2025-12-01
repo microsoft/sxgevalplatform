@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    
+    <!-- Performance Testing -->
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+    
+    <!-- HTTP Client and JSON -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
+    
+    <!-- Configuration - updated to 9.0.0 to match dependencies -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
+ 
+    <!-- Azure Authentication for DataVerse - updated to match Storage project -->
+    <PackageReference Include="Azure.Identity" Version="1.17.0" />
+    
+    <!-- Security: Fix transitive vulnerabilities -->
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sxg.EvalPlatform.API.Storage\Sxg.EvalPlatform.API.Storage.csproj" />
+    <ProjectReference Include="..\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj" />
+  </ItemGroup>
+
+  <!-- Copy appsettings files from main API project on build -->
+  <Target Name="CopyAppSettings" AfterTargets="Build">
+    <ItemGroup>
+      <AppSettingsFiles Include="..\SXG.EvalPlatform.API\appsettings.json" />
+      <AppSettingsFiles Include="..\SXG.EvalPlatform.API\appsettings.*.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AppSettingsFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Message Text="Copied appsettings files from main API project to performance test output directory" Importance="high" />
+  </Target>
+
+  <!-- Include appsettings in output -->
+  <ItemGroup>
+    <None Update="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

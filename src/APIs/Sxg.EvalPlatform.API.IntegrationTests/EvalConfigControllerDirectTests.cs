@@ -19,6 +19,7 @@ namespace Sxg.EvalPlatform.API.IntegrationTests
         private readonly Mock<IMetricsConfigurationRequestHandler> _mockRequestHandler;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<ILogger<EvalConfigsController>> _mockLogger;
+        private readonly Mock<ICallerIdentificationService> _mockCallerService;
         private readonly Mock<IOpenTelemetryService> _mockTelemetryService;
         private readonly EvalConfigsController _controller;
 
@@ -27,12 +28,14 @@ namespace Sxg.EvalPlatform.API.IntegrationTests
             _mockRequestHandler = new Mock<IMetricsConfigurationRequestHandler>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockLogger = new Mock<ILogger<EvalConfigsController>>();
+            _mockCallerService = new Mock<ICallerIdentificationService>();
             _mockTelemetryService = new Mock<IOpenTelemetryService>();
 
             _controller = new EvalConfigsController(
                _mockRequestHandler.Object,
           _mockConfiguration.Object,
             _mockLogger.Object,
+                    _mockCallerService.Object,
                     _mockTelemetryService.Object
                 );
         }
