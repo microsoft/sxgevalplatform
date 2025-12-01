@@ -111,7 +111,7 @@ def get_eval_run_context() -> Optional[str]:
 
 
 @contextmanager
-def eval_workflow_step(step_name: str, step_position: str = None, operation_id: str = None):
+def eval_workflow_step(step_name: str, step_position: Optional[str] = None, operation_id: Optional[str] = None):
     """
     Context manager for tracking evaluation workflow steps.
     Logs only once at the end with final status.
@@ -307,11 +307,23 @@ def set_span_status(span, success: bool, description: str = ""):
         success: Whether operation was successful
         description: Error description if failed
     """
-    if span and hasattr(span, 'set_status') and OPENTELEMETRY_AVAILABLE:
-        if success:
-            span.set_status(Status(StatusCode.OK))
-        else:
-            span.set_status(Status(StatusCode.ERROR, description))
+    if span and hasattr(span, 'set_status'):
+        try:
+            if OPENTELEMETRY_AVAILABLE:
+                # Use real OpenTelemetry StatusCode enum
+                if success:
+                    span.set_status(Status(StatusCode.OK))
+                else:
+                    span.set_status(Status(StatusCode.ERROR, description))
+            else:
+                # Use mock string values for StatusCode
+                if success:
+                    span.set_status(Status("OK"))
+                else:
+                    span.set_status(Status("ERROR", description))
+        except (AttributeError, TypeError):
+            # Handle mock implementations or incompatible versions
+            pass
 
 
 def log_operation_with_tracing(logger: logging.Logger, operation_name: str, **properties):

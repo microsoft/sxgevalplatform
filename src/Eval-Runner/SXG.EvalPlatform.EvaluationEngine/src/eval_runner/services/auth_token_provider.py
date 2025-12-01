@@ -121,7 +121,8 @@ class AuthTokenProvider:
         """
         async with self._token_lock:
             # Check if we have a valid cached token
-            if self.enable_caching and not self._is_token_expired(self._cached_token):
+            if (self.enable_caching and self._cached_token is not None and 
+                not self._is_token_expired(self._cached_token)):
                 logger.debug("Using cached token")
                 return self._cached_token.token
             

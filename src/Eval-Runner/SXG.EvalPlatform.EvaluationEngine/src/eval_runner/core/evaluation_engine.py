@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from ..services.http_client import api_client
+from ..config.settings import app_settings
 from ..models.eval_models import (
     QueueMessage, Dataset, EnrichedDatasetResponse, MetricsConfigurationResponse, EvaluationConfig,
     DatasetItem, MetricScore, DatasetItemResult, MetricSummary, EvaluationSummary
@@ -111,6 +112,9 @@ class EvaluationEngine:
                     # Calculate exponential backoff delay for next attempt
                     retry_delay = base_delay * (2 ** attempt)
                     
+                    # Extract detailed error information for telemetry
+                    error_details = self._extract_api_error_details(e)
+                    
                     # Log retry attempt with comprehensive telemetry
                     # Note: error_details dict is logged separately to avoid KeyError from unpacking
                     log_operation_error(
@@ -155,6 +159,9 @@ class EvaluationEngine:
                     logger.info(f"Waiting {retry_delay} seconds before retry attempt {attempt + 2}/{max_retries + 1} for {operation_name} (exponential backoff)")
                     await asyncio.sleep(retry_delay)
                 else:
+                    # Extract detailed error information for telemetry
+                    error_details = self._extract_api_error_details(e)
+                    
                     # Log final failure with comprehensive telemetry
                     # Note: error_details dict is logged separately to avoid KeyError from unpacking
                     log_operation_error(
@@ -793,7 +800,7 @@ class EvaluationEngine:
         logger.info(f"Processing {len(dataset.items)} dataset items with {len(metrics_config)} metrics each")
         
         # Process dataset items concurrently with controlled concurrency
-        dataset_semaphore = asyncio.Semaphore(3)  # Limit concurrent dataset items to avoid resource overload
+        dataset_semaphore = asyncio.Semaphore(app_settings.evaluation.max_parallel_prompts)  # Use configured max parallel prompts
         
         async def process_dataset_item(i, item):
             async with dataset_semaphore:
@@ -870,7 +877,7 @@ class EvaluationEngine:
         """
         # Run metrics in parallel with optimized concurrency
         # Higher concurrency for metrics since they're typically I/O bound
-        semaphore = asyncio.Semaphore(8)  # Increased from 5 to 8 for better throughput
+        semaphore = asyncio.Semaphore(app_settings.evaluation.max_parallel_metrics)  # Use configured max parallel metrics
         
         async def evaluate_metric_with_timeout(config):
             async with semaphore:

@@ -171,7 +171,7 @@ class DiagnosticsService:
         start_time = time.time()
         
         try:
-            # Initialize auth provider
+            # Always initialize auth provider (just stores config, no token acquisition)
             self._auth_provider = AuthTokenProvider(
                 client_id=app_settings.api_authentication.client_id,
                 tenant_id=app_settings.api_authentication.tenant_id,
@@ -184,12 +184,19 @@ class DiagnosticsService:
             duration_ms = (time.time() - start_time) * 1000
             
             auth_type = "managed identity" if app_settings.api_authentication.use_managed_identity else "service principal"
-            logger.info(f"[DIAGNOSTICS_CHECK] Provider initialized with {auth_type} in {duration_ms:.1f}ms")
+            auth_enabled = app_settings.api_authentication.enable_authentication
+            
+            status_msg = f"Authentication provider initialized with {auth_type}"
+            if not auth_enabled:
+                status_msg += " (authentication disabled - no tokens will be acquired)"
+            
+            logger.info(f"[DIAGNOSTICS_CHECK] {status_msg} in {duration_ms:.1f}ms")
             return DiagnosticResult(
                 service_name="Authentication Setup",
                 status=HealthStatus.HEALTHY,
-                message="Authentication provider initialized successfully",
+                message=status_msg,
                 details={
+                    "authentication_enabled": auth_enabled,
                     "use_managed_identity": app_settings.api_authentication.use_managed_identity,
                     "tenant_id": app_settings.api_authentication.tenant_id,
                     "scope": app_settings.api_authentication.scope
@@ -210,6 +217,20 @@ class DiagnosticsService:
     async def _check_token_acquisition(self) -> DiagnosticResult:
         """Check if we can acquire authentication tokens."""
         start_time = time.time()
+        
+        # Check if authentication is enabled
+        if not app_settings.api_authentication.enable_authentication:
+            logger.info("[DIAGNOSTICS_CHECK] Authentication disabled - skipping token acquisition test")
+            return DiagnosticResult(
+                service_name="Token Acquisition",
+                status=HealthStatus.HEALTHY,
+                message="Authentication disabled - token acquisition skipped",
+                details={
+                    "authentication_enabled": False,
+                    "reason": "Feature flag disabled"
+                },
+                duration_ms=(time.time() - start_time) * 1000
+            )
         
         try:
             if not self._auth_provider:
@@ -420,7 +441,10 @@ class DiagnosticsService:
         start_time = time.time()
         
         try:
-            if not self._auth_provider:
+            # Test basic connectivity - auth provider check only needed if auth enabled
+            auth_enabled = app_settings.api_authentication.enable_authentication
+            
+            if auth_enabled and not self._auth_provider:
                 return DiagnosticResult(
                     service_name="API Connectivity",
                     status=HealthStatus.UNHEALTHY,
@@ -428,7 +452,6 @@ class DiagnosticsService:
                     duration_ms=0
                 )
             
-            # Test basic connectivity with auth header
             try:
                 from eval_runner.services.http_client import get_api_client
                 self._http_client = get_api_client()
@@ -441,17 +464,27 @@ class DiagnosticsService:
                     duration_ms=(time.time() - start_time) * 1000
                 )
             
-            auth_header = await self._auth_provider.get_auth_header()
+            # Get auth headers (will be empty if auth disabled)
+            auth_header = {}
+            if auth_enabled and self._auth_provider:
+                auth_header = await self._auth_provider.get_auth_header()
             
             duration_ms = (time.time() - start_time) * 1000
             
-            logger.info(f"[DIAGNOSTICS_CHECK] API client configured with authentication in {duration_ms:.1f}ms")
+            if auth_enabled:
+                logger.info(f"[DIAGNOSTICS_CHECK] API client configured with authentication in {duration_ms:.1f}ms")
+                message = "API client configured with authentication"
+            else:
+                logger.info(f"[DIAGNOSTICS_CHECK] API client configured without authentication in {duration_ms:.1f}ms")
+                message = "API client configured without authentication (feature flag disabled)"
+            
             return DiagnosticResult(
                 service_name="API Connectivity",
                 status=HealthStatus.HEALTHY,
-                message="API client configured with authentication",
+                message=message,
                 details={
                     "base_url": app_settings.api_endpoints.base_url,
+                    "authentication_enabled": auth_enabled,
                     "has_auth_header": "Authorization" in auth_header
                 },
                 duration_ms=duration_ms

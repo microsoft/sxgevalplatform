@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluationApiClient:
-    """Simple client for calling existing evaluation platform APIs with connection pooling."""
+    """Simple client for calling existing evaluation platform APIs with per-request sessions."""
     
     def __init__(self):
         """Initialize the API client using app settings."""
@@ -27,95 +27,51 @@ class EvaluationApiClient:
             sock_read=60.0  # 60 second read timeout
         )
         
-        # Connection pool settings (will be created lazily)
-        self._connector: Optional[aiohttp.TCPConnector] = None
-        
-        # Session management
-        self._session: Optional[aiohttp.ClientSession] = None
-        self._session_created_at: Optional[float] = None
-        self._session_lock: Optional[asyncio.Lock] = None
-        
-        # Authentication token provider
+        # Authentication configuration and provider
         auth_config = app_settings.api_authentication
-        self._auth_provider: Optional[AuthTokenProvider] = None
-        if auth_config.use_managed_identity or auth_config.client_id:
-            self._auth_provider = AuthTokenProvider(
-                client_id=auth_config.client_id,
-                tenant_id=auth_config.tenant_id,
-                scope=auth_config.scope,
-                use_managed_identity=auth_config.use_managed_identity,
-                enable_caching=auth_config.enable_token_caching,
-                refresh_buffer_seconds=auth_config.token_refresh_buffer_seconds
-            )
-            logger.info("✅ Authentication provider initialized for Eval API")
+        self._authentication_enabled = auth_config.enable_authentication
+        
+        # Always initialize auth provider (just stores config, no token acquisition)
+        self._auth_provider = AuthTokenProvider(
+            client_id=auth_config.client_id,
+            tenant_id=auth_config.tenant_id,
+            scope=auth_config.scope,
+            use_managed_identity=auth_config.use_managed_identity,
+            enable_caching=auth_config.enable_token_caching,
+            refresh_buffer_seconds=auth_config.token_refresh_buffer_seconds
+        )
+        
+        if self._authentication_enabled:
+            logger.info("🔐 API authentication enabled - tokens will be acquired for API calls")
         else:
-            logger.warning("⚠️  No authentication configured for Eval API - requests will be unauthenticated")
+            logger.info("🔓 API authentication disabled - direct API calls without tokens")
         
     async def _get_auth_headers(self) -> Dict[str, str]:
         """
         Get authentication headers for API requests.
         
         Returns:
-            Dictionary with authentication headers (Authorization: Bearer <token>)
+            Dictionary with authentication headers (Authorization: Bearer <token>) or empty dict if auth disabled
         """
-        if self._auth_provider is None:
+        # Skip token acquisition if authentication is disabled
+        if not self._authentication_enabled:
+            logger.debug("🔓 Authentication disabled - returning empty headers")
             return {}
         
         try:
             auth_headers = await self._auth_provider.get_auth_header()
-            logger.debug("✅ Retrieved authentication header")
+            logger.debug("🔐 Retrieved authentication header")
             return auth_headers
         except Exception as e:
             logger.error(f"❌ Failed to get authentication token: {str(e)}")
             logger.error(f"Auth error type: {type(e).__name__}")
             raise
     
-    def _get_connector(self) -> aiohttp.TCPConnector:
-        """Get or create HTTP connector with connection pooling."""
-        if self._connector is None:
-            self._connector = aiohttp.TCPConnector(
-                limit=20,  # Total connection pool size
-                limit_per_host=10,  # Max connections per host
-                ttl_dns_cache=300,  # DNS cache TTL (5 minutes)
-                use_dns_cache=True,
-                keepalive_timeout=30,  # Keep alive timeout
-                enable_cleanup_closed=True
-            )
-        return self._connector
-    
-    def _get_session_lock(self) -> asyncio.Lock:
-        """Get or create session lock."""
-        if self._session_lock is None:
-            self._session_lock = asyncio.Lock()
-        return self._session_lock
-    
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session with connection pooling. Must be called with lock held."""
-        current_time = time.time()
-        
-        # Create new session if none exists or if session is too old (1 hour)
-        if (self._session is None or 
-            self._session.closed or 
-            (self._session_created_at and current_time - self._session_created_at > 3600)):
-            
-            if self._session and not self._session.closed:
-                await self._session.close()
-            
-            connector = self._get_connector()
-            self._session = aiohttp.ClientSession(
-                timeout=self.timeout,
-                connector=connector
-            )
-            self._session_created_at = current_time
-            logger.debug("Created new HTTP session with connection pooling")
-        
-        return self._session
-    
     async def _make_request(self, method: str, url: str, **kwargs) -> tuple:
-        """Make HTTP request with session lock held for the entire operation.
+        """Make HTTP request with a fresh session and connector for each request.
         
-        Lock is held ONLY during the actual HTTP request, not during retry delays.
-        This prevents TOCTOU race conditions while allowing efficient retries.
+        This approach creates completely fresh HTTP infrastructure per request
+        to avoid any session timeout/closure issues that can occur with connection reuse.
         
         Args:
             method: HTTP method (get, post, put, etc.)
@@ -129,19 +85,28 @@ class EvaluationApiClient:
             aiohttp.ClientError: On HTTP errors
             asyncio.TimeoutError: On timeout
         """
-        async with self._get_session_lock():
-            session = await self._get_session()
-            
-            # Session is guaranteed to be open and valid from _get_session()
-            # No need to check - if it's closed here while holding the lock, something is critically wrong
-            
-            # Make the request while holding the lock
-            async with getattr(session, method)(url, **kwargs) as response:
-                response_text = await response.text()
-                return response_text, response.status, dict(response.headers)
+        # Create completely fresh connector and session for each request
+        connector = aiohttp.TCPConnector(
+            limit=10,  # Smaller pool for per-request usage
+            limit_per_host=5,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+            keepalive_timeout=30,
+            enable_cleanup_closed=True
+        )
+        
+        async with aiohttp.ClientSession(timeout=self.timeout, connector=connector) as session:
+            try:
+                async with getattr(session, method)(url, **kwargs) as response:
+                    response_text = await response.text()
+                    return response_text, response.status, dict(response.headers)
+            except Exception as e:
+                logger.debug(f"HTTP request failed: {method.upper()} {url} - {type(e).__name__}: {str(e)}")
+                raise
+        # Both session and connector automatically closed when exiting the context manager
     
     async def close(self):
-        """Close the HTTP session and cleanup resources."""
+        """Clean up resources."""
         # Close authentication provider
         if self._auth_provider is not None:
             try:
@@ -150,28 +115,7 @@ class EvaluationApiClient:
             except Exception as e:
                 logger.warning(f"Error closing authentication provider: {e}")
         
-        if self._session_lock is not None:
-            async with self._session_lock:
-                if self._session and not self._session.closed:
-                    await self._session.close()
-                    self._session = None
-                    self._session_created_at = None
-                
-                if self._connector and not self._connector.closed:
-                    await self._connector.close()
-                    self._connector = None
-                    
-                logger.debug("Closed HTTP session and cleaned up resources")
-        else:
-            # No lock exists, just clean up directly
-            if self._session and not self._session.closed:
-                await self._session.close()
-                self._session = None
-                self._session_created_at = None
-            
-            if self._connector and not self._connector.closed:
-                await self._connector.close()
-                self._connector = None
+        # No need to manage connector since we create fresh ones per request
         
     async def fetch_enriched_dataset(self, eval_run_id: str) -> Dict[str, Any]:
         """

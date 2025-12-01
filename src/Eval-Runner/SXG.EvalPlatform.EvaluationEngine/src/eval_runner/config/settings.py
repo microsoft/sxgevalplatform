@@ -54,6 +54,7 @@ class ApiAuthenticationConfig:
     
     # Authentication options
     use_managed_identity: bool = True
+    enable_authentication: bool = True  # Feature flag to enable/disable authentication
     enable_token_caching: bool = True
     token_refresh_buffer_seconds: int = 300  # Refresh token 5 minutes before expiry
     
@@ -244,6 +245,7 @@ class AppSettings:
             resource_app_id=auth_config.get('ResourceAppId', 'ac2b08ba-4232-438f-b333-0300df1de14d'),
             scope=auth_config.get('Scope', 'api://ac2b08ba-4232-438f-b333-0300df1de14d/.default'),
             use_managed_identity=auth_config.get('UseManagedIdentity', True),
+            enable_authentication=auth_config.get('EnableAuthentication', True),
             enable_token_caching=auth_config.get('EnableTokenCaching', True),
             token_refresh_buffer_seconds=auth_config.get('TokenRefreshBufferSeconds', 300)
         )
