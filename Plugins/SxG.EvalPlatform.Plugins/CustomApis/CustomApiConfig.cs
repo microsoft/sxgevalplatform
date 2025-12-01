@@ -182,6 +182,40 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
         }
 
         /// <summary>
+        /// UpdateEnrichedDatasetFile Custom API configuration - Updates enriched dataset file after Power Automate flow enrichment
+        /// </summary>
+        public static class UpdateEnrichedDatasetFile
+        {
+            public const string ApiName = "cr890_UpdateEnrichedDatasetFile";
+            public const string DisplayName = "Update Enriched Dataset File";
+            public const string Description = "Updates enriched dataset file after Power Automate flow enrichment";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.UpdateEnrichedDatasetFile";
+            public const string ExecutePrivilegeName = "cr890_UpdateEnrichedDatasetFile";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for UpdateEnrichedDatasetFile API (evalRunId and enrichedDatasetJson)
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string EvalRunId = "evalRunId";
+                public const string EnrichedDatasetJson = "enrichedDatasetJson";
+            }
+
+            /// <summary>
+            /// Response properties for UpdateEnrichedDatasetFile API (standardized format)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+            }
+        }
+
+        /// <summary>
         /// UpdateFailedState Custom API configuration
         /// </summary>
         public static class UpdateFailedState

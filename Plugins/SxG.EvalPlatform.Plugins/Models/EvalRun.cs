@@ -45,6 +45,7 @@ namespace SxG.EvalPlatform.Plugins.Models
             public const string cr890_AgentId = "cr890_agentid";
             public const string cr890_AgentSchemaName = "cr890_agentschemaname";
             public const string cr890_Dataset = "cr890_dataset";
+            public const string cr890_DatasetFile = "cr890_datasetfile";
             public const string cr890_DatasetId = "cr890_datasetid";
             public const string cr890_EnvironmentId = "cr890_environmentid";
             public const string cr890_EvalRunId = "cr890_evalrunid";
@@ -143,6 +144,21 @@ namespace SxG.EvalPlatform.Plugins.Models
                 this.OnPropertyChanging("cr890_Dataset");
                 this.SetAttributeValue("cr890_dataset", value);
                 this.OnPropertyChanged("cr890_Dataset");
+            }
+        }
+
+        [Microsoft.Xrm.Sdk.AttributeLogicalNameAttribute("cr890_datasetfile")]
+        public System.Nullable<System.Guid> cr890_DatasetFile
+        {
+            get
+            {
+                return this.GetAttributeValue<System.Nullable<System.Guid>>("cr890_datasetfile");
+            }
+            set
+            {
+                this.OnPropertyChanging("cr890_DatasetFile");
+                this.SetAttributeValue("cr890_datasetfile", value);
+                this.OnPropertyChanged("cr890_DatasetFile");
             }
         }
 
