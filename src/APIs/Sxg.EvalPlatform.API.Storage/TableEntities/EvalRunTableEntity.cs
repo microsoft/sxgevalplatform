@@ -5,21 +5,10 @@ using SXG.EvalPlatform.Common;
 namespace Sxg.EvalPlatform.API.Storage.TableEntities
 {
     /// <summary>
-    /// Constants for evaluation run status values
-    /// </summary>
-    //public static class EvalRunStatusConstants
-    //{
-    //    public const string Queued = "Queued";
-    //    public const string Running = "Running";
-    //    public const string Completed = "Completed";
-    //    public const string Failed = "Failed";
-    //}
-
-    /// <summary>
     /// Entity class for storing evaluation run data in Azure Table Storage
     /// Uses AgentId as PartitionKey and EvalRunId as RowKey
     /// </summary>
-    public class EvalRunTableEntity : ITableEntity
+    public class EvalRunTableEntity : ITableEntity, IAuditableEntity
     {
         private string _agentId = string.Empty;
         private string _evalRunId = string.Empty;
@@ -66,6 +55,8 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         public string MetricsConfigurationId { get; set; } = string.Empty;
         public string DataSetId { get; set; } = string.Empty;
         public string Status { get; set; } = CommonConstants.EvalRunStatus.RequestSubmitted;
+        public string? CreatedBy { get; set; }
+        public DateTime? CreatedOn { get; set; }
         public string? LastUpdatedBy { get; set; }
         public DateTime? LastUpdatedOn { get; set; }
         public DateTime? StartedDatetime { get; set; }

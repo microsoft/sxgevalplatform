@@ -152,9 +152,6 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _logger.LogInformation("Saving dataset for Agent: {AgentId}, DatasetId: {DatasetId}, Type: {DatasetType}",
                          entity.AgentId, entity.DatasetId, entity.DatasetType);
 
-                // Update timestamp
-                entity.LastUpdatedOn = DateTime.UtcNow;
-
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
 
@@ -502,7 +499,6 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 // Apply the updates
                 updateAction(existingEntity);
-                existingEntity.LastUpdatedOn = DateTime.UtcNow;
 
                 // Save the updated entity
                 await TableClient.UpsertEntityAsync(existingEntity);

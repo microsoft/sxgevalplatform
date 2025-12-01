@@ -28,6 +28,9 @@ param(
 # Set error action preference
 $ErrorActionPreference = "Stop"
 
+# Suppress Azure CLI Python warnings globally for this session
+$env:PYTHONWARNINGS = "ignore"
+
 # Function to convert nested JSON to flat App Settings format
 function ConvertTo-AppSettings {
  param (
@@ -261,7 +264,7 @@ Write-Host "[3/12] Verifying App Service: $AppName" -ForegroundColor Yellow
 $appExists = az webapp show --name $AppName --resource-group $ResourceGroupName --query "name" -o tsv 2>$null
 
 if (-not $appExists) {
-    Write-Host "? App Service $AppName does not exist" -ForegroundColor Red
+  Write-Host "? App Service $AppName does not exist" -ForegroundColor Red
     exit 1
 }
 Write-Host "? App Service verified: $AppName" -ForegroundColor Green

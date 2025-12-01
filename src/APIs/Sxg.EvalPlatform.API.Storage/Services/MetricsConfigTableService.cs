@@ -157,9 +157,6 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 _logger.LogInformation("Saving Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
         entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
 
-                // Update timestamp
-                entity.LastUpdatedOn = DateTime.UtcNow;
-
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
 

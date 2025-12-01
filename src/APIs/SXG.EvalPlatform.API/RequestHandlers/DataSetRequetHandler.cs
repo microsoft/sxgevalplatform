@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Services;
 using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
@@ -19,6 +20,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IConfigHelper _configHelper;
         private readonly ILogger<DataSetRequestHandler> _logger;
         private readonly IMapper _mapper;
+        private readonly ICallerIdentificationService _callerService;
                     
 
         public DataSetRequestHandler(
@@ -27,13 +29,68 @@ namespace SxgEvalPlatformApi.RequestHandlers
             ILogger<DataSetRequestHandler> logger,
             IMapper mapper,
             IConfigHelper configHelper,
-            ICacheManager cacheManager)
+            ICacheManager cacheManager,
+            ICallerIdentificationService callerService)
         {
             _dataSetTableService = dataSetTableService;
             _logger = logger;
             _mapper = mapper;
             _blobStorageService = blobStorageService;
             _configHelper = configHelper;
+            _callerService = callerService;
+        }
+
+        /// <summary>
+        /// Get the audit user based on authentication flow
+        /// For AppToApp (service principal with no user context): use application name
+        /// For DirectUser/DelegatedAppToApp (user context): use UPN or email
+        /// </summary>
+        private string GetAuditUser()
+        {
+            try
+            {
+                var callerInfo = _callerService.GetCallerInfo();
+                
+                _logger.LogDebug("GetAuditUser - IsServicePrincipal: {IsServicePrincipal}, HasDelegatedUser: {HasDelegatedUser}, UserEmail: {UserEmail}, AppName: {AppName}",
+                    callerInfo.IsServicePrincipal, callerInfo.HasDelegatedUser, callerInfo.UserEmail, callerInfo.ApplicationName);
+
+                if (_callerService.IsServicePrincipalCall() && !_callerService.HasDelegatedUserContext())
+                {
+                    // AppToApp flow - use application name
+                    var appName = _callerService.GetCallingApplicationName();
+                    var auditUser = !string.IsNullOrWhiteSpace(appName) && appName != "unknown" ? appName : "System";
+                    _logger.LogInformation("Audit user (AppToApp): {AuditUser}", auditUser);
+                    return auditUser;
+                }
+                else
+                {
+                    // DirectUser or DelegatedAppToApp - use UPN/email
+                    var userEmail = _callerService.GetCurrentUserEmail();
+                    
+                    // Check if we got a meaningful value
+                    if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown")
+                    {
+                        _logger.LogInformation("Audit user (User): {AuditUser}", userEmail);
+                        return userEmail;
+                    }
+                    
+                    // Try to get user ID as fallback
+                    var userId = _callerService.GetCurrentUserId();
+                    if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown")
+                    {
+                        _logger.LogInformation("Audit user (User ID fallback): {AuditUser}", userId);
+                        return userId;
+                    }
+                    
+                    _logger.LogWarning("Could not determine audit user, using 'System'. UserEmail: {UserEmail}, UserId: {UserId}", userEmail, userId);
+                    return "System";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get caller information, defaulting to 'System'");
+                return "System";
+            }
         }
 
         /// <summary>
@@ -297,20 +354,20 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             var datasetId = Guid.NewGuid().ToString();
             var currentTime = DateTime.UtcNow;
+            var auditUser = GetAuditUser();
 
             // Create entity
             var entity = _mapper.Map<DataSetTableEntity>(saveDatasetDto);
             entity.DatasetId = datasetId;
             entity.RowKey = datasetId;
-            entity.CreatedBy = "System";
-            entity.CreatedOn = currentTime;
-            entity.LastUpdatedBy = "System";
-            entity.LastUpdatedOn = currentTime;
 
             // Set blob storage paths
             var (blobContainer, blobFilePath) = CreateBlobPaths(saveDatasetDto, datasetId);
             entity.BlobFilePath = blobFilePath;
             entity.ContainerName = blobContainer;
+
+            // Set audit properties for creation
+            entity.SetCreationAudit(auditUser);
 
             // Serialize dataset content
             var datasetContent = SerializeDatasetRecords(saveDatasetDto.DatasetRecords);
@@ -322,7 +379,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity);
                        
 
-            _logger.LogInformation("Successfully created dataset with ID: {DatasetId}", savedEntity.DatasetId);
+            _logger.LogInformation("Successfully created dataset with ID: {DatasetId} by {AuditUser}", savedEntity.DatasetId, auditUser);
 
             return CreateSuccessResponse(savedEntity, "created", "Dataset created successfully");
         }
@@ -332,11 +389,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private async Task<DatasetSaveResponseDto> UpdateExistingDatasetAsync(DataSetTableEntity existingEntity, List<EvalDataset> datasetRecords)
         {
-            var currentTime = DateTime.UtcNow;
+            var auditUser = GetAuditUser();
 
-            // Update audit fields
-            existingEntity.LastUpdatedBy = "System";
-            existingEntity.LastUpdatedOn = currentTime;
+            // Set audit properties for update
+            existingEntity.SetUpdateAudit(auditUser);
 
             // Serialize dataset content
             var datasetContent = SerializeDatasetRecords(datasetRecords);
@@ -350,7 +406,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             // Save updated metadata to table storage
             var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity);
                         
-            _logger.LogInformation("Successfully updated dataset with ID: {DatasetId}", savedEntity.DatasetId);
+            _logger.LogInformation("Successfully updated dataset with ID: {DatasetId} by {AuditUser}", savedEntity.DatasetId, auditUser);
 
             return CreateSuccessResponse(savedEntity, "updated", "Dataset updated successfully");
         }

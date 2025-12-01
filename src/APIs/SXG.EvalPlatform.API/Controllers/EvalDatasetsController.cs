@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Any;
 using SxgEvalPlatformApi.Models;
@@ -12,6 +13,7 @@ using System.Text.Json;
 
 namespace SxgEvalPlatformApi.Controllers
 {
+    [Authorize]
     [Route("api/v1/eval/datasets")]
     public class EvalDatasetsController : BaseController
     {
@@ -21,7 +23,8 @@ namespace SxgEvalPlatformApi.Controllers
                                      
                                       
                                       ILogger<EvalDatasetsController> logger,
-                                      IOpenTelemetryService telemetryService) : base(logger, telemetryService)
+                                      ICallerIdentificationService callerService,
+                                      IOpenTelemetryService telemetryService) : base(logger, callerService, telemetryService)
 
         {
             _dataSetRequestHandler = dataSetRequestHandler;

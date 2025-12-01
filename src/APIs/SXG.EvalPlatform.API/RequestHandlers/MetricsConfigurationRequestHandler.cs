@@ -6,6 +6,7 @@ using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SXG.EvalPlatform.Common.Exceptions;
 using SxgEvalPlatformApi.Models.Dtos;
+using SxgEvalPlatformApi.Services;
 using System.Text.Json;
 
 namespace SxgEvalPlatformApi.RequestHandlers
@@ -21,6 +22,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly ILogger<MetricsConfigurationRequestHandler> _logger;
         private readonly IMapper _mapper;
         private readonly ICacheManager _cacheManager;
+        private readonly ICallerIdentificationService _callerService;
 
         // Cache key patterns
         //private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
@@ -39,7 +41,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                                                   ILogger<MetricsConfigurationRequestHandler> logger,
                                                   IMapper mapper,
                                                   IConfigHelper configHelper,
-                                                  ICacheManager cacheManager)
+                                                  ICacheManager cacheManager,
+                                                  ICallerIdentificationService callerService)
         {
             _metricsConfigTableService = metricsConfigTableService;
             _logger = logger;
@@ -47,6 +50,60 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _blobStorageService = blobStorageService;
             _configHelper = configHelper;
             _cacheManager = cacheManager;
+            _callerService = callerService;
+        }
+
+        /// <summary>
+        /// Get the audit user based on authentication flow
+        /// For AppToApp (service principal with no user context): use application name
+        /// For DirectUser/DelegatedAppToApp (user context): use UPN or email
+        /// </summary>
+        private string GetAuditUser()
+        {
+            try
+            {
+                var callerInfo = _callerService.GetCallerInfo();
+                
+                _logger.LogDebug("GetAuditUser - IsServicePrincipal: {IsServicePrincipal}, HasDelegatedUser: {HasDelegatedUser}, UserEmail: {UserEmail}, AppName: {AppName}",
+                    callerInfo.IsServicePrincipal, callerInfo.HasDelegatedUser, callerInfo.UserEmail, callerInfo.ApplicationName);
+
+                if (_callerService.IsServicePrincipalCall() && !_callerService.HasDelegatedUserContext())
+                {
+                    // AppToApp flow - use application name
+                    var appName = _callerService.GetCallingApplicationName();
+                    var auditUser = !string.IsNullOrWhiteSpace(appName) && appName != "unknown" ? appName : "System";
+                    _logger.LogInformation("Audit user (AppToApp): {AuditUser}", auditUser);
+                    return auditUser;
+                }
+                else
+                {
+                    // DirectUser or DelegatedAppToApp - use UPN/email
+                    var userEmail = _callerService.GetCurrentUserEmail();
+                    
+                    // Check if we got a meaningful value
+                    if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown")
+                    {
+                        _logger.LogInformation("Audit user (User): {AuditUser}", userEmail);
+                        return userEmail;
+                    }
+                    
+                    // Try to get user ID as fallback
+                    var userId = _callerService.GetCurrentUserId();
+                    if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown")
+                    {
+                        _logger.LogInformation("Audit user (User ID fallback): {AuditUser}", userId);
+                        return userId;
+                    }
+                    
+                    _logger.LogWarning("Could not determine audit user, using 'System'. UserEmail: {UserEmail}, UserId: {UserId}", userEmail, userId);
+                    return "System";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get caller information, defaulting to 'System'");
+                return "System";
+            }
         }
 
         /// <summary>
@@ -141,9 +198,9 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 var (isExistingConfig, configurationId, entity) = await DetermineConfigurationStateAsync(createConfigDto);
                 var (blobContainer, blobFilePath) = GetOrCreateBlobPaths(entity, createConfigDto, configurationId, isExistingConfig);
+                var auditUser = GetAuditUser();
 
                 entity.ConfigurationId = configurationId;
-                entity.LastUpdatedOn = DateTime.UtcNow;
                 entity.BlobFilePath = blobFilePath;
                 entity.ConainerName = blobContainer;
 
@@ -152,14 +209,17 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     _mapper.Map(createConfigDto, entity);
                 }
 
+                // Set audit properties (automatically detects create vs update based on CreatedOn)
+                entity.SetAudit(auditUser);
+
                 await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, JsonSerializer.Serialize(createConfigDto.MetricsConfiguration));
 
                 var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity);
 
                 //await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
 
-                _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId}",
-                   isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId);
+                _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId} by {AuditUser}",
+                   isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId, auditUser);
 
                 return CreateSuccessResponse(savedEntity, isExistingConfig);
             }
@@ -193,8 +253,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     };
                 }
 
-                // Update the entity
-                existingEntity.LastUpdatedOn = DateTime.UtcNow;
+                var auditUser = GetAuditUser();
+
+                // Set audit properties for update
+                existingEntity.SetUpdateAudit(auditUser);
 
                 // Update blob storage
                 await _blobStorageService.WriteBlobContentAsync(
@@ -206,7 +268,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 //await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
 
-                _logger.LogInformation("Successfully updated configuration with ID: {ConfigId}", savedEntity.ConfigurationId);
+                _logger.LogInformation("Successfully updated configuration with ID: {ConfigId} by {AuditUser}", savedEntity.ConfigurationId, auditUser);
 
                 return CreateSuccessResponse(savedEntity, true);
             }

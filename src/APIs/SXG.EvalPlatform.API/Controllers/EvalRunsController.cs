@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sxg.EvalPlatform.API.Storage.Services;
 using SxgEvalPlatformApi.RequestHandlers;
@@ -14,6 +15,7 @@ namespace SxgEvalPlatformApi.Controllers;
 /// - EvalRunsController.EnrichedDataset.cs (Enriched dataset operations)
 /// - EvalRunsController.Results.cs (Evaluation results operations)
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/v1/eval/runs")]
 public partial class EvalRunsController : BaseController
@@ -30,9 +32,10 @@ public partial class EvalRunsController : BaseController
         IMetricsConfigTableService metricsConfigTableService,
         IEvalArtifactsRequestHandler evalArtifactsRequestHandler,
         IEvaluationResultRequestHandler evaluationResultRequestHandler,
+        ICallerIdentificationService callerService,
         ILogger<EvalRunsController> logger,
         IOpenTelemetryService? telemetryService = null)
-        : base(logger, telemetryService)
+        : base(logger, callerService, telemetryService)
     {
         _evalRunRequestHandler = evalRunRequestHandler;
         _dataSetTableService = dataSetTableService;

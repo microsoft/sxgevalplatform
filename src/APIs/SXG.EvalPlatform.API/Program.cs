@@ -11,6 +11,7 @@ using SxgEvalPlatformApi;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
 using SxgEvalPlatformApi.Middleware;
+using SXG.EvalPlatform.API.Middleware;  // ? Added for UserContextMiddleware
 using System.Reflection;
 using SxgEvalPlatformApi.Extensions;
 
@@ -24,10 +25,18 @@ builder.Logging.AddDebug();
 // Add core services
 builder.Services.AddControllers();
 
+// Add HttpContextAccessor (required for CallerIdentificationService)
+builder.Services.AddHttpContextAccessor();
+
 // Add custom service extensions
 builder.Services.AddOpenTelemetryServices(builder.Configuration, builder.Environment);
 builder.Services.AddSwaggerServices();
 builder.Services.AddCorsServices();
+
+// ? Azure AD Authentication (feature flag controlled)
+var authEnabled = builder.Configuration.GetValue<bool>("FeatureFlags:EnableAuthentication", false);
+builder.Services.AddAzureAdAuthentication(builder.Configuration);
+
 builder.Services.AddAutoMapperServices();
 builder.Services.AddHttpClientServices();
 builder.Services.AddBusinessServices(builder.Configuration);
@@ -46,6 +55,14 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     c.DefaultModelsExpandDepth(-1);
+    
+    // Configure OAuth 2.0 for Swagger (only if authentication is enabled)
+    if (authEnabled && !string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]))
+    {
+        c.OAuthClientId(builder.Configuration["AzureAd:ClientId"]);
+     c.OAuthUsePkce();
+      c.OAuthScopeSeparator(" ");
+    }
 });
 
 app.UseHttpsRedirection();
@@ -53,7 +70,13 @@ app.UseCors("AllowAll");
 
 // Authentication/Authorization - Swagger endpoints are already registered above, so they're accessible
 app.UseAuthentication();
+
+// ? ADDED: Extract user context from headers when service principals call the API
+// This middleware runs after authentication and adds delegated user claims for proper user tracking
+app.UseUserContext();
+
 app.UseAuthorization();
+
 app.MapControllers();
 
 // Log application startup with telemetry
@@ -65,11 +88,19 @@ telemetryService.AddActivityTags(new Dictionary<string, object>
 {
     ["environment"] = app.Environment.EnvironmentName,
     ["version"] = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0",
-    ["machine_name"] = Environment.MachineName
+    ["machine_name"] = Environment.MachineName,
+    ["authentication_enabled"] = authEnabled,
+    ["authentication_configured"] = !string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]),
+    ["user_context_middleware_enabled"] = true  // ? Track that middleware is active
 });
 
-logger.LogInformation("SXG Evaluation Platform API starting up - Environment: {Environment}",
-    app.Environment.EnvironmentName);
+logger.LogInformation(
+    "SXG Evaluation Platform API starting up - Environment: {Environment}, Authentication: {AuthStatus}, UserContext: Enabled",
+    app.Environment.EnvironmentName,
+    authEnabled 
+      ? "ENABLED" + (!string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]) ? " (Configured)" : " (NOT Configured - will fail!)")
+        : "DISABLED (Anonymous Access)"
+);
 
 app.Run();
 

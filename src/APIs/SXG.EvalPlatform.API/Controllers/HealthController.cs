@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.Services;
@@ -8,6 +9,7 @@ namespace SxgEvalPlatformApi.Controllers;
 /// <summary>
 /// Health check controller for monitoring API status with OpenTelemetry
 /// </summary>
+[AllowAnonymous]
 [ApiController]
 [Route("api/v1/[controller]")]
 public class HealthController : ControllerBase

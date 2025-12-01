@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Sxg.EvalPlatform.API.Storage.Configuration;
 using Sxg.EvalPlatform.API.Storage.Services;
 using StackExchange.Redis;
@@ -21,73 +24,92 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
         /// <returns>The service collection for chaining</returns>
         public static IServiceCollection AddCacheServices(this IServiceCollection services)
         {
-            // Register a delegate that will resolve configuration at runtime instead of build time
+            // Always register memory cache
+            services.AddMemoryCache(options =>
+            {
+                // Default memory cache configuration
+                options.SizeLimit = 100 * 1024 * 1024; // 100 MB default
+                options.CompactionPercentage = 0.25;
+                options.ExpirationScanFrequency = TimeSpan.FromMinutes(1);
+            });
+
+            // Always register distributed memory cache as fallback - this ensures IDistributedCache is always available
+            services.AddDistributedMemoryCache();
+
+            // Register Connection Multiplexer conditionally
+            services.AddSingleton(serviceProvider =>
+            {
+                var configHelper = serviceProvider.GetRequiredService<IConfigHelper>();
+                var cacheOptions = configHelper.GetConfigurationSection<CacheOptions>("Cache");
+
+                // Only configure Redis if Redis provider is selected
+                if (cacheOptions.Provider.ToLowerInvariant() == "redis" ||
+                    cacheOptions.Provider.ToLowerInvariant() == "distributed")
+                {
+                    try
+                    {
+                        return ConfigureRedisConnection(serviceProvider, configHelper, cacheOptions);
+                    }
+                    catch (Exception ex)
+                    {
+                        var logger = serviceProvider.GetService<ILogger<RedisCacheManager>>();
+                        logger?.LogError(ex, "Failed to configure Redis connection, will fall back to memory cache");
+                        return (IConnectionMultiplexer)null;
+                    }
+                }
+
+                return (IConnectionMultiplexer)null;
+            });
+
+            // Register ICacheManager with runtime configuration resolution
             services.AddSingleton<ICacheManager>(serviceProvider =>
             {
                 var configHelper = serviceProvider.GetRequiredService<IConfigHelper>();
-                var dataCachingEnabled = configHelper.IsDataCachingEnabled();
                 var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
                 var logger = loggerFactory?.CreateLogger("CacheServiceExtensions");
 
-                logger?.LogInformation("🔍 Runtime cache configuration check - EnableDataCaching: {Enabled}", dataCachingEnabled);
-
-                if (!dataCachingEnabled)
-                {
-                    logger?.LogWarning("⚠️ Data caching is DISABLED via FeatureFlags:EnableDataCaching configuration");
-                    logger?.LogInformation("✅ Returning NoCacheManager - all cache operations will be no-ops");
-
-                    // Return NoCacheManager directly - no Redis connection will be attempted
-                    return new NoCacheManager(logger.GetType().Name == "ILogger`1"
-                        ? serviceProvider.GetRequiredService<ILogger<NoCacheManager>>()
-                        : loggerFactory.CreateLogger<NoCacheManager>());
-                }
-
-                logger?.LogInformation("✅ Data caching is ENABLED - creating cache manager");
-
                 // Get cache configuration
                 var cacheOptions = configHelper.GetConfigurationSection<CacheOptions>("Cache");
-                logger?.LogInformation("Cache provider selected: {Provider}", cacheOptions.Provider);
+                logger?.LogInformation("🔍 Cache configuration check - Provider: {Provider}", cacheOptions.Provider);
 
                 // Return appropriate cache manager based on provider
                 switch (cacheOptions.Provider.ToLowerInvariant())
                 {
+                    case "none":
+                    case "disabled":
+                    case "":
+                        logger?.LogWarning("⚠️ Data caching is DISABLED via Cache:Provider configuration");
+                        logger?.LogInformation("✅ Returning NoCacheManager - all cache operations will be no-ops");
+                        return new NoCacheManager(logger.GetType().Name == "ILogger`1"
+                            ? serviceProvider.GetRequiredService<ILogger<NoCacheManager>>()
+                            : loggerFactory.CreateLogger<NoCacheManager>());
+
                     case "redis":
                     case "distributed":
-                        var distributedCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
-                        var cacheLogger = serviceProvider.GetRequiredService<ILogger<RedisCacheManager>>();
+                        logger?.LogInformation("✅ Redis caching is ENABLED - creating Redis cache manager");
+                        // Try to get Redis connection, fallback to memory if not available
                         var conn = serviceProvider.GetService<IConnectionMultiplexer>();
-                        return new RedisCacheManager(distributedCache, cacheLogger, conn);
+                        if (conn != null && conn.IsConnected)
+                        {
+                            var distributedCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
+                            var cacheLogger = serviceProvider.GetRequiredService<ILogger<RedisCacheManager>>();
+                            return new RedisCacheManager(distributedCache, cacheLogger, conn);
+                        }
+                        else
+                        {
+                            logger?.LogWarning("Redis connection not available, falling back to memory cache manager");
+                            var fallbackMemoryCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                            var fallbackMemLogger = serviceProvider.GetRequiredService<ILogger<MemoryCacheManager>>();
+                            return new MemoryCacheManager(fallbackMemoryCache, fallbackMemLogger);
+                        }
 
                     case "memory":
                     default:
+                        logger?.LogInformation("✅ Memory caching is ENABLED - creating memory cache manager");
                         var memoryCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
                         var memLogger = serviceProvider.GetRequiredService<ILogger<MemoryCacheManager>>();
                         return new MemoryCacheManager(memoryCache, memLogger);
                 }
-            });
-
-            // ONLY register distributed cache and ConnectionMultiplexer if caching is enabled
-            // This prevents Redis connection attempts during startup when caching is disabled
-            services.AddSingleton(serviceProvider =>
-            {
-                var configHelper = serviceProvider.GetRequiredService<IConfigHelper>();
-                var dataCachingEnabled = configHelper.IsDataCachingEnabled();
-
-                if (!dataCachingEnabled)
-                {
-                    // Return a null marker to indicate caching is disabled
-                    return (IConnectionMultiplexer)null;
-                }
-
-                // Only configure Redis if caching is enabled
-                var cacheOptions = configHelper.GetConfigurationSection<CacheOptions>("Cache");
-                if (cacheOptions.Provider.ToLowerInvariant() == "redis" ||
-                    cacheOptions.Provider.ToLowerInvariant() == "distributed")
-                {
-                    return ConfigureRedisConnection(serviceProvider, configHelper, cacheOptions);
-                }
-
-                return (IConnectionMultiplexer)null;
             });
 
             return services;

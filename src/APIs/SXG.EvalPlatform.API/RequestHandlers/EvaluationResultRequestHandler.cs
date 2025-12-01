@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Services;
 using System.Text.Json;
 using static SXG.EvalPlatform.Common.CommonConstants;
 
@@ -22,6 +23,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IMapper _mapper;
         private readonly IConfigHelper _configHelper;
         private readonly ICacheManager _cacheManager;
+        private readonly ICallerIdentificationService _callerService;
 
         public EvaluationResultRequestHandler(
             IAzureBlobStorageService blobService,
@@ -31,7 +33,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             ILogger<EvaluationResultRequestHandler> logger,
             IConfigHelper configHelper,
             IMapper mapper,
-            ICacheManager cacheManager)
+            ICacheManager cacheManager,
+            ICallerIdentificationService callerService)
         {
             _blobService = blobService;
             _evalRunTableService = evalRunTableService;
@@ -41,27 +44,33 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _cacheManager = cacheManager;
             _metricsConfigTableService = metricsConfigTableService;
             _dataSetTableService = dataSetTableService;
+            _callerService = callerService;
         }
+
 
         /// <summary>
         /// Save evaluation results to blob storage and update cache
         /// </summary>
         public async Task<(EvaluationResultSaveResponseDto? EvalResponse, APIRequestProcessingResultDto? RequestProcesingResult)> SaveEvaluationResultAsync(Guid evalRunId, SaveEvaluationResultDto saveDto)
         {
-           
+            // Get caller information from the service
+            var callerId = _callerService.GetCurrentUserId();
+            var callerEmail = _callerService.GetCurrentUserEmail();
+            
             try
             {
                 string evalSummaryFileName = $"evaluation-results/{evalRunId}_summary.json";
                 string evalDatasetFileName = $"evaluation-results/{evalRunId}_dataset.json";
 
-                _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}, Caller: {CallerEmail} ({CallerId})", 
+        evalRunId, callerEmail, callerId);
 
                 // First, verify that the EvalRunId exists and get internal details
                 var evalRunEntity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
 
                 if (evalRunEntity == null)
                 {
-                    _logger.LogWarning("EvalRunId not found: {EvalRunId}", evalRunId);
+                    _logger.LogWarning("EvalRunId not found: {EvalRunId}, Requested by: {CallerEmail}", evalRunId, callerEmail);
                     return (null, new APIRequestProcessingResultDto
                     {
                         IsSuccessful = false,
@@ -89,13 +98,16 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Save to blob storage first (write to backend store)
                 await _blobService.WriteBlobContentAsync(containerName, evalSummaryFileName, evalResultSummary.ToString());
 
-                _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
-                    evalRunId, $"{containerName}/{evalSummaryFileName}");
+                _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                    evalRunId, $"{containerName}/{evalSummaryFileName}", callerEmail);
 
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
-                _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
-                    evalRunId, $"{containerName}/{evalDatasetFileName}");
+                _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                    evalRunId, $"{containerName}/{evalDatasetFileName}", callerEmail);
+
+                // Delete enriched dataset file after successfully saving evaluation results
+                await DeleteEnrichedDatasetAsync(evalRunId, containerName);
 
                 return (new EvaluationResultSaveResponseDto
                 {
@@ -109,7 +121,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}, Caller: {CallerEmail}", evalRunId, callerEmail);
                 
                 return (null, new APIRequestProcessingResultDto
                 {
@@ -539,5 +551,52 @@ namespace SxgEvalPlatformApi.RequestHandlers
         //        };
         //    }
         //}
+
+        /// <summary>
+        /// Delete enriched dataset file for the given evaluation run
+        /// </summary>
+        /// <param name="evalRunId">Evaluation run ID</param>
+        /// <param name="containerName">Container name where the enriched dataset is stored</param>
+        private async Task DeleteEnrichedDatasetAsync(Guid evalRunId, string containerName)
+        {
+            try
+            {
+                var enrichedDatasetPath = $"enriched-datasets/{evalRunId}.json";
+
+                _logger.LogInformation("Attempting to delete enriched dataset for EvalRunId: {EvalRunId} at path: {BlobPath}",
+                 evalRunId, $"{containerName}/{enrichedDatasetPath}");
+
+                // Check if the enriched dataset blob exists
+                var blobExists = await _blobService.BlobExistsAsync(containerName, enrichedDatasetPath);
+
+                if (!blobExists)
+                {
+                    _logger.LogInformation("Enriched dataset not found for EvalRunId: {EvalRunId} at path: {BlobPath}. Skipping deletion.",
+                 evalRunId, $"{containerName}/{enrichedDatasetPath}");
+                    return;
+                }
+
+                // Delete the enriched dataset blob
+                var deleteSuccess = await _blobService.DeleteBlobAsync(containerName, enrichedDatasetPath);
+
+                if (deleteSuccess)
+                {
+                    _logger.LogInformation("Successfully deleted enriched dataset for EvalRunId: {EvalRunId} from {BlobPath}",
+   evalRunId, $"{containerName}/{enrichedDatasetPath}");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to delete enriched dataset for EvalRunId: {EvalRunId} from {BlobPath}",
+          evalRunId, $"{containerName}/{enrichedDatasetPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the save operation
+                // The enriched dataset deletion is a cleanup operation and shouldn't block saving results
+                _logger.LogError(ex, "Error deleting enriched dataset for EvalRunId: {EvalRunId}. " +
+                "Evaluation results were saved successfully, but enriched dataset cleanup failed.", evalRunId);
+            }
+        }
     }
 }

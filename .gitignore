@@ -63,3 +63,5 @@ TestResults.xml
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/bin/Debug/net9.0
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/obj
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/obj/Debug/net9.0/compressed/0urgra2c59-c2jlpeoesf.gz
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/bin/Release/net9.0
+/src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/publish

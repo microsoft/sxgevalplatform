@@ -1,5 +1,6 @@
 ﻿using Azure;
 using Azure.Data.Tables;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.TableEntities
 {
@@ -8,7 +9,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
     /// Uses AgentId as PartitionKey for efficient querying by agent
     /// Uses UUID as RowKey for guaranteed uniqueness
     /// </summary>
-    public class MetricsConfigurationTableEntity : ITableEntity
+    public class MetricsConfigurationTableEntity : ITableEntity, IAuditableEntity
     {
         private string _agentId = string.Empty;
 
@@ -44,13 +45,13 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
 
         //public IList<MetricsConfiguration> MetricsConfiguration { get; set; } = new List<MetricsConfiguration>();
 
-        public string CreatedBy { get; set; } = string.Empty;
+        public string? CreatedBy { get; set; }
 
-        public DateTime CreatedOn { get; set; }
+        public DateTime? CreatedOn { get; set; }
 
-        public string LastUpdatedBy { get; set; } = string.Empty;
+        public string? LastUpdatedBy { get; set; }
 
-        public DateTime LastUpdatedOn { get; set; }
+        public DateTime? LastUpdatedOn { get; set; }
 
         private string _configurationId = string.Empty;
 

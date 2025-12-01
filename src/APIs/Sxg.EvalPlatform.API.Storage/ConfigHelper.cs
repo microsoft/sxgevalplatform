@@ -210,13 +210,24 @@ namespace Sxg.EvalPlatform.API.Storage
         }
 
         /// <summary>
-        /// Gets the feature flag value for data caching enablement
+        /// Determines if caching is enabled based on the cache provider setting
+        /// Returns true if provider is "Memory" or "Redis", false if "None" or "Disabled"
         /// </summary>
-        /// <returns>True if data caching is enabled (default), false otherwise</returns>
+        /// <returns>True if caching is enabled, false otherwise</returns>
+        public bool IsCachingEnabled()
+        {
+            var provider = GetCacheProvider().ToLowerInvariant();
+            return provider != "none" && provider != "disabled" && provider != "";
+        }
+
+        /// <summary>
+        /// Legacy method for backward compatibility - now uses cache provider setting
+        /// </summary>
+        /// <returns>True if caching is enabled based on provider, false otherwise</returns>
+        [Obsolete("Use IsCachingEnabled() instead. This method now delegates to cache provider setting.")]
         public bool IsDataCachingEnabled()
         {
-            // Default to true (enabled) if not configured to maintain backward compatibility
-            return _configuration.GetValue<bool>("FeatureFlags:EnableDataCaching", true);
+            return IsCachingEnabled();
         }
 
         /// <summary>

@@ -59,6 +59,8 @@ public class EvalRunTableService : IEvalRunTableService
     {
         try
         {
+            entity.StartedDatetime = DateTime.UtcNow;
+
             await _tableClient.AddEntityAsync(entity);
             _logger.LogInformation("Created evaluation run with ID: {EvalRunId}", entity.EvalRunId);
             return entity;

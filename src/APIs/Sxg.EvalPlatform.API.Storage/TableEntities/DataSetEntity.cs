@@ -1,5 +1,6 @@
 using Azure;
 using Azure.Data.Tables;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.TableEntities
 {
@@ -7,7 +8,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
     /// Entity class for storing dataset metadata in Azure Table Storage
     /// Uses AgentId as PartitionKey and DatasetId as RowKey
     /// </summary>
-    public class DataSetTableEntity : ITableEntity
+    public class DataSetTableEntity : ITableEntity, IAuditableEntity
     {
         private string _agentId = string.Empty;
         private string _datasetId = string.Empty;
@@ -70,22 +71,22 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
         /// <summary>
         /// Who created the dataset
         /// </summary>
-        public string CreatedBy { get; set; } = string.Empty;
+        public string? CreatedBy { get; set; }
 
         /// <summary>
         /// When the dataset was created
         /// </summary>
-        public DateTime CreatedOn { get; set; }
+        public DateTime? CreatedOn { get; set; }
 
         /// <summary>
         /// When the dataset was last updated
         /// </summary>
-        public DateTime LastUpdatedOn { get; set; }
+        public DateTime? LastUpdatedOn { get; set; }
 
         /// <summary>
         /// Who last updated the dataset
         /// </summary>
-        public string LastUpdatedBy { get; set; } = string.Empty;
+        public string? LastUpdatedBy { get; set; }
 
         // ITableEntity implementation
         // Using AgentId as PartitionKey for efficient agent-based queries

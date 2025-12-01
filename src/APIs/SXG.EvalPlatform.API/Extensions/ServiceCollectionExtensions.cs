@@ -50,43 +50,43 @@ public static class ServiceCollectionExtensions
                tracing
              .AddAspNetCoreInstrumentation(options =>
             {
-         options.RecordException = true;
-         options.EnrichWithHttpRequest = (activity, httpRequest) =>
-  {
-           activity.SetTag("http.request.body.size", httpRequest.ContentLength ?? 0);
-           activity.SetTag("http.request.user_agent", httpRequest.Headers.UserAgent.ToString());
-      // ? UPDATED: Ensure cloud.role includes environment
-           activity.SetTag("cloud.role", cloudRoleName);
-       };
-         options.EnrichWithHttpResponse = (activity, httpResponse) =>
-        {
-            activity.SetTag("http.response.body.size", httpResponse.ContentLength ?? 0);
-        };
-     })
+                options.RecordException = true;
+                options.EnrichWithHttpRequest = (activity, httpRequest) =>
+         {
+             activity.SetTag("http.request.body.size", httpRequest.ContentLength ?? 0);
+             activity.SetTag("http.request.user_agent", httpRequest.Headers.UserAgent.ToString());
+             // ? UPDATED: Ensure cloud.role includes environment
+             activity.SetTag("cloud.role", cloudRoleName);
+         };
+                options.EnrichWithHttpResponse = (activity, httpResponse) =>
+               {
+                   activity.SetTag("http.response.body.size", httpResponse.ContentLength ?? 0);
+               };
+            })
                     .AddHttpClientInstrumentation(options =>
                      {
-                  options.RecordException = true;
-                  options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
-     {
-         activity.SetTag("http.request.method", httpRequestMessage.Method.ToString());
-         // ? UPDATED: Ensure cloud.role includes environment
-         activity.SetTag("cloud.role", cloudRoleName);
-     };
-                  options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
-      {
-          activity.SetTag("http.response.status_code", (int)httpResponseMessage.StatusCode);
-      };
-              })
+                         options.RecordException = true;
+                         options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+            {
+                activity.SetTag("http.request.method", httpRequestMessage.Method.ToString());
+                // ? UPDATED: Ensure cloud.role includes environment
+                activity.SetTag("cloud.role", cloudRoleName);
+            };
+                         options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
+             {
+                 activity.SetTag("http.response.status_code", (int)httpResponseMessage.StatusCode);
+             };
+                     })
            .AddSqlClientInstrumentation(options =>
                    {
-                options.RecordException = true;
-                options.SetDbStatementForText = true;
+                       options.RecordException = true;
+                       options.SetDbStatementForText = true;
                        // ? UPDATED: Ensure cloud.role includes environment
-                options.Enrich = (activity, eventName, rawObject) =>
-       {
-           activity.SetTag("cloud.role", cloudRoleName);
-       };
-            })
+                       options.Enrich = (activity, eventName, rawObject) =>
+              {
+                  activity.SetTag("cloud.role", cloudRoleName);
+              };
+                   })
                .AddSource("SXG.EvalPlatform.API")
                    .SetSampler(new TraceIdRatioBasedSampler(samplingRatio));
 
@@ -101,8 +101,8 @@ public static class ServiceCollectionExtensions
                {
                    tracing.AddAzureMonitorTraceExporter(options =>
                              {
-                       options.ConnectionString = appInsightsConnectionString;
-                   });
+                                 options.ConnectionString = appInsightsConnectionString;
+                             });
                }
            })
             .WithMetrics(metrics =>
@@ -123,8 +123,8 @@ public static class ServiceCollectionExtensions
              {
                  metrics.AddAzureMonitorMetricExporter(options =>
                        {
-                    options.ConnectionString = appInsightsConnectionString;
-                });
+                           options.ConnectionString = appInsightsConnectionString;
+                       });
              }
          });
 
@@ -155,28 +155,72 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(c =>
-         {
-             c.SwaggerDoc("v1", new OpenApiInfo
-             {
-                 Title = "SXG Evaluation Platform API",
-                 Version = "v1",
-                 Description = "API for SXG Evaluation Platform components with OpenTelemetry integration",
-                 Contact = new OpenApiContact
-                 {
-                     Name = "SXG Team",
-                     Email = "sxg@microsoft.com"
-                 }
-             });
 
-             // Include XML comments
-             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-             if (File.Exists(xmlPath))
-             {
-                 c.IncludeXmlComments(xmlPath);
-             }
-         });
+        // Build service provider to access configuration
+        var serviceProvider = services.BuildServiceProvider();
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+
+        // Get Azure AD settings
+        var clientId = configuration["AzureAd:ClientId"];
+        var tenantId = configuration["AzureAd:TenantId"];
+        var audience = configuration["AzureAd:Audience"] ?? $"api://{clientId}";
+
+        services.AddSwaggerGen(c =>
+   {
+       c.SwaggerDoc("v1", new OpenApiInfo
+       {
+           Title = "SXG Evaluation Platform API",
+           Version = "v1",
+           Description = "API for SXG Evaluation Platform components with OpenTelemetry integration and Azure AD authentication",
+           Contact = new OpenApiContact
+           {
+               Name = "SXG Team",
+               Email = "sxg@microsoft.com"
+           }
+       });
+
+       // Add JWT Bearer authentication to Swagger
+       // Use Implicit Flow (simpler for Swagger UI, no client secret needed)
+       c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+       {
+           Type = SecuritySchemeType.OAuth2,
+           Flows = new OpenApiOAuthFlows
+           {
+               Implicit = new OpenApiOAuthFlow
+               {
+                   AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize"),
+                   // ? REMOVED TokenUrl - not needed for Implicit flow
+                   Scopes = new Dictionary<string, string>
+         {
+    { $"{audience}/EVALPlatformAPI.ReadWrite", "Read and write evaluations" }
+       }
+               }
+           }
+       });
+
+       c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+       {
+         new OpenApiSecurityScheme
+         {
+           Reference = new OpenApiReference
+   {
+      Type = ReferenceType.SecurityScheme,
+     Id = "oauth2"
+           }
+ },
+        new[] { $"{audience}/EVALPlatformAPI.ReadWrite" }
+      }
+            });
+
+       // Include XML comments
+       var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+       var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+       if (File.Exists(xmlPath))
+       {
+           c.IncludeXmlComments(xmlPath);
+       }
+   });
 
         return services;
     }
@@ -259,6 +303,9 @@ public static class ServiceCollectionExtensions
 
         // Validators
         services.AddScoped<IEntityValidators, EntityValidators>();
+
+        // Caller Identification Service
+        services.AddScoped<ICallerIdentificationService, CallerIdentificationService>();
 
         // Cache services - IConfigHelper is now registered, so this will work
         services.AddCacheServices();

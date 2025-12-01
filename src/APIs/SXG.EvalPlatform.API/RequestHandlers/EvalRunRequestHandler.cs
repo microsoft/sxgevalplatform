@@ -4,6 +4,7 @@ using Sxg.EvalPlatform.API.Storage.TableEntities;
 using Sxg.EvalPlatform.API.Storage.Validators;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
+using SxgEvalPlatformApi.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace SxgEvalPlatformApi.RequestHandlers
@@ -19,7 +20,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly ILogger<EvalRunRequestHandler> _logger;
         private readonly IDataSetTableService _dataSetTableService;
         private readonly IMetricsConfigTableService _metricsConfigTableService;
-        private readonly IEntityValidators _entityValidators; 
+        private readonly IEntityValidators _entityValidators;
+        private readonly ICallerIdentificationService _callerService;
 
         public EvalRunRequestHandler(IEvalRunTableService evalRunTableService,
                                      IDataVerseAPIService dataVerseAPIService,
@@ -28,7 +30,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                                      ICacheManager cacheManager,
                                      IDataSetTableService dataSetTableService,
                                      IMetricsConfigTableService metricsConfigTableService,
-                                     IEntityValidators entityValidators)
+                                     IEntityValidators entityValidators,
+                                     ICallerIdentificationService callerService)
         {
             _evalRunTableService = evalRunTableService;
             _dataVerseAPIService = dataVerseAPIService;
@@ -37,6 +40,71 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _dataSetTableService = dataSetTableService;
             _metricsConfigTableService = metricsConfigTableService;
             _entityValidators = entityValidators;
+            _callerService = callerService;
+        }
+
+        /// <summary>
+        /// Get the audit user based on authentication flow
+        /// For AppToApp (service principal with no user context): use application name
+        /// For DirectUser/DelegatedAppToApp (user context): use UPN or email
+        /// </summary>
+        private string GetAuditUser()
+        {
+            try
+            {
+                var callerInfo = _callerService.GetCallerInfo();
+                
+                // ENHANCED LOGGING - Log complete caller info
+                _logger.LogWarning("=== AUDIT USER DEBUG ===");
+                _logger.LogWarning("CallerInfo Full: {CallerInfo}", callerInfo.ToString());
+                _logger.LogWarning("IsServicePrincipal: {IsServicePrincipal}", callerInfo.IsServicePrincipal);
+                _logger.LogWarning("HasDelegatedUser: {HasDelegatedUser}", callerInfo.HasDelegatedUser);
+                _logger.LogWarning("UserEmail: '{UserEmail}' (Length: {Length})", callerInfo.UserEmail, callerInfo.UserEmail?.Length ?? 0);
+                _logger.LogWarning("UserId: '{UserId}' (Length: {Length})", callerInfo.UserId, callerInfo.UserId?.Length ?? 0);
+                _logger.LogWarning("AppName: '{AppName}'", callerInfo.ApplicationName);
+                _logger.LogWarning("AppId: '{AppId}'", callerInfo.ApplicationId);
+                _logger.LogWarning("AuthType: '{AuthType}'", callerInfo.AuthenticationType);
+
+                if (_callerService.IsServicePrincipalCall() && !_callerService.HasDelegatedUserContext())
+                {
+                    // AppToApp flow - use application name
+                    var appName = _callerService.GetCallingApplicationName();
+                    var auditUser = !string.IsNullOrWhiteSpace(appName) && appName != "unknown" ? appName : "System";
+                    _logger.LogWarning("AUDIT DECISION: AppToApp flow - Using: '{AuditUser}'", auditUser);
+                    return auditUser;
+                }
+                else
+                {
+                    // DirectUser or DelegatedAppToApp - use UPN/email
+                    var userEmail = _callerService.GetCurrentUserEmail();
+                    _logger.LogWarning("Got UserEmail: '{UserEmail}' (Type: {Type})", userEmail, userEmail?.GetType().Name ?? "null");
+                    
+                    // Check if we got a meaningful value
+                    if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown" && userEmail != "0")
+                    {
+                        _logger.LogWarning("AUDIT DECISION: Using UserEmail: '{AuditUser}'", userEmail);
+                        return userEmail;
+                    }
+                    
+                    // Try to get user ID as fallback
+                    var userId = _callerService.GetCurrentUserId();
+                    _logger.LogWarning("Got UserId: '{UserId}' (Type: {Type})", userId, userId?.GetType().Name ?? "null");
+                    
+                    if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown" && userId != "0")
+                    {
+                        _logger.LogWarning("AUDIT DECISION: Using UserId fallback: '{AuditUser}'", userId);
+                        return userId;
+                    }
+                    
+                    _logger.LogWarning("AUDIT DECISION: Could not determine audit user, using 'System'. UserEmail: '{UserEmail}', UserId: '{UserId}'", userEmail, userId);
+                    return "System";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "AUDIT ERROR: Failed to get caller information, defaulting to 'System'");
+                return "System";
+            }
         }
 
 
@@ -57,6 +125,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 var evalRunId = Guid.NewGuid();
                 var currentDateTime = DateTime.UtcNow;
+                var auditUser = GetAuditUser();
 
                 // Store container name and blob path separately for better blob storage handling
                 var containerName = CommonUtils.TrimAndRemoveSpaces(createDto.AgentId); // Ensure valid container name for Azure Blob Storage
@@ -69,7 +138,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     DataSetId = createDto.DataSetId.ToString(),
                     MetricsConfigurationId = createDto.MetricsConfigurationId.ToString(),
                     Status = CommonConstants.EvalRunStatus.RequestSubmitted,
-                    LastUpdatedOn = currentDateTime,
                     StartedDatetime = currentDateTime,
                     ContainerName = containerName,
                     BlobFilePath = blobFilePath,
@@ -82,7 +150,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Set the RowKey to the GUID string
                 entity.RowKey = evalRunId.ToString();
 
-                // Create in storage first
+                // Set audit properties for creation
+                entity.SetCreationAudit(auditUser);
+
+                // Create in storage
                 var createdEntity = await _evalRunTableService.CreateEvalRunAsync(entity);
                 var datasetEntity = await _dataSetTableService.GetDataSetByIdAsync(createDto.DataSetId.ToString());
                 var metricsConfigEntity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
@@ -93,7 +164,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 evalRunDto.MetricsConfigurationName = metricsConfigEntity.ConfigurationName;
                               
 
-                _logger.LogInformation("Created evaluation run with ID: {EvalRunId} and updated cache", evalRunId);
+                _logger.LogInformation("Created evaluation run with ID: {EvalRunId} by {AuditUser}", evalRunId, auditUser);
 
                 // Send dataset enrichment request to DataVerse API (no caching needed for external API calls)
                 var enrichmentRequestResult = await SendDatasetEnrichmentToDataVerseAsync(evalRunId, createDto);

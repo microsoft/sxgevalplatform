@@ -6,9 +6,9 @@ namespace Sxg.EvalPlatform.API.Storage.Configuration
     public class CacheOptions
     {
         /// <summary>
-        /// Cache provider type: "Memory" or "Redis"
+        /// Cache provider type: "None", "Memory", or "Redis"
         /// </summary>
-        public string Provider { get; set; } = "Memory";
+        public string Provider { get; set; } = "None";
 
         /// <summary>
         /// Default cache expiration time in minutes

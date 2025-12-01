@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
@@ -8,6 +9,7 @@ using System.Diagnostics;
 
 namespace SxgEvalPlatformApi.Controllers
 {
+    [Authorize]
     [Route("api/v1/eval")]
     public class EvalConfigsController : BaseController
     {
@@ -17,7 +19,8 @@ namespace SxgEvalPlatformApi.Controllers
         public EvalConfigsController(IMetricsConfigurationRequestHandler metricsConfigurationRequestHandler,
                                      IConfiguration config,
                                      ILogger<EvalConfigsController> logger,
-                                     IOpenTelemetryService telemetryService) : base(logger)
+                                     ICallerIdentificationService callerService,
+                                     IOpenTelemetryService telemetryService) : base(logger, callerService, telemetryService)
 
         {
             _metricsConfigurationRequestHandler = metricsConfigurationRequestHandler;
@@ -39,6 +42,7 @@ namespace SxgEvalPlatformApi.Controllers
 
             try
             {
+                var caller = GetCurrentUserId(); 
                 _logger.LogInformation("Request to retrieve default Metrics configuration");
                 activity?.SetTag("operation", "GetDefaultMetricsConfiguration");
 

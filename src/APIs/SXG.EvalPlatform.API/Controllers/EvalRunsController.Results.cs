@@ -57,8 +57,13 @@ public partial class EvalRunsController
                 return CreateValidationErrorResponse<EvaluationResultSaveResponseDto>();
             }
 
-            _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}", evalRunId);
+            // ? Get caller information for logging (service will also use it internally)
+            var callerDescription = GetCallerDescription();
 
+            _logger.LogInformation("SaveEvaluationResult called for EvalRunId: {EvalRunId} by {CallerDescription}",
+                  evalRunId, callerDescription);
+
+            // ? Service will automatically get caller information via ICallerIdentificationService
             var result = await _evaluationResultRequestHandler.SaveEvaluationResultAsync(evalRunId, saveDto);
 
             bool isSuccessful = result.RequestProcesingResult!.IsSuccessful;
