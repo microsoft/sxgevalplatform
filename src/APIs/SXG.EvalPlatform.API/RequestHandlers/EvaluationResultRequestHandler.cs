@@ -24,6 +24,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IConfigHelper _configHelper;
         private readonly ICacheManager _cacheManager;
         private readonly ICallerIdentificationService _callerService;
+        private readonly IMessagePublisher _messagePublisher;
 
         public EvaluationResultRequestHandler(
             IAzureBlobStorageService blobService,
@@ -34,7 +35,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             IConfigHelper configHelper,
             IMapper mapper,
             ICacheManager cacheManager,
-            ICallerIdentificationService callerService)
+            ICallerIdentificationService callerService,
+            IMessagePublisher messagePublisher)
         {
             _blobService = blobService;
             _evalRunTableService = evalRunTableService;
@@ -45,6 +47,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _metricsConfigTableService = metricsConfigTableService;
             _dataSetTableService = dataSetTableService;
             _callerService = callerService;
+            _messagePublisher = messagePublisher;
         }
 
 
@@ -100,6 +103,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
                     evalRunId, $"{containerName}/{evalSummaryFileName}", callerEmail);
+
+                //Write the same to service bus
+                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
+                
+                _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
+                    evalRunId);
 
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 

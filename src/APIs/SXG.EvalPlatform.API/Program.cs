@@ -39,6 +39,7 @@ builder.Services.AddAzureAdAuthentication(builder.Configuration);
 
 builder.Services.AddAutoMapperServices();
 builder.Services.AddHttpClientServices();
+builder.Services.AddServiceBus(builder.Configuration);
 builder.Services.AddBusinessServices(builder.Configuration);
 
 var app = builder.Build();

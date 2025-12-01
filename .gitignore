@@ -65,3 +65,6 @@ TestResults.xml
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/obj/Debug/net9.0/compressed/0urgra2c59-c2jlpeoesf.gz
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/bin/Release/net9.0
 /src/APIs/Sample-ClientApps/EvalPlatform.WebApp.Client/publish
+/src/APIs/Sxg.EvalPlatform.API.IntegrationTests/bin/Release/net8.0
+/src/APIs/SXG.EvalPlatform.API/appsettings.Development.json
+/src/APIs/SXG.EvalPlatform.API/appsettings.Local.json
