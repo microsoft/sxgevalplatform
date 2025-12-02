@@ -40,27 +40,27 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
     }
 
     /// <summary>
-    /// Request model for UpdateDataset Custom API
+    /// Request model for UpdateDatasetAsFile Custom API
     /// </summary>
-    public class UpdateDatasetRequest : EvalRunRequest
+    public class UpdateDatasetAsFileRequest : EvalRunRequest
     {
         public string DatasetId { get; set; }
 
-   public override bool IsValid()
+        public override bool IsValid()
         {
             return base.IsValid() && !string.IsNullOrWhiteSpace(DatasetId);
-  }
+        }
 
         public override string GetValidationError()
         {
-     string baseError = base.GetValidationError();
+            string baseError = base.GetValidationError();
             if (!string.IsNullOrWhiteSpace(baseError))
-      return baseError;
+                return baseError;
 
-       if (string.IsNullOrWhiteSpace(DatasetId))
-      return "DatasetId is required";
+            if (string.IsNullOrWhiteSpace(DatasetId))
+                return "DatasetId is required";
 
-       return null;
+            return null;
         }
     }
 

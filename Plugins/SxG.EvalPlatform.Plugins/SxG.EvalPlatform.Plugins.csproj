@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\AuthTokenHelper.cs" />
+    <Compile Include="Common\EvalRunHelper.cs" />
     <Compile Include="CustomApis\CustomApiConfig.cs" />
     <Compile Include="Implementation\EnvironmentVariableService.cs" />
     <Compile Include="Implementation\ServiceCache.cs" />
@@ -88,7 +89,6 @@
     <Compile Include="Plugins\GetEvalRun.cs" />
     <Compile Include="Plugins\PostEvalRun.cs" />
     <Compile Include="Plugins\PublishEnrichedDataset.cs" />
-    <Compile Include="Plugins\UpdateDataset.cs" />
     <Compile Include="Plugins\UpdateDatasetAsFile.cs" />
     <Compile Include="Plugins\UpdateFailedState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

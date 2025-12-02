@@ -81,40 +81,6 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
         }
 
         /// <summary>
-        /// UpdateDataset Custom API configuration - Accepts evalRunId and datasetId
-        /// </summary>
-        public static class UpdateDataset
-        {
-            public const string ApiName = "cr890_UpdateDataset";
-            public const string DisplayName = "Update Dataset";
-            public const string Description = "Updates dataset from external datasets API and updates eval run";
-            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.UpdateDataset";
-            public const string ExecutePrivilegeName = "cr890_UpdateDataset";
-            public const bool AllowedCustomProcessing = true;
-            public const bool IsFunction = false; // POST operation
-            public const bool IsPrivate = false;
-
-            /// <summary>
-            /// Request parameters for UpdateDataset API (evalRunId and datasetId)
-            /// </summary>
-            public static class RequestParameters
-            {
-                public const string EvalRunId = "evalRunId";
-                public const string DatasetId = "datasetId";
-            }
-
-            /// <summary>
-            /// Response properties for UpdateDataset API (standardized format)
-            /// </summary>
-            public static class ResponseProperties
-            {
-                public const string Success = "success";
-                public const string Message = "message";
-                public const string Timestamp = "timestamp";
-            }
-        }
-
-        /// <summary>
         /// PublishEnrichedDataset Custom API configuration (renamed from EnrichDataset)
         /// </summary>
         public static class PublishEnrichedDataset

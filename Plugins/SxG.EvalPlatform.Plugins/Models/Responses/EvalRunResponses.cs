@@ -201,9 +201,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
     }
 
     /// <summary>
-    /// Response model for UpdateDataset Custom API (standardized format)
+    /// Response model for UpdateDatasetAsFile Custom API (standardized format)
     /// </summary>
-    public class UpdateDatasetResponse
+    public class UpdateDatasetAsFileResponse
     {
         /// <summary>
         /// Indicates if the operation was successful
@@ -224,12 +224,12 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         /// Creates a successful response
         /// </summary>
         /// <returns>Success response</returns>
-        public static UpdateDatasetResponse CreateSuccess()
+        public static UpdateDatasetAsFileResponse CreateSuccess()
         {
-            return new UpdateDatasetResponse
+            return new UpdateDatasetAsFileResponse
             {
                 Success = true,
-                Message = "Dataset updated successfully",
+                Message = "Dataset file updated successfully",
                 Timestamp = DateTime.UtcNow
             };
         }
@@ -240,9 +240,9 @@ namespace SxG.EvalPlatform.Plugins.Models.Responses
         /// <param name="message">Error message</param>
         /// <param name="evalRunId">Eval run ID</param>
         /// <returns>Error response</returns>
-        public static UpdateDatasetResponse CreateError(string message, string evalRunId = null)
+        public static UpdateDatasetAsFileResponse CreateError(string message, string evalRunId = null)
         {
-            return new UpdateDatasetResponse
+            return new UpdateDatasetAsFileResponse
             {
                 Success = false,
                 Message = message,

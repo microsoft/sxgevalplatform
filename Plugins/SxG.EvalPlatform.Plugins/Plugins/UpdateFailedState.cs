@@ -68,7 +68,7 @@ namespace SxG.EvalPlatform.Plugins
                 string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
 
                 // Update external API status to Failed
-                bool externalUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "DatasetEnrichmentFailed", authToken, loggingService, configService);
+                bool externalUpdateSuccess = EvalRunHelper.UpdateExternalEvalRunStatus(request.EvalRunId, "DatasetEnrichmentFailed", authToken, loggingService, configService, nameof(UpdateFailedState));
                 if (!externalUpdateSuccess)
                 {
                     loggingService.Trace($"{nameof(UpdateFailedState)}: Warning - Failed to update external status, but Dataverse update succeeded", TraceSeverity.Warning);
@@ -156,78 +156,6 @@ namespace SxG.EvalPlatform.Plugins
             catch (Exception ex)
             {
                 loggingService.LogException(ex, $"{nameof(UpdateFailedState)}: Exception updating eval run status in Dataverse");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Updates external eval run status via API call
-        /// </summary>
-        /// <param name="evalRunId">Eval Run ID</param>
-        /// <param name="status">Status to set (e.g., "Failed")</param>
-        /// <param name="authToken">Authentication bearer token</param>
-        /// <param name="loggingService">Logging service</param>
-        /// <param name="configService">Configuration service</param>
-        /// <returns>True if update successful, false otherwise</returns>
-        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
-        {
-            var startTime = DateTimeOffset.UtcNow;
-            try
-            {
-                string url = $"{configService.GetEvalRunsStatusApiUrl(evalRunId)}";
-                loggingService.Trace($"{nameof(UpdateFailedState)}: Calling external status API: {url}");
-
-                var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-                httpWebRequest.Method = "PUT";
-                httpWebRequest.ContentType = "application/json";
-                httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
-
-                // Add authorization header if token is available
-                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
-
-                // Prepare request body
-                string requestBody = $"{{\"status\":\"{status}\"}}";
-                byte[] data = Encoding.UTF8.GetBytes(requestBody);
-                httpWebRequest.ContentLength = data.Length;
-
-                loggingService.Trace($"{nameof(UpdateFailedState)}: Status update request body: {requestBody}");
-
-                using (Stream requestStream = httpWebRequest.GetRequestStream())
-                {
-                    requestStream.Write(data, 0, data.Length);
-                }
-
-                using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
-                {
-                    var duration = DateTimeOffset.UtcNow - startTime;
-                    bool success = httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.NoContent;
-
-                    loggingService.LogDependency("EvalAPI", url, startTime, duration, success);
-
-                    if (success)
-                    {
-                        loggingService.Trace($"{nameof(UpdateFailedState)}: Successfully updated external status to {status}");
-                        return true;
-                    }
-                    else
-                    {
-                        loggingService.Trace($"{nameof(UpdateFailedState)}: External status API returned status: {httpWebResponse.StatusCode}", TraceSeverity.Warning);
-                        return false;
-                    }
-                }
-            }
-            catch (WebException webEx)
-            {
-                var duration = DateTimeOffset.UtcNow - startTime;
-                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
-                loggingService.LogException(webEx, $"{nameof(UpdateFailedState)}: WebException updating external status");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                var duration = DateTimeOffset.UtcNow - startTime;
-                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
-                loggingService.LogException(ex, $"{nameof(UpdateFailedState)}: Exception updating external status");
                 return false;
             }
         }
