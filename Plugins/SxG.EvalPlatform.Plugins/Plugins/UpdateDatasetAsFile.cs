@@ -35,6 +35,7 @@ namespace SxG.EvalPlatform.Plugins
             var loggingService = localContext.LoggingService;
             var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
+            var managedIdentityService = localContext.ManagedIdentityService;
 
             try
             {
@@ -65,15 +66,19 @@ namespace SxG.EvalPlatform.Plugins
 
                 loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
+                // Get authentication token for external API calls
+                string apiScope = configService.GetApiScope();
+                string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
+
                 // Update external status to "EnrichingDataset" before fetching dataset
-                bool statusUpdateSuccess = EvalRunHelper.UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", null, loggingService, configService, nameof(UpdateDatasetAsFile));
+                bool statusUpdateSuccess = EvalRunHelper.UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", authToken, loggingService, configService, nameof(UpdateDatasetAsFile));
                 if (!statusUpdateSuccess)
                 {
                     loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch", TraceSeverity.Warning);
                 }
 
                 // Call external dataset API to get dataset data using datasetId
-                var datasetJson = CallExternalDatasetApi(request.DatasetId, loggingService, configService);
+                var datasetJson = CallExternalDatasetApi(request.DatasetId, authToken, loggingService, configService);
                 if (datasetJson == null)
                 {
                     var errorResponse = UpdateDatasetAsFileResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
@@ -163,7 +168,12 @@ namespace SxG.EvalPlatform.Plugins
         /// <summary>
         /// Calls external dataset API to retrieve dataset data
         /// </summary>
-        private string CallExternalDatasetApi(string datasetId, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        /// <param name="datasetId">Dataset ID</param>
+        /// <param name="authToken">Authentication bearer token</param>
+        /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
+        /// <returns>Dataset JSON string or null if failed</returns>
+        private string CallExternalDatasetApi(string datasetId, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
@@ -175,6 +185,9 @@ namespace SxG.EvalPlatform.Plugins
                 httpWebRequest.Method = "GET";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {

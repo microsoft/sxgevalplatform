@@ -273,14 +273,13 @@ cr890_evalrun_cr890_status.Failed     // 4
 
 ### Overview
 
-The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datasets:
+The SxG Eval Platform exposes the following Custom APIs for managing evaluation runs and datasets:
 
 1. **PostEvalRun** - Create new evaluation run
 2. **GetEvalRun** - Retrieve evaluation run details
 3. **UpdateDatasetAsFile** - Fetch dataset from external API and store as file
-4. **UpdateEnrichedDatasetFile** - Update enriched dataset file after enrichment
-5. **PublishEnrichedDataset** - Publish enriched dataset to external API
-6. **UpdateFailedState** - Mark evaluation run as failed
+4. **PublishEnrichedDataset** - Publish enriched dataset to external API
+5. **UpdateFailedState** - Mark evaluation run as failed
 
 ---
 
@@ -419,9 +418,11 @@ The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datas
 
 **Operations Performed:**
 1. Validates eval run ID
-2. Retrieves `cr890_evalrun` record by primary key
-3. Converts status from integer to string
-4. Returns all fields including JSON dataset
+2. Retrieves `cr890_evalrun` record by primary key using early-bound entity
+3. Downloads dataset from `cr890_datasetfile` file column using file blocks API
+4. Converts status from integer to string
+5. Parses dataset JSON into array of `DatasetItem` objects
+6. Returns all fields including parsed dataset
 
 **External API Calls:** None
 
@@ -502,68 +503,7 @@ The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datas
 
 ---
 
-### 4. UpdateEnrichedDatasetFile
-
-**Purpose:** Updates enriched dataset file after Power Automate flow enrichment.
-
-**API Details:**
-- **API Name:** `cr890_UpdateEnrichedDatasetFile`
-- **Display Name:** Update Enriched Dataset File
-- **HTTP Method:** POST (Action)
-- **Is Function:** No
-- **Execute Privilege:** `cr890_UpdateEnrichedDatasetFile`
-
-**Request Parameters:**
-
-| Parameter Name | Type | Required | Description |
-|----------------|------|----------|-------------|
-| `evalRunId` | String (GUID) | Yes | Unique identifier for the evaluation run |
-| `enrichedDatasetJson` | String (JSON) | Yes | Enriched dataset JSON content |
-
-**Request Example:**
-```json
-{
-    "evalRunId": "6cb6deb9-4b5b-4a93-987b-fdaccc5e79dd",
-    "enrichedDatasetJson": "[{\"prompt\":\"Test\",\"actualResponse\":\"Response\"}]"
-}
-```
-
-**Response Properties:**
-
-| Property Name | Type | Description |
-|--------------|------|-------------|
-| `success` | Boolean | Indicates if operation was successful |
-| `message` | String | Success or error message |
-| `timestamp` | String (ISO 8601) | Timestamp of operation |
-
-**Success Response Example:**
-```json
-{
-    "success": true,
-    "message": "Enriched dataset file updated successfully",
-    "timestamp": "2024-01-15T10:37:00.000Z"
-}
-```
-
-**Error Response Example:**
-```json
-{
-    "success": false,
-    "message": "EnrichedDatasetJson is required",
-    "timestamp": "2024-01-15T10:37:00.000Z"
-}
-```
-
-**Operations Performed:**
-1. Validates request parameters
-2. Stores enriched dataset as file in `cr890_datasetfile` column using file blocks API
-3. Sets `cr890_status` to 2 (Updated)
-
-**External API Calls:** None
-
----
-
-### 5. PublishEnrichedDataset
+### 4. PublishEnrichedDataset
 
 **Purpose:** Publishes enriched dataset to external API.
 
@@ -615,9 +555,9 @@ The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datas
 
 **Operations Performed:**
 1. Validates eval run ID
-2. Retrieves `cr890_dataset` from eval run record
+2. Downloads dataset from `cr890_datasetfile` file column using file blocks API
 3. Publishes enriched dataset to external API
-4. Updates `cr890_status` to 3 (Completed)
+4. Updates `cr890_status` to 3 (Completed) using `EvalRunHelper`
 
 **External API Calls:**
 
@@ -630,7 +570,7 @@ The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datas
 
 ---
 
-### 6. UpdateFailedState
+### 5. UpdateFailedState
 
 **Purpose:** Marks evaluation run as failed in both Dataverse and external API.
 
@@ -704,12 +644,13 @@ The SxG Eval Platform exposes Custom APIs for managing evaluation runs and datas
 
 ## Custom API Summary Table
 
+### Implemented Plugins
+
 | API Name | Method | Function | Request Params | Response Params | External Calls | Status Update |
 |----------|--------|----------|----------------|-----------------|----------------|---------------|
 | `cr890_PostEvalRun` | POST | No | 5 params | 3 params | 0 | Creates (New) |
 | `cr890_GetEvalRun` | GET | Yes | 1 param | 8 params | 0 | None |
 | `cr890_UpdateDatasetAsFile` | POST | No | 2 params | 3 params | 2 | Sets Updated |
-| `cr890_UpdateEnrichedDatasetFile` | POST | No | 2 params | 3 params | 0 | Sets Updated |
 | `cr890_PublishEnrichedDataset` | POST | No | 1 param | 3 params | 1 | Sets Completed |
 | `cr890_UpdateFailedState` | POST | No | 1 param | 3 params | 1 | Sets Failed |
 
@@ -765,11 +706,6 @@ Only `GetEvalRun` returns extended data:
 - `datasetId` cannot be null or empty
 - Both `evalRunId` and `datasetId` are required
 
-### UpdateEnrichedDatasetFile Specific
-- `enrichedDatasetJson` cannot be null or empty
-- `enrichedDatasetJson` must be valid JSON format
-- Both `evalRunId` and `enrichedDatasetJson` are required
-
 ### PostEvalRun Specific
 - Only `evalRunId` is required
 - Other parameters are optional but recommended
@@ -790,8 +726,8 @@ All external API calls use OAuth 2.0 Bearer token authentication:
 
 | Status | Used In External API | Description |
 |--------|---------------------|-------------|
-| `EnrichingDataset` | UpdateDataset | Indicates dataset enrichment in progress |
-| `Failed` | UpdateFailedState | Indicates evaluation run failed |
+| `EnrichingDataset` | UpdateDatasetAsFile | Indicates dataset enrichment in progress |
+| `DatasetEnrichmentFailed` | UpdateFailedState | Indicates dataset enrichment failed |
 
 ### Error Handling
 
@@ -802,4 +738,3 @@ All external API calls use OAuth 2.0 Bearer token authentication:
 
 ---
 
-## Development
