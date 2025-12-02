@@ -6,6 +6,7 @@ namespace SxG.EvalPlatform.Plugins
     using System.Text;
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Sdk.Messages;
+    using SxG.EvalPlatform.Plugins.Common;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
@@ -34,6 +35,7 @@ namespace SxG.EvalPlatform.Plugins
             var loggingService = localContext.LoggingService;
             var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
+            var managedIdentityService = localContext.ManagedIdentityService;
 
             try
             {
@@ -48,7 +50,7 @@ namespace SxG.EvalPlatform.Plugins
                     string validationError = request.GetValidationError();
                     loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Validation failed - {validationError}", TraceSeverity.Warning);
 
-                    var errorResponse = UpdateDatasetResponse.CreateError(validationError, request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError(validationError, request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
@@ -57,25 +59,29 @@ namespace SxG.EvalPlatform.Plugins
                 if (string.IsNullOrWhiteSpace(request.DatasetId))
                 {
                     loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Validation failed - DatasetId is required", TraceSeverity.Warning);
-                    var errorResponse = UpdateDatasetResponse.CreateError("DatasetId is required", request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError("DatasetId is required", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
 
                 loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Request validated successfully - EvalRunId: {request.EvalRunId}, DatasetId: {request.DatasetId}");
 
+                // Get authentication token for external API calls
+                string apiScope = configService.GetApiScope();
+                string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
+
                 // Update external status to "EnrichingDataset" before fetching dataset
-                bool statusUpdateSuccess = UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", loggingService, configService);
+                bool statusUpdateSuccess = EvalRunHelper.UpdateExternalEvalRunStatus(request.EvalRunId, "EnrichingDataset", authToken, loggingService, configService, nameof(UpdateDatasetAsFile));
                 if (!statusUpdateSuccess)
                 {
                     loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Warning - Failed to update external status to EnrichingDataset, continuing with dataset fetch", TraceSeverity.Warning);
                 }
 
                 // Call external dataset API to get dataset data using datasetId
-                var datasetJson = CallExternalDatasetApi(request.DatasetId, loggingService, configService);
+                var datasetJson = CallExternalDatasetApi(request.DatasetId, authToken, loggingService, configService);
                 if (datasetJson == null)
                 {
-                    var errorResponse = UpdateDatasetResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError("Failed to retrieve dataset from external API", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
@@ -84,7 +90,7 @@ namespace SxG.EvalPlatform.Plugins
                 if (!Guid.TryParse(request.EvalRunId, out Guid evalRunGuid))
                 {
                     loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Invalid EvalRunId format: {request.EvalRunId}", TraceSeverity.Error);
-                    var errorResponse = UpdateDatasetResponse.CreateError("Invalid EvalRunId format", request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError("Invalid EvalRunId format", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
@@ -93,7 +99,7 @@ namespace SxG.EvalPlatform.Plugins
                 bool uploadSuccess = UploadDatasetAsFile(evalRunGuid, request.DatasetId, datasetJson, organizationService, loggingService);
                 if (!uploadSuccess)
                 {
-                    var errorResponse = UpdateDatasetResponse.CreateError("Failed to upload dataset as file", request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError("Failed to upload dataset as file", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
@@ -102,7 +108,7 @@ namespace SxG.EvalPlatform.Plugins
                 bool updateSuccess = UpdateEvalRunStatus(evalRunGuid, organizationService, loggingService);
                 if (!updateSuccess)
                 {
-                    var errorResponse = UpdateDatasetResponse.CreateError("Failed to update eval run status", request.EvalRunId);
+                    var errorResponse = UpdateDatasetAsFileResponse.CreateError("Failed to update eval run status", request.EvalRunId);
                     SetResponseParameters(context, errorResponse, loggingService);
                     return;
                 }
@@ -116,7 +122,7 @@ namespace SxG.EvalPlatform.Plugins
                 });
 
                 // Create success response
-                var response = UpdateDatasetResponse.CreateSuccess();
+                var response = UpdateDatasetAsFileResponse.CreateSuccess();
                 SetResponseParameters(context, response, loggingService);
 
                 loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Execution completed successfully");
@@ -126,7 +132,7 @@ namespace SxG.EvalPlatform.Plugins
                 loggingService.LogException(ex, $"{nameof(UpdateDatasetAsFile)}: Exception occurred");
 
                 // Create error response
-                var errorResponse = UpdateDatasetResponse.CreateError($"Internal server error: {ex.Message}");
+                var errorResponse = UpdateDatasetAsFileResponse.CreateError($"Internal server error: {ex.Message}");
                 SetResponseParameters(context, errorResponse, loggingService);
 
                 throw new InvalidPluginExecutionException($"{nameof(UpdateDatasetAsFile)} :: Error :: " + ex.Message, ex);
@@ -141,9 +147,9 @@ namespace SxG.EvalPlatform.Plugins
         /// <summary>
         /// Extracts request parameters from plugin execution context
         /// </summary>
-        private UpdateDatasetRequest ExtractRequestFromContext(IPluginExecutionContext context, IPluginLoggingService loggingService)
+        private UpdateDatasetAsFileRequest ExtractRequestFromContext(IPluginExecutionContext context, IPluginLoggingService loggingService)
         {
-            var request = new UpdateDatasetRequest();
+            var request = new UpdateDatasetAsFileRequest();
 
             // Extract evalRunId parameter
             if (context.InputParameters.Contains(CustomApiConfig.UpdateDatasetAsFile.RequestParameters.EvalRunId))
@@ -160,71 +166,14 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Updates external eval run status via API call
-        /// </summary>
-        private bool UpdateExternalEvalRunStatus(string evalRunId, string status, IPluginLoggingService loggingService, IPluginConfigurationService configService)
-        {
-            var startTime = DateTimeOffset.UtcNow;
-            try
-            {
-                string url = $"{configService.GetEvalRunsStatusApiUrl(evalRunId)}";
-                loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Calling external status API: {url}");
-
-                var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-                httpWebRequest.Method = "PUT";
-                httpWebRequest.ContentType = "application/json";
-                httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
-
-                string requestBody = $"{{\"status\":\"{status}\"}}";
-                byte[] data = Encoding.UTF8.GetBytes(requestBody);
-                httpWebRequest.ContentLength = data.Length;
-
-                loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Status update request body: {requestBody}");
-
-                using (Stream requestStream = httpWebRequest.GetRequestStream())
-                {
-                    requestStream.Write(data, 0, data.Length);
-                }
-
-                using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
-                {
-                    var duration = DateTimeOffset.UtcNow - startTime;
-                    bool success = httpWebResponse.StatusCode == HttpStatusCode.OK || httpWebResponse.StatusCode == HttpStatusCode.NoContent;
-
-                    loggingService.LogDependency("EvalAPI", url, startTime, duration, success);
-
-                    if (success)
-                    {
-                        loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: Successfully updated external status to {status}");
-                        return true;
-                    }
-                    else
-                    {
-                        loggingService.Trace($"{nameof(UpdateDatasetAsFile)}: External status API returned status: {httpWebResponse.StatusCode}", TraceSeverity.Warning);
-                        return false;
-                    }
-                }
-            }
-            catch (WebException webEx)
-            {
-                var duration = DateTimeOffset.UtcNow - startTime;
-                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
-                loggingService.LogException(webEx, $"{nameof(UpdateDatasetAsFile)}: WebException updating external status");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                var duration = DateTimeOffset.UtcNow - startTime;
-                loggingService.LogDependency("EvalAPI", "UpdateStatus", startTime, duration, false);
-                loggingService.LogException(ex, $"{nameof(UpdateDatasetAsFile)}: Exception updating external status");
-                return false;
-            }
-        }
-
-        /// <summary>
         /// Calls external dataset API to retrieve dataset data
         /// </summary>
-        private string CallExternalDatasetApi(string datasetId, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        /// <param name="datasetId">Dataset ID</param>
+        /// <param name="authToken">Authentication bearer token</param>
+        /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
+        /// <returns>Dataset JSON string or null if failed</returns>
+        private string CallExternalDatasetApi(string datasetId, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
@@ -236,6 +185,9 @@ namespace SxG.EvalPlatform.Plugins
                 httpWebRequest.Method = "GET";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 {
@@ -393,7 +345,7 @@ namespace SxG.EvalPlatform.Plugins
         /// <summary>
         /// Sets response parameters in the plugin execution context
         /// </summary>
-        private void SetResponseParameters(IPluginExecutionContext context, UpdateDatasetResponse response, IPluginLoggingService loggingService)
+        private void SetResponseParameters(IPluginExecutionContext context, UpdateDatasetAsFileResponse response, IPluginLoggingService loggingService)
         {
             try
             {

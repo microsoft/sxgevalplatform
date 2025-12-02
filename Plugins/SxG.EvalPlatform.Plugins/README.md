@@ -34,8 +34,8 @@ The configuration service builds the following API endpoints:
 
 | Endpoint | Method | Used By | Purpose | Configuration Method |
 |----------|--------|---------|---------|---------------------|
-| `/api/v1/eval/datasets/{datasetId}` | GET | UpdateDataset | Fetch dataset | `GetDatasetsApiUrl(datasetId)` |
-| `/api/v1/eval/runs/{evalRunId}/status` | PUT | UpdateDataset, UpdateFailedState | Update status | `GetEvalRunsStatusApiUrl(evalRunId)` |
+| `/api/v1/eval/datasets/{datasetId}` | GET | UpdateDatasetAsFile | Fetch dataset | `GetDatasetsApiUrl(datasetId)` |
+| `/api/v1/eval/runs/{evalRunId}/status` | PUT | UpdateDatasetAsFile, UpdateFailedState | Update status | `GetEvalRunsStatusApiUrl(evalRunId)` |
 | `/api/v1/eval/runs/{evalRunId}/enriched-dataset` | POST | PublishEnrichedDataset | Publish enriched data | `GetEnrichedDatasetApiUrl(evalRunId)` |
 
 ## Logging Layer
@@ -123,7 +123,9 @@ The logging service automatically detects the configuration at runtime:
 
 Both logging destinations can run simultaneously or independently based on your configuration.
 
-## Authentication Helper
+## Helper Classes
+
+### AuthTokenHelper
 
 ### Overview
 
@@ -163,6 +165,69 @@ AuthTokenHelper.AddAuthorizationHeader(
 The OAuth scope is configured via the `cr890_ApiScope` environment variable:
 - **Default**: `443bbe62-c474-49f7-884c-d1b5a23eb735/.default`
 - **Format**: `{ResourceId}/.default` or specific scopes
+
+---
+
+### EvalRunHelper
+
+### Overview
+
+The `EvalRunHelper` utility provides reusable methods for common eval run operations across plugins, promoting code reuse and consistency.
+
+### Usage
+
+**Update External Eval Run Status:**
+```csharp
+// Update external API status
+bool success = EvalRunHelper.UpdateExternalEvalRunStatus(
+    evalRunId, 
+    "EnrichingDataset", 
+    authToken, 
+    loggingService, 
+    configService,
+    nameof(YourPlugin));
+```
+
+**Update Eval Run Status in Dataverse:**
+```csharp
+// Update status to Completed (3)
+bool success = EvalRunHelper.UpdateEvalRunStatus(
+    evalRunId, 
+    3, 
+    organizationService, 
+    loggingService,
+    nameof(YourPlugin));
+```
+
+### Features
+
+- **Centralized status updates** - Single reusable method for updating status in Dataverse and external API
+- **Comprehensive logging** - All operations logged with caller context
+- **Graceful error handling** - Returns boolean success indicators
+- **Consistent implementation** - Ensures all plugins use the same approach
+
+### Methods
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `UpdateExternalEvalRunStatus` | Updates eval run status in external API via PUT call | `bool` - Success indicator |
+| `UpdateEvalRunStatus` | Updates eval run status field in Dataverse | `bool` - Success indicator |
+
+### Status Values
+
+Common status values used in external API calls:
+- `EnrichingDataset` - Dataset enrichment in progress
+- `DatasetEnrichmentFailed` - Dataset enrichment failed
+- `Failed` - General failure status
+
+Common status integer values for Dataverse:
+- `0` - New
+- `1` - Started
+- `2` - Updated
+- `3` - Completed
+- `4` - Failed
+
+---
 
 ## Entity Structure
 
@@ -208,11 +273,11 @@ cr890_evalrun_cr890_status.Failed     // 4
 
 ### Overview
 
-The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and datasets:
+The SxG Eval Platform exposes the following Custom APIs for managing evaluation runs and datasets:
 
 1. **PostEvalRun** - Create new evaluation run
 2. **GetEvalRun** - Retrieve evaluation run details
-3. **UpdateDataset** - Fetch and update dataset from external API
+3. **UpdateDatasetAsFile** - Fetch dataset from external API and store as file
 4. **PublishEnrichedDataset** - Publish enriched dataset to external API
 5. **UpdateFailedState** - Mark evaluation run as failed
 
@@ -353,24 +418,26 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 
 **Operations Performed:**
 1. Validates eval run ID
-2. Retrieves `cr890_evalrun` record by primary key
-3. Converts status from integer to string
-4. Returns all fields including JSON dataset
+2. Retrieves `cr890_evalrun` record by primary key using early-bound entity
+3. Downloads dataset from `cr890_datasetfile` file column using file blocks API
+4. Converts status from integer to string
+5. Parses dataset JSON into array of `DatasetItem` objects
+6. Returns all fields including parsed dataset
 
 **External API Calls:** None
 
 ---
 
-### 3. UpdateDataset
+### 3. UpdateDatasetAsFile
 
-**Purpose:** Fetches dataset from external API and updates evaluation run.
+**Purpose:** Fetches dataset from external API and stores it as a file in Dataverse file column (DLP-compliant).
 
 **API Details:**
-- **API Name:** `cr890_UpdateDataset`
-- **Display Name:** Update Dataset
+- **API Name:** `cr890_UpdateDatasetAsFile`
+- **Display Name:** Update Dataset As File
 - **HTTP Method:** POST (Action)
 - **Is Function:** No
-- **Execute Privilege:** `cr890_UpdateDataset`
+- **Execute Privilege:** `cr890_UpdateDatasetAsFile`
 
 **Request Parameters:**
 
@@ -399,7 +466,7 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 ```json
 {
     "success": true,
-  "message": "Dataset updated successfully",
+    "message": "Dataset file updated successfully",
     "timestamp": "2024-01-15T10:35:00.000Z"
 }
 ```
@@ -408,7 +475,7 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 ```json
 {
     "success": false,
- "message": "DatasetId is required",
+    "message": "DatasetId is required",
     "timestamp": "2024-01-15T10:35:00.000Z"
 }
 ```
@@ -417,7 +484,7 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 1. Validates request parameters (both IDs required)
 2. Updates external API status to "EnrichingDataset"
 3. Fetches dataset from external datasets API
-4. Updates `cr890_evalrun` record with fetched dataset JSON
+4. Stores dataset as file in `cr890_datasetfile` column using file blocks API
 5. Sets `cr890_status` to 2 (Updated)
 
 **External API Calls:**
@@ -488,9 +555,9 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 
 **Operations Performed:**
 1. Validates eval run ID
-2. Retrieves `cr890_dataset` from eval run record
+2. Downloads dataset from `cr890_datasetfile` file column using file blocks API
 3. Publishes enriched dataset to external API
-4. Updates `cr890_status` to 3 (Completed)
+4. Updates `cr890_status` to 3 (Completed) using `EvalRunHelper`
 
 **External API Calls:**
 
@@ -577,11 +644,13 @@ The SxG Eval Platform exposes 5 Custom APIs for managing evaluation runs and dat
 
 ## Custom API Summary Table
 
+### Implemented Plugins
+
 | API Name | Method | Function | Request Params | Response Params | External Calls | Status Update |
 |----------|--------|----------|----------------|-----------------|----------------|---------------|
 | `cr890_PostEvalRun` | POST | No | 5 params | 3 params | 0 | Creates (New) |
 | `cr890_GetEvalRun` | GET | Yes | 1 param | 8 params | 0 | None |
-| `cr890_UpdateDataset` | POST | No | 2 params | 3 params | 2 | Sets Updated |
+| `cr890_UpdateDatasetAsFile` | POST | No | 2 params | 3 params | 2 | Sets Updated |
 | `cr890_PublishEnrichedDataset` | POST | No | 1 param | 3 params | 1 | Sets Completed |
 | `cr890_UpdateFailedState` | POST | No | 1 param | 3 params | 1 | Sets Failed |
 
@@ -632,7 +701,7 @@ Only `GetEvalRun` returns extended data:
 - `evalRunId` must be a valid GUID format
 - `evalRunId` cannot be null or empty
 
-### UpdateDataset Specific
+### UpdateDatasetAsFile Specific
 - `datasetId` must be a valid GUID format
 - `datasetId` cannot be null or empty
 - Both `evalRunId` and `datasetId` are required
@@ -657,8 +726,8 @@ All external API calls use OAuth 2.0 Bearer token authentication:
 
 | Status | Used In External API | Description |
 |--------|---------------------|-------------|
-| `EnrichingDataset` | UpdateDataset | Indicates dataset enrichment in progress |
-| `Failed` | UpdateFailedState | Indicates evaluation run failed |
+| `EnrichingDataset` | UpdateDatasetAsFile | Indicates dataset enrichment in progress |
+| `DatasetEnrichmentFailed` | UpdateFailedState | Indicates dataset enrichment failed |
 
 ### Error Handling
 
@@ -669,4 +738,3 @@ All external API calls use OAuth 2.0 Bearer token authentication:
 
 ---
 
-## Development

@@ -79,7 +79,7 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 // Update status to Completed (value: 3)
-                UpdateEvalRunStatus(request.EvalRunId, 3, organizationService, loggingService);
+                EvalRunHelper.UpdateEvalRunStatus(request.EvalRunId, 3, organizationService, loggingService, nameof(PublishEnrichedDataset));
 
                 // Log event to Application Insights
                 loggingService.LogEvent("PublishEnrichedDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
@@ -226,38 +226,6 @@ namespace SxG.EvalPlatform.Plugins
             {
                 loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception downloading dataset file");
                 return null;
-            }
-        }
-
-        /// <summary>
-        /// Updates eval run status
-        /// </summary>
-        /// <param name="evalRunId">Eval run ID</param>
-        /// <param name="statusValue">New status integer value</param>
-        /// <param name="organizationService">Organization service</param>
-        /// <param name="loggingService">Logging service</param>
-        private void UpdateEvalRunStatus(string evalRunId, int statusValue, IOrganizationService organizationService, IPluginLoggingService loggingService)
-        {
-            try
-            {
-                // Parse the EvalRunId GUID for direct update using Primary Key
-                if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
-                {
-                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format for status update: {evalRunId}", TraceSeverity.Error);
-                    return;
-                }
-
-                // Update using late-bound entity to avoid serialization issues with Elastic tables
-                var updateEntity = new Entity("cr890_evalrun", evalRunGuid);
-                updateEntity["cr890_status"] = new OptionSetValue(statusValue);
-
-                organizationService.Update(updateEntity);
-
-                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully updated eval run status to {statusValue}");
-            }
-            catch (Exception ex)
-            {
-                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception updating eval run status");
             }
         }
 
