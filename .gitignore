@@ -58,3 +58,4 @@ TestResults.xml
 /src/APIs/SXG.EvalPlatform.API/appsettings.Development.json
 /src/APIs/SXG.EvalPlatform.API/appsettings.Local.json
 /src/APIs/SXG.EvalPlatform.API/Properties/PublishProfiles/sxgevalapippe - Zip Deploy.pubxml.user
+/src/APIs/SXG.EvalPlatform.API/appsettings.local.json
