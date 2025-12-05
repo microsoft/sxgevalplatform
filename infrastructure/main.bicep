@@ -141,3 +141,69 @@ module serviceBus 'templates/bicep/ServiceBus/main.module.bicep' = {
     managedIdentityId: managedIdentity.outputs.managedIdentityId
   }
 }
+
+
+//App Service Plan Region1
+module appServicePlanRegion1 'templates/bicep/AppServicePlan/main.module.bicep' = {
+  name: 'appServicePlanRegion1-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-appServicePlan-${environment}-region1'
+    location: location
+    environment: environment
+    componentId: componentId
+    serviceName: serviceName
+  }
+}
+
+
+//App Service Plan Region2
+module appServicePlanRegion2 'templates/bicep/AppServicePlan/main.module.bicep' = {
+  name: 'appServicePlanRegion2-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-appServicePlan-${environment}-region2'
+    location: location
+    environment: environment
+    componentId: componentId
+    serviceName: serviceName
+  }
+}
+
+    
+
+//App Service Region1
+
+module appServiceRegion1 'templates/bicep/AppService/main.module.bicep' = {
+  name: 'appServiceRegion1-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-appService-${environment}-region1'
+    location: location
+    environment: environment
+    componentId: componentId
+    serviceName: serviceName
+  }
+}
+
+//App Service Region2
+
+module appServiceRegion2 'templates/bicep/AppService/main.module.bicep' = {
+  name: 'appServiceRegion2-${releaseNumber}'
+  dependsOn: [
+    // resourceNames
+  ]
+  params: {
+    name: 'sxg-eval-appService-${environment}-region2'
+    location: location
+    environment: environment
+    componentId: componentId
+    serviceName: serviceName
+  }
+}

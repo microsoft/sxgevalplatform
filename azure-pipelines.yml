@@ -78,7 +78,7 @@ stages:
 #   jobs:
 #     - job: BuildAndDeployDev
 #       pool:
-#         vmImage: 'windows'
+#         vmImage: 'windows-latest'
 #       steps:
 #         - checkout: self
 
@@ -108,7 +108,7 @@ stages:
 #     - deployment: DeployQA
 #       environment: 'PPE'
 #       pool:
-#         vmImage: 'windows'
+#         vmImage: 'windows-latest'
 #       strategy:
 #         runOnce:
 #           deploy:
@@ -129,7 +129,7 @@ stages:
 #     - deployment: DeployProd
 #       environment: 'Prod'
 #       pool:
-#         vmImage: 'windows'
+#         vmImage: 'windows-latest'
 #       strategy:
 #         runOnce:
 #           deploy:
