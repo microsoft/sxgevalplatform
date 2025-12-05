@@ -57,5 +57,6 @@ TestResults.xml
 /src/APIs/Sxg.EvalPlatform.API.IntegrationTests/bin/Release/net8.0
 /src/APIs/SXG.EvalPlatform.API/appsettings.Development.json
 /src/APIs/SXG.EvalPlatform.API/appsettings.Local.json
-/src/APIs/SXG.EvalPlatform.API/Properties/PublishProfiles/sxgevalapippe - Zip Deploy.pubxml.user
 /src/APIs/SXG.EvalPlatform.API/appsettings.local.json
+/src/APIs/SXG.EvalPlatform.API/Properties/PublishProfiles
+/src/APIs/SXG.EvalPlatform.API/Properties/ServiceDependencies/sxgevalapippe - Zip Deploy/profile.arm.json
