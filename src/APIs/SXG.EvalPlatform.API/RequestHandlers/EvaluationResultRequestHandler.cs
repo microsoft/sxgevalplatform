@@ -1,4 +1,5 @@
 using AutoMapper;
+using Newtonsoft.Json.Linq;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.TableEntities;
@@ -101,8 +102,24 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath} and updated cache",
                     evalRunId, $"{containerName}/{evalDatasetFileName}");
 
-                //Write the same to service bus
-                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
+                //Post the metadata, summary, and results to the service bus
+                var combinedJson = JObject.Parse(evalResultDataset.ToString());
+                combinedJson["summary"] = JObject.Parse(evalResultSummary.ToString());
+                combinedJson["details"] = new JObject
+                {
+                    ["evalRunId"] = evalRunId.ToString(),
+                    ["agentId"] = evalRunEntity.AgentId.ToString(),
+                    ["metricsConfigurationId"] = evalRunEntity.MetricsConfigurationId.ToString(),
+                    ["dataSetId"] = evalRunEntity.DataSetId.ToString(),
+                    ["status"] = evalRunEntity.Status.ToString(),
+                    ["startedDatetime"] = evalRunEntity.StartedDatetime,
+                    ["completedDatetime"] = evalRunEntity.CompletedDatetime,
+                    ["metricsConfigurationName"] = await GetMetricsConfigurationName(evalRunEntity.MetricsConfigurationId),
+                    ["dataSetName"] = await GetDataSetName(evalRunEntity.DataSetId),
+                    ["evalRunName"] = evalRunEntity.EvalRunName,
+                };
+
+                await _messagePublisher.SendMessageAsync("evalresults", combinedJson.ToString());
 
                 _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
                     evalRunId);
@@ -331,8 +348,6 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 throw;
             }
         }
-
-
 
         /// <summary>
         /// Get evaluation results for a specific agent within a date range with caching support
