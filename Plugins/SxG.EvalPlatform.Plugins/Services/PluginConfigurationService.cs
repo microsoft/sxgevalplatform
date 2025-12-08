@@ -16,6 +16,7 @@ namespace SxG.EvalPlatform.Plugins.Services
         private const string EnableAppInsightsLoggingKey = "cr890_EnableAppInsightsLogging";
         private const string EnableAuditLoggingKey = "cr890_EnableAuditLogging";
         private const string AppInsightsConnectionStringKey = "cr890_AppInsightsConnectionString";
+        private const string FileUploadFlowUrlKey = "cr890_FileUploadFlowUrl";
 
         // Default values
         private const string DefaultEvalApiBaseUrl = "https://sxgevalapidev.azurewebsites.net";
@@ -150,6 +151,22 @@ namespace SxG.EvalPlatform.Plugins.Services
             try
             {
                 return _environmentVariableService.GetString(AppInsightsConnectionStringKey);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the file upload flow URL for file upload operations
+        /// </summary>
+        /// <returns>File upload flow trigger URL</returns>
+        public string GetFileUploadFlowUrl()
+        {
+            try
+            {
+                return _environmentVariableService.GetString(FileUploadFlowUrlKey);
             }
             catch
             {

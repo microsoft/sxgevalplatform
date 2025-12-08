@@ -55,5 +55,11 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <returns>Connection string for Application Insights</returns>
         string GetAppInsightsConnectionString();
+
+        /// <summary>
+        /// Gets the file upload flow URL for file upload operations
+        /// </summary>
+        /// <returns>File upload flow trigger URL</returns>
+        string GetFileUploadFlowUrl();
     }
 }

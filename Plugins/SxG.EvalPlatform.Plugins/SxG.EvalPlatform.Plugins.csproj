@@ -45,6 +45,12 @@
 			Placeholder
 		</Description>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>gerdgeg.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -70,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CustomApis\CustomApiConfig.cs" />
+    <Compile Include="Helpers\PowerAutomateFlowHelper.cs" />
     <Compile Include="Implementation\EnvironmentVariableService.cs" />
     <Compile Include="Implementation\ServiceCache.cs" />
     <Compile Include="Interfaces\IEnvironmentVariableService.cs" />
@@ -98,6 +105,7 @@
     <Content Include=".gitignore" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="gerdgeg.snk" />
     <None Include="README.md" />
   </ItemGroup>
   <Target Name="GetTfmPublishedFiles">

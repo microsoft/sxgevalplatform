@@ -11,6 +11,7 @@ namespace SxG.EvalPlatform.Plugins
     using SxG.EvalPlatform.Plugins.Models.Responses;
     using SxG.EvalPlatform.Plugins.CustomApis;
     using SxG.EvalPlatform.Plugins.Services;
+    using SxG.EvalPlatform.Plugins.Helpers;
     using Microsoft.Crm.Sdk.Messages;
 
     /// <summary>
@@ -81,7 +82,7 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 // Update the eval run record with retrieved dataset content (store as file column instead of text field)
-                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, loggingService);
+                bool updateSuccess = UpdateEvalRunRecord(request.EvalRunId, datasetJson, organizationService, loggingService, configService);
                 if (!updateSuccess)
                 {
                     var errorResponse = UpdateDatasetResponse.CreateError("Failed to update eval run record", request.EvalRunId);
@@ -273,14 +274,15 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Updates eval run record by uploading dataset JSON into file column and setting status
+        /// Updates eval run record by triggering Power Automate flow to upload dataset JSON to file column and setting status
         /// </summary>
-        /// /// <param name="evalRunId">Eval run ID</param>
+        /// <param name="evalRunId">Eval run ID</param>
         /// <param name="datasetJson">Retrieved dataset content as JSON string</param>
         /// <param name="organizationService">Organization service</param>
         /// <param name="loggingService">Logging service</param>
+        /// <param name="configService">Configuration service</param>
         /// <returns>True if update successful</returns>
-        private bool UpdateEvalRunRecord(string evalRunId, string datasetJson, IOrganizationService organizationService, IPluginLoggingService loggingService)
+        private bool UpdateEvalRunRecord(string evalRunId, string datasetJson, IOrganizationService organizationService, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             try
             {
@@ -298,68 +300,48 @@ namespace SxG.EvalPlatform.Plugins
 
                 var fileName = $"dataset-{evalRunGuid}.json";
                 byte[] dataBytes = Encoding.UTF8.GetBytes(datasetJson);
-                loggingService.Trace($"{nameof(UpdateDataset)}: Preparing to upload file '{fileName}' size {dataBytes.Length} bytes to file column cr890_datasetfile");
+                
+                loggingService.Trace($"{nameof(UpdateDataset)}: Preparing to trigger Power Automate flow to upload file '{fileName}' size {dataBytes.Length} bytes to file column cr890_datasetfile");
 
-                // Initialize upload
-                var initReq = new InitializeFileBlocksUploadRequest
+                // Get file upload flow URL from configuration
+                string flowUrl = configService.GetFileUploadFlowUrl();
+                if (string.IsNullOrWhiteSpace(flowUrl))
                 {
-                    Target = new EntityReference("cr890_evalrun", evalRunGuid),
-                    FileAttributeName = "cr890_datasetfile",
-                    FileName = fileName
-                };
-                var initResp = (InitializeFileBlocksUploadResponse)organizationService.Execute(initReq);
-                var uploadId = initResp.FileContinuationToken;
-                loggingService.Trace($"{nameof(UpdateDataset)}: File upload initialized. UploadId={uploadId}");
-
-                // Upload blocks (single or multiple depending on size)
-                const int blockSize = 4 * 1024 * 1024; //4MB block size
-                var blockIds = new System.Collections.Generic.List<string>();
-                int offset = 0;
-                int blockIndex = 0;
-                while (offset < dataBytes.Length)
-                {
-                    int remaining = dataBytes.Length - offset;
-                    int currentSize = remaining > blockSize ? blockSize : remaining;
-                    byte[] block = new byte[currentSize];
-                    Buffer.BlockCopy(dataBytes, offset, block, 0, currentSize);
-                    string blockId = blockIndex.ToString();
-
-                    var uploadBlockReq = new UploadBlockRequest
-                    {
-                        FileContinuationToken = uploadId,
-                        BlockId = blockId,
-                        BlockData = block
-                    };
-                    organizationService.Execute(uploadBlockReq);
-
-                    blockIds.Add(blockId);
-                    offset += currentSize;
-                    blockIndex++;
+                    loggingService.Trace($"{nameof(UpdateDataset)}: File upload flow URL not configured", TraceSeverity.Error);
+                    return false;
                 }
-                loggingService.Trace($"{nameof(UpdateDataset)}: Uploaded {blockIds.Count} block(s) for file '{fileName}'");
 
-                // Commit upload
-                var commitReq = new CommitFileBlocksUploadRequest
+                // Trigger Power Automate flow to handle file upload
+                bool flowTriggered = PowerAutomateFlowHelper.TriggerFileUploadFlow(
+                    evalRunId,
+                    fileName,
+                    dataBytes,
+                    "cr890_datasetfile", // File column logical name
+                    "cr890_evalrun", // Entity logical name (plural form for Web API)
+                    flowUrl,
+                    loggingService
+                );
+
+                if (!flowTriggered)
                 {
-                    FileContinuationToken = uploadId,
-                    FileName = fileName,
-                    MimeType = "application/json",
-                    BlockList = blockIds.ToArray()
-                };
-                organizationService.Execute(commitReq);
-                loggingService.Trace($"{nameof(UpdateDataset)}: File blocks committed successfully for '{fileName}'");
+                    loggingService.Trace($"{nameof(UpdateDataset)}: Failed to trigger Power Automate flow for file upload", TraceSeverity.Error);
+                    return false;
+                }
 
-                // Update status field only (OptionSetValue2 = Updated)
-                var statusEntity = new Entity("cr890_evalrun", evalRunGuid);
+                // Update status field immediately (OptionSetValue 2 = Updated)
+                // Note: Power Automate flow will handle the file upload asynchronously
+                var statusEntity = new Entity("cr890_evalrun", evalRunGuid); //ToDo Move this to FileUploadFlow
                 statusEntity["cr890_status"] = new OptionSetValue(2);
                 organizationService.Update(statusEntity);
 
-                loggingService.Trace($"{nameof(UpdateDataset)}: Successfully updated status to Updated (2) after file upload");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Successfully triggered Power Automate flow for file upload and updated status to Updated (2)");
+                loggingService.Trace($"{nameof(UpdateDataset)}: Note - File upload will be processed asynchronously by Power Automate flow");
+                
                 return true;
             }
             catch (Exception ex)
             {
-                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating eval run record (file upload)");
+                loggingService.LogException(ex, $"{nameof(UpdateDataset)}: Exception updating eval run record (Power Automate flow trigger)");
                 return false;
             }
         }
