@@ -1,19 +1,8 @@
-using AutoMapper;
-using Microsoft.OpenApi.Models;
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using Azure.Monitor.OpenTelemetry.Exporter;
-using Sxg.EvalPlatform.API.Storage;
-using Sxg.EvalPlatform.API.Storage.Services;
-using SxgEvalPlatformApi;
-using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
 using SxgEvalPlatformApi.Middleware;
 using SXG.EvalPlatform.API.Middleware;  // ? Added for UserContextMiddleware
-using System.Reflection;
 using SxgEvalPlatformApi.Extensions;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +12,101 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 // Add core services
+
 builder.Services.AddControllers();
+
+// Add rate limiting policies
+var rateLimitingOptions = builder.Configuration.GetSection("RateLimiting").Get<RateLimitingOptions>();
+
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("IpPolicy", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = rateLimitingOptions?.IpPolicy?.PermitLimit ?? 100,
+            Window = TimeSpan.FromSeconds(rateLimitingOptions?.IpPolicy?.WindowSeconds ?? 60),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("UserPolicy", context =>
+    {
+        var userId = context.User?.Identity?.IsAuthenticated == true
+            ? context.User.FindFirst("oid")?.Value ?? context.User.Identity.Name ?? "anonymous"
+            : "anonymous";
+        return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = rateLimitingOptions?.UserPolicy?.PermitLimit ?? 50,
+            Window = TimeSpan.FromSeconds(rateLimitingOptions?.UserPolicy?.WindowSeconds ?? 60),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("SessionPolicy", context =>
+    {
+        var sessionId = context.Request.Headers["X-Session-Id"].FirstOrDefault()
+            ?? context.Request.Cookies["SessionId"]
+            ?? "nosession";
+        return RateLimitPartition.GetFixedWindowLimiter(sessionId, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = rateLimitingOptions?.SessionPolicy?.PermitLimit ?? 30,
+            Window = TimeSpan.FromSeconds(rateLimitingOptions?.SessionPolicy?.WindowSeconds ?? 60),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+});
+
+//builder.Services.AddRateLimiter(options =>
+//{
+//    // Per IP address
+//    options.AddPolicy("IpPolicy", context =>
+//    {
+//        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+//        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+//        {
+//            PermitLimit = 100, // requests per minute per IP
+//            Window = TimeSpan.FromMinutes(1),
+//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+//            QueueLimit = 0
+//        });
+//    });
+
+//    // Per user (from claims)
+//    options.AddPolicy("UserPolicy", context =>
+//    {
+//        var userId = context.User?.Identity?.IsAuthenticated == true
+//            ? context.User.FindFirst("oid")?.Value ?? context.User.Identity.Name ?? "anonymous"
+//            : "anonymous";
+//        return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
+//        {
+//            PermitLimit = 50, // requests per minute per user
+//            Window = TimeSpan.FromMinutes(1),
+//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+//            QueueLimit = 0
+//        });
+//    });
+
+//    // Per session (from header/cookie)
+//    options.AddPolicy("SessionPolicy", context =>
+//    {
+//        var sessionId = context.Request.Headers["X-Session-Id"].FirstOrDefault()
+//            ?? context.Request.Cookies["SessionId"]
+//            ?? "nosession";
+//        return RateLimitPartition.GetFixedWindowLimiter(sessionId, _ => new FixedWindowRateLimiterOptions
+//        {
+//            PermitLimit = 30, // requests per minute per session
+//            Window = TimeSpan.FromMinutes(1),
+//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+//            QueueLimit = 0
+//        });
+//    });
+//});
 
 // Add HttpContextAccessor (required for CallerIdentificationService)
 builder.Services.AddHttpContextAccessor();
@@ -42,10 +125,16 @@ builder.Services.AddHttpClientServices();
 builder.Services.AddServiceBus(builder.Configuration);
 builder.Services.AddBusinessServices(builder.Configuration);
 
+
 var app = builder.Build();
 
 // Configure middleware pipeline
+
+
 app.UseMiddleware<TelemetryMiddleware>();
+
+// Enable rate limiting globally (all endpoints)
+app.UseRateLimiter();
 
 // Enable Swagger in all environments for API documentation
 // Must come BEFORE authentication middleware to allow anonymous access
