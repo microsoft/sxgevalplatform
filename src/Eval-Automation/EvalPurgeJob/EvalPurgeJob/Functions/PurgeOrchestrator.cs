@@ -22,16 +22,22 @@ namespace EvalPurgeJob
             _config = config;
         }
         [Function("EvalPurgeOrchestrator")]
-        public async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx)
+        public async Task RunOrchestrato([OrchestrationTrigger] TaskOrchestrationContext ctx, Tuple<DateTime, string> purgeParams)
         {
+            try
+            {
 
+                if (ctx != null)
+                {
+                    await ctx.CallActivityAsync<string>("PurgeDataSetFiles", purgeParams);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in EvalPurgeOrchestrator: {message}", ex.Message);
+                throw;
+            }
 
-            var retentionDays = _config.GetValue<int>("Purge:RetentionDays", 3);
-
-            var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-
-            await ctx.CallActivityAsync<string>("PurgeDataSetFiles", cutoff);
-          
         }
 
 

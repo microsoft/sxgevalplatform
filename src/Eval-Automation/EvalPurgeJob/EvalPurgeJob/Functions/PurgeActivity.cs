@@ -12,7 +12,7 @@ namespace EvalPurgeJob
         private readonly ILogger _logger;
         private readonly IConfiguration _config;
 
-        public PurgeBlobsActivity(ILoggerFactory loggerFactory,IConfiguration config)
+        public PurgeBlobsActivity(ILoggerFactory loggerFactory, IConfiguration config)
         {
             _logger = loggerFactory.CreateLogger<EvalPurgeOrchestrator>();
             _config = config;
@@ -20,38 +20,26 @@ namespace EvalPurgeJob
 
         [Function("PurgeDataSetFiles")]
         public async Task Run(
-            [ActivityTrigger] DateTimeOffset cutoff)
+            [ActivityTrigger] Tuple<DateTime, string> purgeParams)
         {
-       
-            var tableStorageHelper = new TableStorageHelper(
-                _config["TableServiceUri"],
-                _config["TableName"],
-                _logger
-            );
-            var recentEntities = await tableStorageHelper.GetEntitiesModifiedAfterAsync(cutoff);
-            var uniqueAgentIds = new HashSet<string>();
-            foreach (var row in recentEntities)
-            {
-                if (row.TryGetValue("AgentId", out var agentIdObj) && agentIdObj is string agentId && !string.IsNullOrEmpty(agentId))
-                {
-                   uniqueAgentIds.Add(agentId);
-                }
-            }
-
-            _logger.LogInformation("Purging dataset files for older than {cutoff}", cutoff);
-
-
-            foreach (var agentId in uniqueAgentIds)
+            try
             {
                 var blobServiceUrl = Environment.GetEnvironmentVariable("BlobServiceUrl");
-                var containerName = agentId.ToLower();
+                var containerName = purgeParams.Item2.ToLower();
                 var blobStorageHelper = new BlobStorageHelper(blobServiceUrl, containerName);
-                await blobStorageHelper.GetBlobsNewerThanAsync(cutoff);
+                await blobStorageHelper.GetBlobsNewerThanAsync(purgeParams.Item1);
+
+                //var managedIdentityClientId = Environment.GetEnvironmentVariable("ManagedIdentityClientId");
+
+                //await blobStorageHelper.DeleteBlobsNewerThanAsync(purgeParams.Item1);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in PurgeDataSetFiles: {message}", ex.Message);
+                throw;
+            }
+
            
-            //var managedIdentityClientId = Environment.GetEnvironmentVariable("ManagedIdentityClientId");
-           
-            //await blobStorageHelper.DeleteBlobsNewerThanAsync(input.Item2);
         }
     }
 }
