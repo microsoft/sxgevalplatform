@@ -110,10 +110,8 @@
     <Content Include="ILRepack.Exclude.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="gerdgeg.snk" />
     <None Include="ILRepack.targets" />
     <None Include="README.md" />
-    <None Include="Verify-ILRepack.ps1" />
   </ItemGroup>
   <Target Name="GetTfmPublishedFiles">
     <Message Text="GetTfmPublishedFiles from: $(OutputPath)" />
