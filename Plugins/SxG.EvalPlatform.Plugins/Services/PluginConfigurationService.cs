@@ -18,10 +18,12 @@ namespace SxG.EvalPlatform.Plugins.Services
         private const string AppInsightsConnectionStringKey = "cr890_AppInsightsConnectionString";
         private const string EnableNestedCallLoggingKey = "cr890_EnableNestedCallLogging";
         private const string MaxTelemetryDepthKey = "cr890_MaxTelemetryDepth";
+        private const string ApiScopeKey = "cr890_ApiScope";
 
         // Default values
         private const string DefaultEvalApiBaseUrl = "https://sxgevalapidev.azurewebsites.net";
         private const int DefaultApiTimeoutSeconds = 30;
+        private const string DefaultApiScope = "443bbe62-c474-49f7-884c-d1b5a23eb735/.default";
 
         public PluginConfigurationService(IEnvironmentVariableService environmentVariableService)
         {
@@ -71,14 +73,10 @@ namespace SxG.EvalPlatform.Plugins.Services
         /// </summary>
         /// <param name="evalRunId">Optional eval run ID to append</param>
         /// <returns>Full eval runs API URL</returns>
-        public string GetEvalRunsApiUrl(string evalRunId = null)
+        public string GetEvalRunsStatusApiUrl(string evalRunId)
         {
             string baseUrl = GetEvalApiBaseUrl();
-            if (string.IsNullOrWhiteSpace(evalRunId))
-            {
-                return $"{baseUrl}/api/v1/eval/runs";
-            }
-            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}";
+            return $"{baseUrl}/api/v1/eval/runs/{evalRunId}/status";
         }
 
         /// <summary>
@@ -190,6 +188,28 @@ namespace SxG.EvalPlatform.Plugins.Services
             {
                 // 0 = no limit, log all depths
                 return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the OAuth scope for external API authentication
+        /// </summary>
+        /// <returns>OAuth scope (e.g., "443bbe62-c474-49f7-884c-d1b5a23eb735/.default")</returns>
+        public string GetApiScope()
+        {
+            try
+            {
+                string scope = _environmentVariableService.GetString(ApiScopeKey);
+                if (string.IsNullOrWhiteSpace(scope))
+                {
+                    return DefaultApiScope;
+                }
+                return scope;
+            }
+            catch
+            {
+                // Return default if environment variable not found
+                return DefaultApiScope;
             }
         }
     }

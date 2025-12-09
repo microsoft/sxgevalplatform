@@ -6,6 +6,7 @@ namespace SxG.EvalPlatform.Plugins
     using System.Text;
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Sdk.Query;
+    using SxG.EvalPlatform.Plugins.Common;
     using SxG.EvalPlatform.Plugins.Common.Framework;
     using SxG.EvalPlatform.Plugins.Models;
     using SxG.EvalPlatform.Plugins.Models.Requests;
@@ -33,6 +34,7 @@ namespace SxG.EvalPlatform.Plugins
             var loggingService = localContext.LoggingService;
             var configService = localContext.ConfigurationService;
             var organizationService = localContext.OrganizationService;
+            var managedIdentityService = localContext.ManagedIdentityService;
 
             try
             {
@@ -63,8 +65,12 @@ namespace SxG.EvalPlatform.Plugins
                     return;
                 }
 
+                // Get authentication token for external API calls
+                string apiScope = configService.GetApiScope();
+                string authToken = AuthTokenHelper.AcquireToken(managedIdentityService, loggingService, apiScope);
+
                 // Call external API to publish enriched dataset
-                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, loggingService, configService);
+                bool publishSuccess = CallExternalPublishApi(request.EvalRunId, dataset, authToken, loggingService, configService);
                 if (!publishSuccess)
                 {
                     var errorResponse = PublishEnrichedDatasetResponse.CreateError("Failed to publish enriched dataset to external API", request.EvalRunId);
@@ -73,13 +79,13 @@ namespace SxG.EvalPlatform.Plugins
                 }
 
                 // Update status to Completed (value: 3)
-                UpdateEvalRunStatus(request.EvalRunId, 3, organizationService, loggingService);
+                EvalRunHelper.UpdateEvalRunStatus(request.EvalRunId, 3, organizationService, loggingService, nameof(PublishEnrichedDataset));
 
                 // Log event to Application Insights
                 loggingService.LogEvent("PublishEnrichedDatasetSuccess", new System.Collections.Generic.Dictionary<string, string>
-  {
-        { "EvalRunId", request.EvalRunId },
-     { "DatasetSize", dataset?.Length.ToString() ?? "0" }
+                {
+                    { "EvalRunId", request.EvalRunId },
+                    { "DatasetSize", dataset?.Length.ToString() ?? "0" }
                 });
 
                 // Create success response
@@ -126,7 +132,7 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Retrieves dataset from eval run record
+        /// Retrieves dataset from eval run record's file column
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="organizationService">Organization service</param>
@@ -143,12 +149,18 @@ namespace SxG.EvalPlatform.Plugins
                     return null;
                 }
 
-                // Retrieve using early-bound entity
-                var evalRunRecord = organizationService.Retrieve(EvalRun.EntityLogicalName, evalRunGuid, new ColumnSet("cr890_dataset")).ToEntity<EvalRun>();
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Retrieving dataset file from cr890_datasetfile column");
 
-                string dataset = evalRunRecord.cr890_Dataset;
-                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from eval run record");
+                // Download the dataset file from cr890_datasetfile column using file blocks API
+                string dataset = DownloadDatasetFile(evalRunGuid, organizationService, loggingService);
+                
+                if (string.IsNullOrEmpty(dataset))
+                {
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: No dataset file found in cr890_datasetfile column", TraceSeverity.Warning);
+                    return null;
+                }
 
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully retrieved dataset from file column, length: {dataset.Length}");
                 return dataset;
             }
             catch (Exception ex)
@@ -159,34 +171,61 @@ namespace SxG.EvalPlatform.Plugins
         }
 
         /// <summary>
-        /// Updates eval run status
+        /// Downloads dataset file from Dataverse file column using file blocks API
         /// </summary>
-        /// <param name="evalRunId">Eval run ID</param>
-        /// <param name="statusValue">New status integer value</param>
-        /// <param name="organizationService">Organization service</param>
-        /// <param name="loggingService">Logging service</param>
-        private void UpdateEvalRunStatus(string evalRunId, int statusValue, IOrganizationService organizationService, IPluginLoggingService loggingService)
+        private string DownloadDatasetFile(Guid evalRunGuid, IOrganizationService organizationService, IPluginLoggingService loggingService)
         {
             try
             {
-                // Parse the EvalRunId GUID for direct update using Primary Key
-                if (!Guid.TryParse(evalRunId, out Guid evalRunGuid))
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Starting file download process for EvalRunId: {evalRunGuid}");
+
+                var initializeRequest = new OrganizationRequest("InitializeFileBlocksDownload")
                 {
-                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Invalid EvalRunId format for status update: {evalRunId}", TraceSeverity.Error);
-                    return;
+                    ["Target"] = new EntityReference("cr890_evalrun", evalRunGuid),
+                    ["FileAttributeName"] = "cr890_datasetfile"
+                };
+
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Initializing file blocks download");
+                var initializeResponse = organizationService.Execute(initializeRequest);
+                string fileContinuationToken = (string)initializeResponse["FileContinuationToken"];
+                long fileSize = (long)initializeResponse["FileSizeInBytes"];
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: File blocks download initialized, size: {fileSize} bytes");
+
+                const int blockSize = 4 * 1024 * 1024; // 4MB block size
+                var fileBytes = new System.Collections.Generic.List<byte>();
+                long offset = 0;
+
+                while (offset < fileSize)
+                {
+                    long currentBlockSize = Math.Min(blockSize, fileSize - offset);
+
+                    var downloadBlockRequest = new OrganizationRequest("DownloadBlock")
+                    {
+                        ["Offset"] = offset,
+                        ["BlockLength"] = currentBlockSize,
+                        ["FileContinuationToken"] = fileContinuationToken
+                    };
+
+                    loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Downloading block at offset {offset}, size: {currentBlockSize} bytes");
+                    var downloadBlockResponse = organizationService.Execute(downloadBlockRequest);
+                    byte[] blockData = (byte[])downloadBlockResponse["Data"];
+                    fileBytes.AddRange(blockData);
+
+                    offset += currentBlockSize;
                 }
 
-                // Update using late-bound entity to avoid serialization issues with Elastic tables
-                var updateEntity = new Entity("cr890_evalrun", evalRunGuid);
-                updateEntity["cr890_status"] = new OptionSetValue(statusValue);
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: All blocks downloaded, total size: {fileBytes.Count} bytes");
 
-                organizationService.Update(updateEntity);
+                // Convert byte array to string
+                string datasetJson = Encoding.UTF8.GetString(fileBytes.ToArray());
+                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Dataset file downloaded and converted to string");
 
-                loggingService.Trace($"{nameof(PublishEnrichedDataset)}: Successfully updated eval run status to {statusValue}");
+                return datasetJson;
             }
             catch (Exception ex)
             {
-                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception updating eval run status");
+                loggingService.LogException(ex, $"{nameof(PublishEnrichedDataset)}: Exception downloading dataset file");
+                return null;
             }
         }
 
@@ -195,10 +234,11 @@ namespace SxG.EvalPlatform.Plugins
         /// </summary>
         /// <param name="evalRunId">Eval run ID</param>
         /// <param name="dataset">Dataset JSON string to publish</param>
+        /// <param name="authToken">Authentication bearer token</param>
         /// <param name="loggingService">Logging service</param>
         /// <param name="configService">Configuration service</param>
         /// <returns>True if publish successful</returns>
-        private bool CallExternalPublishApi(string evalRunId, string dataset, IPluginLoggingService loggingService, IPluginConfigurationService configService)
+        private bool CallExternalPublishApi(string evalRunId, string dataset, string authToken, IPluginLoggingService loggingService, IPluginConfigurationService configService)
         {
             var startTime = DateTimeOffset.UtcNow;
             try
@@ -210,6 +250,9 @@ namespace SxG.EvalPlatform.Plugins
                 httpWebRequest.Method = "POST";
                 httpWebRequest.ContentType = "application/json";
                 httpWebRequest.Timeout = configService.GetApiTimeoutSeconds() * 1000;
+
+                // Add authorization header if token is available
+                AuthTokenHelper.AddAuthorizationHeader(httpWebRequest, loggingService, authToken);
 
                 // Prepare request body with enrichedDataset property
                 string requestBody = CreatePublishRequestBody(dataset);

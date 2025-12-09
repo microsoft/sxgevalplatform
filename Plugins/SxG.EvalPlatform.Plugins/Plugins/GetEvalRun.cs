@@ -1,6 +1,7 @@
 ﻿namespace SxG.EvalPlatform.Plugins
 {
     using System;
+    using System.Text;
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Sdk.Query;
     using Newtonsoft.Json;
@@ -63,11 +64,15 @@
                     var evalRunRecord = organizationService.Retrieve(
                         EvalRun.EntityLogicalName, evalRunGuid, 
                             new ColumnSet("cr890_evalrunid", "cr890_id", "cr890_datasetid", "cr890_agentid", "cr890_environmentid", 
-                                "cr890_agentschemaname", "cr890_status", "cr890_dataset", "createdon", "modifiedon")
+                                "cr890_agentschemaname", "cr890_status", "createdon", "modifiedon")
                         ).ToEntity<EvalRun>();
 
+                    // Download dataset from file column instead of reading from JSON column
+                    loggingService.Trace($"{nameof(GetEvalRun)}: Downloading dataset from file column");
+                    string datasetJson = DownloadDatasetFile(evalRunGuid, organizationService, loggingService);
+
                     // Convert early-bound entity to DTO for response
-                    EvalRunDto evalRun = ConvertToDto(evalRunRecord);
+                    EvalRunDto evalRun = ConvertToDto(evalRunRecord, datasetJson);
 
                     loggingService.Trace($"{nameof(GetEvalRun)}: Found eval run - EvalRunId: {evalRun.EvalRunId}, AgentId: {evalRun.AgentId}, Status: {evalRun.GetStatusName()}");
                     loggingService.Trace($"{nameof(GetEvalRun)}: Dataset JSON string length: {(evalRun.Dataset?.Length ?? 0)}");
@@ -114,9 +119,70 @@
         }
 
         /// <summary>
+        /// Downloads dataset file from Dataverse file column using file blocks API
+        /// </summary>
+        private string DownloadDatasetFile(Guid evalRunGuid, IOrganizationService organizationService, IPluginLoggingService loggingService)
+        {
+            try
+            {
+                loggingService.Trace($"{nameof(GetEvalRun)}: Starting file download process for EvalRunId: {evalRunGuid}");
+
+                // Step 1: Initialize file blocks download
+                var initializeRequest = new OrganizationRequest("InitializeFileBlocksDownload")
+                {
+                    ["Target"] = new EntityReference("cr890_evalrun", evalRunGuid),
+                    ["FileAttributeName"] = "cr890_datasetfile"
+                };
+
+                loggingService.Trace($"{nameof(GetEvalRun)}: Initializing file blocks download");
+                var initializeResponse = organizationService.Execute(initializeRequest);
+                string fileContinuationToken = (string)initializeResponse["FileContinuationToken"];
+                long fileSize = (long)initializeResponse["FileSizeInBytes"];
+                loggingService.Trace($"{nameof(GetEvalRun)}: File blocks download initialized, size: {fileSize} bytes");
+
+                // Step 2: Download file content in blocks
+                const int blockSize = 4 * 1024 * 1024; // 4MB block size
+                var fileBytes = new System.Collections.Generic.List<byte>();
+                long offset = 0;
+
+                while (offset < fileSize)
+                {
+                    long currentBlockSize = Math.Min(blockSize, fileSize - offset);
+
+                    var downloadBlockRequest = new OrganizationRequest("DownloadBlock")
+                    {
+                        ["Offset"] = offset,
+                        ["BlockLength"] = currentBlockSize,
+                        ["FileContinuationToken"] = fileContinuationToken
+                    };
+
+                    loggingService.Trace($"{nameof(GetEvalRun)}: Downloading block at offset {offset}, size: {currentBlockSize} bytes");
+                    var downloadBlockResponse = organizationService.Execute(downloadBlockRequest);
+                    byte[] blockData = (byte[])downloadBlockResponse["Data"];
+                    fileBytes.AddRange(blockData);
+
+                    offset += currentBlockSize;
+                }
+
+                loggingService.Trace($"{nameof(GetEvalRun)}: All blocks downloaded, total size: {fileBytes.Count} bytes");
+
+                // Convert byte array to string
+                string datasetJson = Encoding.UTF8.GetString(fileBytes.ToArray());
+                loggingService.Trace($"{nameof(GetEvalRun)}: Dataset file downloaded and converted to string");
+
+                return datasetJson;
+            }
+            catch (Exception ex)
+            {
+                loggingService.LogException(ex, $"{nameof(GetEvalRun)}: Exception downloading dataset file");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Converts early-bound entity to DTO
         /// </summary>
-        private EvalRunDto ConvertToDto(EvalRun entity)
+        private EvalRunDto ConvertToDto(EvalRun entity, string datasetJson)
         {
             if (entity == null)
                 return null;
@@ -130,7 +196,7 @@
                 EnvironmentId = entity.cr890_EnvironmentId,
                 AgentSchemaName = entity.cr890_AgentSchemaName,
                 Status = entity.cr890_Status.HasValue ? (int)entity.cr890_Status.Value : (int?)null,
-                Dataset = entity.cr890_Dataset,
+                Dataset = datasetJson,
                 CreatedOn = entity.CreatedOn,
                 ModifiedOn = entity.ModifiedOn
             };
