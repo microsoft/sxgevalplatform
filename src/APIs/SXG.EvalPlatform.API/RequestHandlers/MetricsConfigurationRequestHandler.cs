@@ -171,7 +171,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return null;
                 }
 
-                var metrics = await FetchMetricsFromBlobAsync(entity.ConainerName, entity.BlobFilePath, configurationId);
+                var metrics = await FetchMetricsFromBlobAsync(entity.ContainerName, entity.BlobFilePath, configurationId);
                                 
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", configurationId);
 
