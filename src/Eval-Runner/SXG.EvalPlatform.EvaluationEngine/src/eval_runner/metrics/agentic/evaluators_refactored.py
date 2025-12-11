@@ -1,0 +1,103 @@
+"""
+Refactored agentic evaluation metrics using Azure AI Evaluation with base classes.
+"""
+
+from typing import Any, Dict, Type
+
+from azure.ai.evaluation import (
+    IntentResolutionEvaluator as AzureIntentResolutionEvaluator,
+    ToolCallAccuracyEvaluator as AzureToolCallAccuracyEvaluator,
+    TaskAdherenceEvaluator as AzureTaskAdherenceEvaluator,
+)
+
+from ...models.eval_models import DatasetItem
+from ..base_evaluators import ModelBasedEvaluator
+
+
+class IntentResolutionEvaluator(ModelBasedEvaluator):
+    """Azure AI Intent Resolution evaluator."""
+    
+    def __init__(self):
+        """Initialize the evaluator."""
+        super().__init__("intent_resolution")
+    
+    def _get_evaluator_class(self) -> Type[Any]:
+        """Get the Azure AI evaluator class."""
+        return AzureIntentResolutionEvaluator
+    
+    def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
+        """Extract intent resolution evaluation results using Microsoft's Likert scale logic."""
+        score = float(azure_result.get("intent_resolution", 0.0))
+        reasoning = str(azure_result.get("intent_resolution_reason", "No reasoning provided"))
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
+        
+        return score, reasoning, passed
+
+
+class ToolCallAccuracyEvaluator(ModelBasedEvaluator):
+    """Azure AI Tool Call Accuracy evaluator."""
+    
+    def __init__(self):
+        """Initialize the evaluator."""
+        super().__init__("tool_call_accuracy")
+    
+    def _get_evaluator_class(self) -> Type[Any]:
+        """Get the Azure AI evaluator class."""
+        return AzureToolCallAccuracyEvaluator
+    
+    def _call_evaluator(self, evaluator: Any, item: DatasetItem, **kwargs) -> Dict[str, Any]:
+        """Call tool call accuracy evaluator with specific parameters."""
+        # Extract tool calls and definitions from kwargs or metadata
+        tool_calls = kwargs.get('tool_calls')
+        tool_definitions = kwargs.get('tool_definitions')
+        
+        if not tool_calls and item.metadata:
+            tool_calls = item.metadata.get('tool_calls', [])
+            tool_definitions = item.metadata.get('tool_definitions', [])
+        
+        if not tool_calls:
+            raise ValueError(
+                f"ToolCallAccuracyEvaluator requires tool calls for evaluation. "
+                f"No tool calls found in kwargs or metadata. "
+                f"Please provide tool_calls data for meaningful tool call accuracy evaluation."
+            )
+        
+        return evaluator(
+            query=item.prompt,
+            tool_calls=tool_calls or [],
+            tool_definitions=tool_definitions or []
+        )
+    
+    def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
+        """Extract tool call accuracy evaluation results using Microsoft's Likert scale logic."""
+        score = float(azure_result.get("tool_call_accuracy", 0.0))
+        reasoning = str(azure_result.get("tool_call_accuracy_reason", "No reasoning provided"))
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
+        
+        return score, reasoning, passed
+
+
+class TaskAdherenceEvaluator(ModelBasedEvaluator):
+    """Azure AI Task Adherence evaluator."""
+    
+    def __init__(self):
+        """Initialize the evaluator."""
+        super().__init__("task_adherence")
+    
+    def _get_evaluator_class(self) -> Type[Any]:
+        """Get the Azure AI evaluator class."""
+        return AzureTaskAdherenceEvaluator
+    
+    def _extract_result(self, azure_result: Dict[str, Any]) -> tuple[float, str, bool]:
+        """Extract task adherence evaluation results using Microsoft's Likert scale logic."""
+        score = float(azure_result.get("task_adherence", 0.0))
+        reasoning = str(azure_result.get("task_adherence_reason", "No reasoning provided"))
+        
+        # Use Microsoft's standard: Likert scale 1-5, score >= threshold (default 3)
+        passed = score >= self.threshold
+        
+        return score, reasoning, passed

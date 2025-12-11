@@ -1,0 +1,68 @@
+# Docker Compose for development and testing
+version: "3.8"
+
+services:
+  eval-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # Azure Storage (use environment variables or Azure managed identity)
+      - AZURE_QUEUE_ACCOUNT_NAME=${AZURE_QUEUE_ACCOUNT_NAME}
+      - AZURE_QUEUE_NAME=${AZURE_QUEUE_NAME:-eval-requests}
+      - AZURE_BLOB_ACCOUNT_NAME=${AZURE_BLOB_ACCOUNT_NAME}
+      - AZURE_BLOB_CONTAINER_NAME=${AZURE_BLOB_CONTAINER_NAME:-eval-results}
+
+      # API Endpoints
+      - EVAL_CONFIG_ENDPOINT=${EVAL_CONFIG_ENDPOINT}
+      - STATUS_UPDATE_ENDPOINT=${STATUS_UPDATE_ENDPOINT}
+
+      # API Keys
+      - EVAL_API_KEY=${EVAL_API_KEY}
+      - STATUS_API_KEY=${STATUS_API_KEY}
+
+      # Azure Identity (for managed identity)
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+
+      # Performance Optimization Settings
+      - MAX_DATASET_CONCURRENCY=${MAX_DATASET_CONCURRENCY:-3}
+      - MAX_METRICS_CONCURRENCY=${MAX_METRICS_CONCURRENCY:-8}
+      - EVALUATION_TIMEOUT=${EVALUATION_TIMEOUT:-30}
+      - HTTP_POOL_CONNECTIONS=${HTTP_POOL_CONNECTIONS:-20}
+      - HTTP_POOL_MAXSIZE=${HTTP_POOL_MAXSIZE:-10}
+      - HTTP_SESSION_LIFETIME=${HTTP_SESSION_LIFETIME:-3600}
+      - AZURE_STORAGE_TIMEOUT=${AZURE_STORAGE_TIMEOUT:-30}
+      - AZURE_STORAGE_CONNECT_TIMEOUT=${AZURE_STORAGE_CONNECT_TIMEOUT:-60}
+      - ENABLE_PERFORMANCE_LOGGING=${ENABLE_PERFORMANCE_LOGGING:-true}
+
+    volumes:
+      - ./logs:/app/logs
+
+    restart: unless-stopped
+
+    # Resource limits (optimized for concurrent processing)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4.0"
+        reservations:
+          memory: 1G
+          cpus: "1.0"
+
+  # Optional: Azure Storage Emulator for local development
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports:
+      - "10000:10000" # Blob service
+      - "10001:10001" # Queue service
+    volumes:
+      - azurite-data:/data
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --location /data --debug /data/debug.log"
+    profiles:
+      - dev
+
+volumes:
+  azurite-data:

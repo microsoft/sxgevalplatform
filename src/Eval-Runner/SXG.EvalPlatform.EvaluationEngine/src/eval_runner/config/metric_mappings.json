@@ -1,0 +1,88 @@
+{
+    "api_to_registry_mappings": {
+        "comment": "Direct mappings from API metric names to registry metric names",
+        "mappings": {
+            "F1 Score": "f1_score",
+            "BLEU": "bleu",
+            "GLEU": "gleu",
+            "METEOR": "meteor",
+            "ROUGE (Precision)": "rouge_(precision)",
+            "ROUGE (Recall)": "rouge_(recall)",
+            "ROUGE (F1)": "rouge_(f1)",
+            "Coherence": "coherence",
+            "Fluency": "fluency",
+            "Similarity": "similarity",
+            "Groundedness": "groundedness",
+            "Relevance": "relevance",
+            "ResponseCompleteness": "responsecompleteness",
+            "IntentResolution": "intent_resolution",
+            "ToolCallAccuracy": "tool_call_accuracy",
+            "TaskAdherence": "task_adherence",
+            "HateUnfairness": "hate_unfairness",
+            "Violence": "violence",
+            "SelfHarm": "self_harm",
+            "Sexual": "sexual"
+        }
+    },
+    "alternative_names": {
+        "comment": "Alternative names that might come from different API versions or clients",
+        "mappings": {
+            "F1": "f1_score",
+            "BleuScore": "bleu",
+            "RougeF1": "rouge_(f1)",
+            "RougePrecision": "rouge_(precision)",
+            "RougeRecall": "rouge_(recall)",
+            "Intent Resolution": "intent_resolution",
+            "Tool Call Accuracy": "tool_call_accuracy",
+            "Task Adherence": "task_adherence",
+            "Hate Unfairness": "hate_unfairness",
+            "Self Harm": "self_harm"
+        }
+    },
+    "fuzzy_match_rules": {
+        "comment": "Rules for fuzzy matching when exact mapping isn't found",
+        "enabled": true,
+        "transformations": [
+            "lowercase",
+            "remove_spaces",
+            "remove_special_chars",
+            "snake_case"
+        ],
+        "similarity_threshold": 0.8
+    },
+    "registry_info": {
+        "comment": "Metadata about available metrics for validation",
+        "last_updated": "2025-10-30",
+        "categories": {
+            "agentic": [
+                "intent_resolution",
+                "tool_call_accuracy",
+                "task_adherence"
+            ],
+            "rag": [
+                "relevance",
+                "coherence",
+                "groundedness",
+                "fluency",
+                "responsecompleteness"
+            ],
+            "risk_and_safety": [
+                "hate_unfairness",
+                "sexual",
+                "violence",
+                "self_harm"
+            ],
+            "text_similarity": [
+                "similarity",
+                "f1_score",
+                "rouge_score",
+                "bleu",
+                "gleu",
+                "meteor",
+                "rouge_(precision)",
+                "rouge_(recall)",
+                "rouge_(f1)"
+            ]
+        }
+    }
+}
