@@ -56,9 +56,10 @@ namespace SxG.EvalPlatform.Plugins.Services
     /// </summary>
     public enum TraceSeverity
     {
-        Information = 0,
-        Warning = 1,
-        Error = 2,
-        Critical = 3
+        Verbose = 0,
+        Information = 1,
+        Warning = 2,
+        Error = 3,
+        Critical = 4
     }
 }
