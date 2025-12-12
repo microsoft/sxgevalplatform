@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  
+  <!-- ILRepack configuration for merging Application Insights into plugin assembly -->
+  <PropertyGroup>
+    <ILRepackAfterBuild>true</ILRepackAfterBuild>
+    <!-- Try multiple locations for ILRepack tool -->
+    <ILRepackToolPath Condition="'$(ILRepackToolPath)' == '' AND Exists('$(SolutionDir)packages\ILRepack.2.0.34\tools\ILRepack.exe')">$(SolutionDir)packages\ILRepack.2.0.34\tools\ILRepack.exe</ILRepackToolPath>
+    <ILRepackToolPath Condition="'$(ILRepackToolPath)' == '' AND Exists('$(NuGetPackageRoot)ilrepack\2.0.34\tools\ILRepack.exe')">$(NuGetPackageRoot)ilrepack\2.0.34\tools\ILRepack.exe</ILRepackToolPath>
+    <ILRepackToolPath Condition="'$(ILRepackToolPath)' == '' AND Exists('C:\.tools\.nuget\packages\ilrepack\2.0.34\tools\ILRepack.exe')">C:\.tools\.nuget\packages\ilrepack\2.0.34\tools\ILRepack.exe</ILRepackToolPath>
+    <ILRepackOutputDir>$(OutputPath)merged\</ILRepackOutputDir>
+    <ILRepackInternalizeExclude>$(ProjectDir)ILRepack.Exclude.txt</ILRepackInternalizeExclude>
+  </PropertyGroup>
+
+  <!-- Install ILRepack package if not present -->
+  <Target Name="EnsureILRepack" BeforeTargets="ILRepackMerge">
+    <Message Text="Checking for ILRepack tool..." Importance="normal" />
+  </Target>
+
+  <!-- Run ILRepack after build to merge assemblies -->
+  <Target Name="ILRepackMerge" AfterTargets="Build" Condition="'$(ILRepackAfterBuild)' == 'true'">
+    
+    <Message Text="==== ILRepack Merge Starting ====" Importance="high" />
+    <Message Text="ILRepack tool path: $(ILRepackToolPath)" Importance="high" />
+    <Message Text="Output directory: $(ILRepackOutputDir)" Importance="high" />
+    
+    <!-- Check if ILRepack tool exists -->
+    <PropertyGroup>
+      <ILRepackExists Condition="Exists('$(ILRepackToolPath)')">true</ILRepackExists>
+    </PropertyGroup>
+    
+    <Warning Text="ILRepack tool not found at $(ILRepackToolPath). Skipping assembly merge. Install ILRepack package." Condition="'$(ILRepackExists)' != 'true'" />
+    <Message Text="✓ ILRepack tool found" Importance="high" Condition="'$(ILRepackExists)' == 'true'" />
+    
+    <!-- Only proceed if ILRepack exists -->
+    <CallTarget Targets="ILRepackMergeInternal" Condition="'$(ILRepackExists)' == 'true'" />
+    
+  </Target>
+
+  <Target Name="ILRepackMergeInternal">
+    
+    <!-- Create output directory -->
+    <MakeDir Directories="$(ILRepackOutputDir)" />
+    
+    <!-- Define assemblies to merge (Application Insights and its dependencies) -->
+    <ItemGroup>
+      <AssembliesToMerge Include="$(OutputPath)Microsoft.ApplicationInsights.dll" Condition="Exists('$(OutputPath)Microsoft.ApplicationInsights.dll')" />
+      <!-- Include System.Diagnostics.DiagnosticSource if present (AI dependency) -->
+      <AssembliesToMerge Include="$(OutputPath)System.Diagnostics.DiagnosticSource.dll" Condition="Exists('$(OutputPath)System.Diagnostics.DiagnosticSource.dll')" />
+      <!-- Include System.Memory if present (AI dependency) -->
+      <AssembliesToMerge Include="$(OutputPath)System.Memory.dll" Condition="Exists('$(OutputPath)System.Memory.dll')" />
+      <!-- Include System.Runtime.CompilerServices.Unsafe if present -->
+      <AssembliesToMerge Include="$(OutputPath)System.Runtime.CompilerServices.Unsafe.dll" Condition="Exists('$(OutputPath)System.Runtime.CompilerServices.Unsafe.dll')" />
+      <!-- Include System.Buffers if present -->
+      <AssembliesToMerge Include="$(OutputPath)System.Buffers.dll" Condition="Exists('$(OutputPath)System.Buffers.dll')" />
+      <!-- Include System.Numerics.Vectors if present -->
+      <AssembliesToMerge Include="$(OutputPath)System.Numerics.Vectors.dll" Condition="Exists('$(OutputPath)System.Numerics.Vectors.dll')" />
+    </ItemGroup>
+
+    <Message Text="Found @(AssembliesToMerge->Count()) assemblies to merge" Importance="high" />
+    <Message Text="Assemblies to merge: @(AssembliesToMerge)" Importance="normal" />
+
+    <!-- Run ILRepack with internalize option (with exclusion file if it exists) -->
+    <Exec 
+      Command="&quot;$(ILRepackToolPath)&quot; /target:library /internalize:&quot;$(ILRepackInternalizeExclude)&quot; /keyfile:&quot;$(ProjectDir)gerdgeg.snk&quot; /ndebug /lib:&quot;$(OutputPath.TrimEnd('\'))&quot; /out:&quot;$(ILRepackOutputDir)$(AssemblyName).dll&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot; @(AssembliesToMerge->'&quot;%(FullPath)&quot;', ' ')"
+      WorkingDirectory="$(ProjectDir)"
+      Condition="'@(AssembliesToMerge)' != '' AND Exists('$(ILRepackInternalizeExclude)')"
+      ContinueOnError="false" />
+
+    <!-- Fallback without internalize exclusions if file doesn't exist -->
+    <Exec 
+      Command="&quot;$(ILRepackToolPath)&quot; /target:library /internalize /keyfile:&quot;$(ProjectDir)gerdgeg.snk&quot; /ndebug /lib:&quot;$(OutputPath.TrimEnd('\'))&quot; /out:&quot;$(ILRepackOutputDir)$(AssemblyName).dll&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot; @(AssembliesToMerge->'&quot;%(FullPath)&quot;', ' ')"
+      WorkingDirectory="$(ProjectDir)"
+      Condition="'@(AssembliesToMerge)' != '' AND !Exists('$(ILRepackInternalizeExclude)')"
+      ContinueOnError="false" />
+
+    <!-- Copy merged assembly back to output directory -->
+    <Copy 
+      SourceFiles="$(ILRepackOutputDir)$(AssemblyName).dll" 
+      DestinationFiles="$(OutputPath)$(AssemblyName).merged.dll"
+      Condition="Exists('$(ILRepackOutputDir)$(AssemblyName).dll')" />
+
+    <!-- Copy PDB if exists -->
+    <Copy 
+      SourceFiles="$(ILRepackOutputDir)$(AssemblyName).pdb" 
+      DestinationFiles="$(OutputPath)$(AssemblyName).merged.pdb"
+      Condition="Exists('$(ILRepackOutputDir)$(AssemblyName).pdb')" />
+
+    <Message Text="? ILRepack: Merged assembly created at $(ILRepackOutputDir)$(AssemblyName).dll" Importance="high" Condition="Exists('$(ILRepackOutputDir)$(AssemblyName).dll')" />
+    <Message Text="? ILRepack: Internalized Application Insights and dependencies into plugin assembly" Importance="high" Condition="Exists('$(ILRepackOutputDir)$(AssemblyName).dll')" />
+    <Message Text="? ILRepack: Merged assembly copied to $(OutputPath)$(AssemblyName).merged.dll" Importance="high" Condition="Exists('$(OutputPath)$(AssemblyName).merged.dll')" />
+    
+  </Target>
+
+</Project>
