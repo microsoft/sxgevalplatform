@@ -1,0 +1,9 @@
+# ILRepack Internalize Exclusions
+# Types matching these patterns will remain public in the merged assembly
+# All other types (including Application Insights) will be internalized
+
+# Keep plugin namespace types public so they can be loaded by the plugin host
+^SxG\.EvalPlatform\.Plugins\.
+
+# Note: All Microsoft.ApplicationInsights.* types will be internalized
+# This prevents conflicts with other versions of Application Insights

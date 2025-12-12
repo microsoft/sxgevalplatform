@@ -3,7 +3,7 @@ using Azure.Identity;
 
 namespace SxgEvalPlatformApi.Utils
 {
-    public class TokenCredentailUtils
+    public class TokenCredentialUtils
     {
         public static TokenCredential GetTokenCredential(string environment)
         {            
