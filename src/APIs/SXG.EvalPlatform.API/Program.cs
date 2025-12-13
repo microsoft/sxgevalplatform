@@ -18,6 +18,14 @@ builder.Services.AddControllers();
 // Add rate limiting policies
 var rateLimitingOptions = builder.Configuration.GetSection("RateLimiting").Get<RateLimitingOptions>();
 
+// Validate rate limiting configuration
+if (rateLimitingOptions == null)
+{
+    var earlyLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger<Program>();
+    earlyLogger.LogWarning(
+        "?? Rate limiting configuration not found in appsettings.json - using fallback defaults " +
+        "(IpPolicy: 100 req/60s, UserPolicy: 50 req/60s, SessionPolicy: 30 req/60s)");
+}
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -120,6 +128,9 @@ builder.Services.AddCorsServices();
 var authEnabled = builder.Configuration.GetValue<bool>("FeatureFlags:EnableAuthentication", false);
 builder.Services.AddAzureAdAuthentication(builder.Configuration);
 
+// ?? MISE Compliance: Register security event logging service
+builder.Services.AddSingleton<ISecurityEventLogger, SecurityEventLogger>();
+
 builder.Services.AddAutoMapperServices();
 builder.Services.AddHttpClientServices();
 builder.Services.AddServiceBus(builder.Configuration);
@@ -128,10 +139,35 @@ builder.Services.AddBusinessServices(builder.Configuration);
 
 var app = builder.Build();
 
+// ?? MISE Compliance: Validate Application Insights configuration
+var appInsightsConnectionString = builder.Configuration["Telemetry:AppInsightsConnectionString"];
+var securityLoggingEnabled = builder.Configuration.GetValue<bool>("SecurityLogging:Enabled", true);
+
+if (securityLoggingEnabled && string.IsNullOrWhiteSpace(appInsightsConnectionString))
+{
+    var validationLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    validationLogger.LogCritical(
+        "?????? MISE COMPLIANCE VIOLATION ??????\n" +
+        "Application Insights connection string not configured!\n" +
+        "Security events will only log to console, NOT to SIEM.\n" +
+        "Configure 'Telemetry:AppInsightsConnectionString' in appsettings.json or environment variables.\n" +
+        "To disable this check, set 'SecurityLogging:Enabled' to false.");
+    
+    // In production, throw an exception to prevent startup without SIEM
+    if (app.Environment.IsProduction())
+    {
+        throw new InvalidOperationException(
+            "MISE Compliance Violation: Application Insights must be configured in production for SIEM integration. " +
+            "Set 'Telemetry:AppInsightsConnectionString' in configuration.");
+    }
+}
+
 // Configure middleware pipeline
 
-
 app.UseMiddleware<TelemetryMiddleware>();
+
+// ?? MISE Compliance: Security monitoring middleware for threat detection
+app.UseMiddleware<SecurityMonitoringMiddleware>();
 
 // Enable rate limiting globally (all endpoints)
 app.UseRateLimiter();
@@ -185,12 +221,30 @@ telemetryService.AddActivityTags(new Dictionary<string, object>
 });
 
 logger.LogInformation(
-    "SXG Evaluation Platform API starting up - Environment: {Environment}, Authentication: {AuthStatus}, UserContext: Enabled",
+    "SXG Evaluation Platform API starting up - Environment: {Environment}, Authentication: {AuthStatus}, UserContext: Enabled, MISE Security: Enabled",
     app.Environment.EnvironmentName,
     authEnabled 
       ? "ENABLED" + (!string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]) ? " (Configured)" : " (NOT Configured - will fail!)")
         : "DISABLED (Anonymous Access)"
 );
+
+// ?? MISE Compliance: Log application startup as security event
+var securityLogger = app.Services.GetService<ISecurityEventLogger>();
+if (securityLogger != null)
+{
+    // Get container/host identifier (works in local dev, Docker, and Azure Container Apps)
+    var hostIdentifier = Environment.GetEnvironmentVariable("CONTAINER_APP_REPLICA_NAME")  // Azure Container Apps
+        ?? Environment.GetEnvironmentVariable("HOSTNAME")                                    // Generic Linux/Docker
+        ?? Environment.MachineName                                                           // Windows/Local dev
+        ?? "localhost";                                                                      // Fallback
+
+    _ = securityLogger.LogConfigurationChangeAsync(
+        changedBy: "System",
+        configKey: "Application.Startup",
+        oldValue: null,
+        newValue: $"Environment: {app.Environment.EnvironmentName}, Auth: {authEnabled}, Host: {hostIdentifier}",
+        ipAddress: hostIdentifier);  // Use host identifier instead of IP
+}
 
 app.Run();
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
+using SxgEvalPlatformApi.Services;
 
 namespace SxgEvalPlatformApi.Extensions;
 
@@ -100,18 +101,42 @@ public static class AuthenticationExtensions
            {
                // Log successful authentication
                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+               var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
                var claimsPrincipal = context.Principal;
 
                // Extract identity information
                var userId = claimsPrincipal?.FindFirst("oid")?.Value ??
    claimsPrincipal?.FindFirst("sub")?.Value ?? "unknown";
+               var userEmail = claimsPrincipal?.FindFirst("email")?.Value ??
+                               claimsPrincipal?.FindFirst("preferred_username")?.Value;
                var appId = claimsPrincipal?.FindFirst("appid")?.Value ??
   claimsPrincipal?.FindFirst("azp")?.Value;
                var tenantId = claimsPrincipal?.FindFirst("tid")?.Value;
                var authType = !string.IsNullOrEmpty(appId) ? "ManagedIdentity" : "DelegatedUser";
+               var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                logger.LogInformation("Token validated successfully - AuthType: {AuthType}, UserId: {UserId}, AppId: {AppId}, TenantId: {TenantId}",
        authType, userId, appId ?? "N/A", tenantId ?? "N/A");
+
+               // MISE Compliance: Log successful authentication to SIEM
+               if (securityLogger != null)
+               {
+                   _ = Task.Run(async () =>
+                   {
+                       try
+                       {
+                           await securityLogger.LogAuthenticationSuccessAsync(
+                               userId: userId,
+                               userEmail: userEmail,
+                               authenticationType: authType,
+                               ipAddress: ipAddress);
+                       }
+                       catch (Exception ex)
+                       {
+                           logger.LogError(ex, "Failed to log authentication success event");
+                       }
+                   });
+               }
 
                return Task.CompletedTask;
            },
@@ -120,8 +145,38 @@ public static class AuthenticationExtensions
           {
               // Log authentication failures
               var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+              var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
+              var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+              var userAgent = context.HttpContext.Request.Headers.UserAgent.ToString();
+
               logger.LogWarning(context.Exception, "Authentication failed - Reason: {Reason}",
 context.Exception.Message);
+
+              // MISE Compliance: Log authentication failure to SIEM
+              if (securityLogger != null)
+              {
+                  var details = new Dictionary<string, object>
+                  {
+                      ["ExceptionType"] = context.Exception?.GetType().Name ?? "Unknown",
+                      ["RequestPath"] = context.HttpContext.Request.Path.Value ?? "unknown"
+                  };
+
+                  _ = Task.Run(async () =>
+                  {
+                      try
+                      {
+                          await securityLogger.LogAuthenticationFailureAsync(
+                              reason: context.Exception?.Message ?? "Authentication failed",
+                              ipAddress: ipAddress,
+                              userAgent: userAgent,
+                              details: details);
+                      }
+                      catch (Exception ex)
+                      {
+                          logger.LogError(ex, "Failed to log authentication failure event");
+                      }
+                  });
+              }
 
               return Task.CompletedTask;
           },
@@ -130,8 +185,31 @@ context.Exception.Message);
                   {
                       // Log when authentication is challenged
                       var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                      var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
+                      var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
                       logger.LogWarning("Authentication challenged - Error: {Error}, ErrorDescription: {ErrorDescription}",
                         context.Error, context.ErrorDescription);
+
+                      // MISE Compliance: Log token validation challenges
+                      if (securityLogger != null && !string.IsNullOrWhiteSpace(context.Error))
+                      {
+                          var reason = $"{context.Error}: {context.ErrorDescription}";
+                          _ = Task.Run(async () =>
+                          {
+                              try
+                              {
+                                  await securityLogger.LogInvalidTokenAsync(
+                                      reason: reason,
+                                      ipAddress: ipAddress,
+                                      tokenHint: context.Error);
+                              }
+                              catch (Exception ex)
+                              {
+                                  logger.LogError(ex, "Failed to log invalid token event");
+                              }
+                          });
+                      }
 
                       return Task.CompletedTask;
                   }
