@@ -27,6 +27,8 @@
         string GetASPNetCoreEnvironment();
         string GetEvalRunTableName();
 
+        bool GetEnablePublishingEvalResultsToDataPlatform();
+
         /// <summary>
         /// Determines if caching is enabled based on the cache provider setting
         /// Returns true if provider is "Memory" or "Redis", false if "None" or "Disabled"

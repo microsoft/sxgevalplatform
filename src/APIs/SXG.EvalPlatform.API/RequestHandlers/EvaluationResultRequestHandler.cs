@@ -11,7 +11,7 @@ using static SXG.EvalPlatform.Common.CommonConstants;
 namespace SxgEvalPlatformApi.RequestHandlers
 {
     /// <summary>
-    /// Request handler for evaluation result operations with caching support
+    /// Request handler for evaluation fetchRequestStatus operations with caching support
     /// </summary>
     public class EvaluationResultRequestHandler : IEvaluationResultRequestHandler
     {
@@ -101,19 +101,44 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Save to blob storage first (write to backend store)
                 await _blobService.WriteBlobContentAsync(containerName, evalSummaryFileName, evalResultSummary.ToString());
 
-                _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                _logger.LogInformation("Successfully saved evaluation fetchRequestStatus summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
                     evalRunId, $"{containerName}/{evalSummaryFileName}", callerEmail);
 
-                //Write the same to service bus
-                await _messagePublisher.SendMessageAsync("evalresults", evalResultDataset.ToString());
                 
-                _logger.LogInformation("Successfully pushed evaluation result details for EvalRunId: {EvalRunId} to the downstream",
-                    evalRunId);
-
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
-                _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                _logger.LogInformation("Successfully saved evaluation fetchRequestStatus dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
                     evalRunId, $"{containerName}/{evalDatasetFileName}", callerEmail);
+
+                if (_configHelper.GetEnablePublishingEvalResultsToDataPlatform())
+                {
+                    //Write the same to service bus
+                    var (evalResultData, fetchRequestStatus) = await GetEvaluationResultFromStorageAsync(evalRunId);
+                    if (fetchRequestStatus.IsSuccessful == false || evalResultData == null)
+                    {
+                        _logger.LogWarning("Failed to retrieve evaluation results for EvalRunId: {EvalRunId} after saving. Skipping publishing to downstream.",
+                            evalRunId);
+                        return (null, new APIRequestProcessingResultDto
+                        {
+                            IsSuccessful = false,
+                            Message = "Failed to retrieve evaluation results after saving. Cannot publish to downstream.",
+                            StatusCode = System.Net.HttpStatusCode.InternalServerError
+                        });
+                    }
+                    //Serialize the evalResultData to JSON string
+                    var evalResultDataJson = JsonSerializer.Serialize(evalResultData, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        WriteIndented = true
+                    });
+                    await _messagePublisher.SendMessageAsync("evalresults", evalResultDataJson);
+                    _logger.LogInformation("Successfully pushed eval results to Data Platform for EvalRunId: {EvalRunId}.",
+                    evalRunId);
+                }
+
+                
+                _logger.LogInformation("Successfully pushed evaluation fetchRequestStatus details for EvalRunId: {EvalRunId} to the downstream",
+                    evalRunId);
 
                 // Delete enriched dataset file after successfully saving evaluation results
                 await DeleteEnrichedDatasetAsync(evalRunId, containerName);
@@ -243,7 +268,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             // Check if at least one blob exists
             if (!summaryExists && !datasetExists)
             {
-                _logger.LogInformation($"No evaluation result blobs found for EvalRunId: {evalRunId} in container: {containerName}. Tried paths: {evalSummaryBlobPath}, {evalResultDatasetPath}.");
+                _logger.LogInformation($"No evaluation fetchRequestStatus blobs found for EvalRunId: {evalRunId} in container: {containerName}. Tried paths: {evalSummaryBlobPath}, {evalResultDatasetPath}.");
                 return (null, new APIRequestProcessingResultDto
                 {
                     IsSuccessful = false,
@@ -255,7 +280,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             // Combine the results from both blobs
             var combinedResults = new Dictionary<string, object>();
 
-            // Add summary data if available
+            // Add summary evalResultData if available
             if (!string.IsNullOrEmpty(summaryContent))
             {
                 try
@@ -270,7 +295,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
             }
 
-            // Add dataset data if available
+            // Add dataset evalResultData if available
             if (!string.IsNullOrEmpty(datasetContent))
             {
                 try
@@ -342,224 +367,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 throw;
             }
         }
-
-
-
-        /// <summary>
-        /// Get evaluation results for a specific agent within a date range with caching support
-        /// </summary>
-        //public async Task<IList<EvaluationResultResponseDto>> GetEvaluationResultsByDateRangeAsync(string agentId, DateTime startDateTime, DateTime endDateTime)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}",
-        //            agentId, startDateTime, endDateTime);
-
-                
-        //        // If not in cache, fetch from storage
-        //        // Get all evaluation runs for the agent
-        //        var evalRuns = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
-
-        //        // Filter runs within the date range and only include completed ones
-        //        var filteredRuns = evalRuns
-        //        .Where(run => run.StartedDatetime.HasValue &&
-        //                 run.StartedDatetime.Value >= startDateTime &&
-        //          run.StartedDatetime.Value <= endDateTime &&
-        //       string.Equals(run.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
-        //              .ToList();
-
-        //        _logger.LogInformation("Found {Count} completed evaluation runs within date range for AgentId: {AgentId}",
-        //      filteredRuns.Count, agentId);
-
-        //        var results = new List<EvaluationResultResponseDto>();
-
-        //        foreach (var evalRun in filteredRuns)
-        //        {
-        //            try
-        //            {
-        //                // Get evaluation results for each run (this will use caching from GetEvaluationResultByIdAsync)
-        //                var result = await GetEvaluationResultByIdAsync(evalRun.EvalRunId);
-
-        //                if (result.Success)
-        //                {
-        //                    results.Add(result);
-        //                }
-        //                else
-        //                {
-        //                    _logger.LogWarning("Could not retrieve results for EvalRunId: {EvalRunId}. Reason: {Message}",
-        //                        evalRun.EvalRunId, result.Message);
-        //                }
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                _logger.LogError(ex, "Error retrieving results for EvalRunId: {EvalRunId}", evalRun.EvalRunId);
-        //                // Continue with other runs instead of failing completely
-        //            }
-        //        }
-
-        //        // Cache the result (cache for 20 minutes for aggregated queries)
-        //        await _cacheManager.SetAsync(cacheKey, results, TimeSpan.FromMinutes(20));
-        //        _logger.LogDebug("Cached evaluation results by date range for AgentId: {AgentId}", agentId);
-
-        //        _logger.LogInformation("Successfully retrieved {Count} evaluation results for AgentId: {AgentId}",
-        //                       results.Count, agentId);
-
-        //        return results;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error retrieving evaluation results for AgentId: {AgentId} between {StartDateTime} and {EndDateTime}",
-        //       agentId, startDateTime, endDateTime);
-        //        throw;
-        //    }
-        //}
-
-        /// <summary>
-        /// Invalidate related caches when data is modified
-        /// </summary>
-        //private async Task InvalidateRelatedCaches(string agentId)
-        //{
-        //    try
-        //    {
-        //        // We can't easily invalidate wildcard patterns, so we'll log this for now
-        //        // In a production system, you might want to implement cache tagging or use a more sophisticated cache invalidation strategy
-        //        _logger.LogDebug("Invalidating related caches for AgentId: {AgentId}", agentId);
-
-        //        // For now, we just log the invalidation need
-        //        // In a more sophisticated implementation, you could:
-        //        // 1. Use cache tags to track related cache entries
-        //        // 2. Store a list of active cache keys and iterate through them
-        //        // 3. Use Redis SCAN command to find matching patterns (for Redis cache)
-
-        //        var statistics = await _cacheManager.GetStatisticsAsync();
-        //        _logger.LogDebug("Cache statistics after potential invalidation - Type: {CacheType}, Items: {ItemCount}",
-        //        statistics.CacheType, statistics.ItemCount);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogWarning(ex, "Error invalidating related caches for AgentId: {AgentId}", agentId);
-        //        // Don't throw - cache invalidation failure shouldn't break the main operation
-        //    }
-        //}
-
-        // ... rest of the existing methods remain the same (GetEvaluationResultByIdFallbackAsync, etc)
-
-        /// <summary>
-        /// Fallback method to retrieve evaluation results using the original logic
-        /// </summary>
-        //private async Task<EvaluationResultResponseDto> GetEvaluationResultByIdFallbackAsync(Guid evalRunId, EvalRunDto evalRun, EvalRunTableEntity evalRunEntity)
-        //{
-        //    try
-        //    {
-        //        _logger.LogInformation("Using fallback method to retrieve evaluation results for EvalRunId: {EvalRunId}", evalRunId);
-
-        //        // Handle container name and blob path with support for folder structure
-        //        string containerName;
-        //        string blobPath;
-
-        //        if (!string.IsNullOrEmpty(evalRunEntity.ContainerName))
-        //        {
-        //            // New format: use stored container name and blob path
-        //            containerName = evalRunEntity.ContainerName;
-        //            // If BlobFilePath is a folder (ends with /), look for evaluation results file dynamically
-        //            if (!string.IsNullOrEmpty(evalRunEntity.BlobFilePath) && evalRunEntity.BlobFilePath.EndsWith('/'))
-        //            {
-        //                // Search for evaluation results files in the folder
-        //                var blobs = await _blobService.ListBlobsAsync(containerName, evalRunEntity.BlobFilePath);
-        //                var evaluationResultBlob = blobs.FirstOrDefault(b =>
-        //               b.Contains("evaluation_results_") && b.EndsWith(".json"));
-
-        //                if (evaluationResultBlob != null)
-        //                {
-        //                    blobPath = evaluationResultBlob;
-        //                }
-        //                else
-        //                {
-        //                    // Fallback to looking for results.json for backward compatibility
-        //                    blobPath = $"{evalRunEntity.BlobFilePath}results.json";
-        //                }
-        //            }
-        //            else
-        //            {
-        //                blobPath = evalRunEntity.BlobFilePath ?? $"evalresults/{evalRunId}/results.json";
-        //            }
-        //        }
-        //        else
-        //        {
-        //            // Backward compatibility: parse the old format
-        //            containerName = CommonUtils.TrimAndRemoveSpaces(evalRunEntity.AgentId);
-        //            // Try to find the evaluation results file dynamically first
-        //            var folderPath = $"evalresults/{evalRunId}/";
-        //            var blobs = await _blobService.ListBlobsAsync(containerName, folderPath);
-        //            var evaluationResultBlob = blobs.FirstOrDefault(b =>
-        //       b.Contains("evaluation_results_") && b.EndsWith(".json"));
-
-        //            if (evaluationResultBlob != null)
-        //            {
-        //                blobPath = evaluationResultBlob;
-        //            }
-        //            else
-        //            {
-        //                // Fallback to the old hardcoded name
-        //                blobPath = $"evalresults/{evalRunId}/results.json";
-        //            }
-        //        }
-
-        //        // Check if blob exists
-        //        var blobExists = await _blobService.BlobExistsAsync(containerName, blobPath);
-        //        if (!blobExists)
-        //        {
-        //            _logger.LogInformation("Evaluation results not found for EvalRunId: {EvalRunId} in path {BlobPath}. " +
-        //                   "This could mean the evaluation run hasn't completed yet or something went wrong.",
-        //                 evalRunId, $"{containerName}/{blobPath}");
-
-        //            return new EvaluationResultResponseDto
-        //            {
-        //                Success = false,
-        //                Message = "Evaluation results not found. This could mean the evaluation run hasn't completed yet or something went wrong during the evaluation process.",
-        //                EvalRunId = evalRunId
-        //            };
-        //        }
-
-        //        // Read blob content
-        //        var jsonContent = await _blobService.ReadBlobContentAsync(containerName, blobPath);
-
-        //        if (string.IsNullOrEmpty(jsonContent))
-        //        {
-        //            _logger.LogWarning("Empty evaluation results content for EvalRunId: {EvalRunId}", evalRunId);
-        //            return new EvaluationResultResponseDto
-        //            {
-        //                Success = false,
-        //                Message = "Evaluation results are empty",
-        //                EvalRunId = evalRunId
-        //            };
-        //        }
-
-        //        // Deserialize the content using the storage model
-        //        var evaluationResult = JsonSerializer.Deserialize<StoredEvaluationResultDto>(jsonContent);
-
-        //        _logger.LogInformation("Successfully retrieved evaluation results using fallback method for EvalRunId: {EvalRunId}", evalRunId);
-
-        //        return new EvaluationResultResponseDto
-        //        {
-        //            Success = true,
-        //            Message = "Evaluation results retrieved successfully (fallback)",
-        //            EvalRunId = evalRunId,
-        //            FileName = evaluationResult?.FileName ?? Path.GetFileName(blobPath),
-        //            EvaluationRecords = evaluationResult?.EvaluationResults
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error in fallback method for EvalRunId: {EvalRunId}", evalRunId);
-        //        return new EvaluationResultResponseDto
-        //        {
-        //            Success = false,
-        //            Message = "Failed to retrieve evaluation results using fallback method",
-        //            EvalRunId = evalRunId
-        //        };
-        //    }
-        //}
+                       
 
         /// <summary>
         /// Delete enriched dataset file for the given evaluation run
