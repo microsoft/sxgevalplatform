@@ -1,16 +1,17 @@
+using Microsoft.Identity.ServiceEssentials;
+using Microsoft.IdentityModel.S2S;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Identity.Web;
-using Microsoft.IdentityModel.Tokens;
 
 namespace SxgEvalPlatformApi.Extensions;
 
 /// <summary>
-/// Extension methods for authentication configuration
+/// Extension methods for authentication configuration using Microsoft Identity Service Essentials (MISE)
 /// </summary>
 public static class AuthenticationExtensions
 {
     /// <summary>
-    /// Configure multi-tenant Azure AD authentication with support for:
+    /// Configure authentication with Microsoft Identity Service Essentials (MISE) with support for:
+    /// - MSAuth1.0 PFT/POP protected tokens
     /// - Managed Identity (app-to-app flow)
     /// - Delegated User Authentication (user flow)
     /// 
@@ -40,8 +41,6 @@ public static class AuthenticationExtensions
 
         // Get configuration values
         var clientId = azureAdSection["ClientId"];
-        var audience = azureAdSection["Audience"];
-        var instance = azureAdSection["Instance"] ?? "https://login.microsoftonline.com/";
         var tenantId = azureAdSection["TenantId"] ?? "common"; // "common" for multi-tenant
 
         // Validate required configuration
@@ -52,133 +51,176 @@ public static class AuthenticationExtensions
                 "Either provide a ClientId or set FeatureFlags:EnableAuthentication to false.");
         }
 
-        // Build valid issuers for multi-tenant scenario
-        var validIssuers = new List<string>
-        {
-            $"{instance}common/v2.0",
-            $"{instance}{tenantId}/v2.0",
-            $"https://sts.windows.net/common/",
-            $"https://sts.windows.net/{tenantId}/"
-        };
+        // Get MISE-specific configuration
+        var miseSection = authSection.GetSection("MISE");
+        var requireProtectedTokens = miseSection.GetValue("RequireProtectedTokens", false);
+        var allowStandardBearer = miseSection.GetValue("AllowStandardBearerTokens", true);
+        var enableEventLogging = miseSection.GetValue("EnableEventLogging", true);
 
-        // Add valid audiences
-        var validAudiences = new List<string> { clientId };
-        if (!string.IsNullOrEmpty(audience) && audience != clientId)
+        // Configure MISE with default modules (best practice)
+        // AddMiseWithDefaultModules reads from configuration section "AzureAd"
+        // MISE registers its handler with the scheme "S2SAuthentication"
+        var authBuilder = services.AddAuthentication("S2SAuthentication")
+            .AddMiseWithDefaultModules(configuration);
+
+        // Configure MISE options post-registration if needed
+        if (!requireProtectedTokens && allowStandardBearer)
         {
-            validAudiences.Add(audience);
+            // Configure to accept standard bearer tokens (not just PFT/POP)
+            services.Configure<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(
+                "S2SAuthentication",
+                options =>
+                {
+                    // MISE token validation is already configured by AddMiseWithDefaultModules
+                    // Additional event handlers for logging if enabled
+                    if (enableEventLogging)
+                    {
+                        var existingOnTokenValidated = options.Events?.OnTokenValidated;
+                        var existingOnAuthFailed = options.Events?.OnAuthenticationFailed;
+                        var existingOnChallenge = options.Events?.OnChallenge;
+
+                        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                        {
+                            OnTokenValidated = async context =>
+                            {
+                                // Call existing handler first
+                                if (existingOnTokenValidated != null)
+                                {
+                                    await existingOnTokenValidated(context);
+                                }
+
+                                // Enhanced MISE-compliant security logging
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                                var claimsPrincipal = context.Principal;
+                                var httpContext = context.HttpContext;
+
+                                // Extract standard claims
+                                var userId = claimsPrincipal?.FindFirst("oid")?.Value ??
+                                    claimsPrincipal?.FindFirst("sub")?.Value ?? "unknown";
+                                var appId = claimsPrincipal?.FindFirst("appid")?.Value ??
+                                    claimsPrincipal?.FindFirst("azp")?.Value;
+                                var tid = claimsPrincipal?.FindFirst("tid")?.Value;
+                                var authType = !string.IsNullOrEmpty(appId) ? "ManagedIdentity" : "DelegatedUser";
+                                
+                                // Extract additional security context
+                                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                                var requestPath = httpContext.Request.Path.Value ?? "unknown";
+                                var userAgent = httpContext.Request.Headers["User-Agent"].ToString() ?? "unknown";
+                                
+                                // Extract token metadata
+                                var tokenType = claimsPrincipal?.FindFirst("token_type")?.Value ?? "Bearer";
+                                var exp = claimsPrincipal?.FindFirst("exp")?.Value;
+                                var roles = claimsPrincipal?.FindAll("roles").Select(c => c.Value).ToList();
+                                var scopes = claimsPrincipal?.FindFirst("scp")?.Value ?? 
+                                           claimsPrincipal?.FindFirst("scope")?.Value;
+                                
+                                // Determine if token is protected (PFT/POP) based on token claims
+                                var isProtectedToken = claimsPrincipal?.FindFirst("cnf")?.Value != null || // Proof of Possession
+                                                     claimsPrincipal?.FindFirst("pop_jwk")?.Value != null; // POP JWK
+
+                                // Log comprehensive authentication event for MISE compliance
+                                logger.LogInformation(
+                                    "[MISE Security Event] Token validated successfully | " +
+                                    "AuthType: {AuthType} | UserId: {UserId} | AppId: {AppId} | TenantId: {TenantId} | " +
+                                    "ClientIP: {ClientIP} | RequestPath: {RequestPath} | TokenType: {TokenType} | " +
+                                    "IsProtectedToken: {IsProtectedToken} | RequireProtectedTokens: {RequireProtectedTokens} | " +
+                                    "Roles: {Roles} | Scopes: {Scopes} | Expires: {TokenExpiration}",
+                                    authType, userId, appId ?? "N/A", tid ?? "N/A",
+                                    clientIp, requestPath, tokenType,
+                                    isProtectedToken, requireProtectedTokens,
+                                    roles.Any() ? string.Join(",", roles) : "none",
+                                    scopes ?? "none",
+                                    exp ?? "unknown");
+                            },
+
+                            OnAuthenticationFailed = async context =>
+                            {
+                                // Call existing handler first
+                                if (existingOnAuthFailed != null)
+                                {
+                                    await existingOnAuthFailed(context);
+                                }
+
+                                // Enhanced failure logging with security context
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                                var httpContext = context.HttpContext;
+                                
+                                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                                var requestPath = httpContext.Request.Path.Value ?? "unknown";
+                                var authHeader = httpContext.Request.Headers["Authorization"].ToString();
+                                var hasToken = !string.IsNullOrEmpty(authHeader);
+                                
+                                // Log authentication failure as security warning
+                                logger.LogWarning(
+                                    "[MISE Security Event] Authentication failed | " +
+                                    "Reason: {Reason} | ClientIP: {ClientIP} | RequestPath: {RequestPath} | " +
+                                    "HasAuthorizationHeader: {HasToken} | AllowStandardBearer: {AllowStandardBearer} | " +
+                                    "ExceptionType: {ExceptionType}",
+                                    context.Exception.Message, clientIp, requestPath,
+                                    hasToken, allowStandardBearer,
+                                    context.Exception.GetType().Name);
+                            },
+
+                            OnChallenge = async context =>
+                            {
+                                // Call existing handler first
+                                if (existingOnChallenge != null)
+                                {
+                                    await existingOnChallenge(context);
+                                }
+
+                                // Log authentication challenge with context
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                                var httpContext = context.HttpContext;
+                                
+                                var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                                var requestPath = httpContext.Request.Path.Value ?? "unknown";
+                                
+                                logger.LogWarning(
+                                    "[MISE Security Event] Authentication challenged | " +
+                                    "Error: {Error} | ErrorDescription: {ErrorDescription} | " +
+                                    "ClientIP: {ClientIP} | RequestPath: {RequestPath} | " +
+                                    "StatusCode: {StatusCode}",
+                                    context.Error ?? "none", context.ErrorDescription ?? "none",
+                                    clientIp, requestPath,
+                                    context.Response?.StatusCode ?? 401);
+                            }
+                        };
+                    }
+                });
         }
-
-        // Configure JWT Bearer authentication
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                    .AddMicrosoftIdentityWebApi(options =>
-                 {
-                     // Token validation parameters
-                     options.TokenValidationParameters = new TokenValidationParameters
-                     {
-                         ValidateIssuer = authSection.GetValue("ValidateIssuer", true),
-                         ValidateAudience = authSection.GetValue("ValidateAudience", true),
-                         ValidateLifetime = authSection.GetValue("ValidateLifetime", true),
-                         ValidateIssuerSigningKey = authSection.GetValue("ValidateIssuerSigningKey", true),
-
-                         // Multi-tenant support - validate against multiple issuers
-                         ValidIssuers = validIssuers,
-
-                         // Support both Client ID and custom audience
-                         ValidAudiences = validAudiences,
-
-                         // Clock skew for token expiration validation
-                         ClockSkew = TimeSpan.FromMinutes(authSection.GetValue("ClockSkewMinutes", 5)),
-
-                         // Map claim types for easy access
-                         NameClaimType = "name",
-                         RoleClaimType = "roles"
-                     };
-
-                     options.Events = new JwtBearerEvents
-                     {
-                         OnTokenValidated = context =>
-           {
-               // Log successful authentication
-               var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-               var claimsPrincipal = context.Principal;
-
-               // Extract identity information
-               var userId = claimsPrincipal?.FindFirst("oid")?.Value ??
-   claimsPrincipal?.FindFirst("sub")?.Value ?? "unknown";
-               var appId = claimsPrincipal?.FindFirst("appid")?.Value ??
-  claimsPrincipal?.FindFirst("azp")?.Value;
-               var tenantId = claimsPrincipal?.FindFirst("tid")?.Value;
-               var authType = !string.IsNullOrEmpty(appId) ? "ManagedIdentity" : "DelegatedUser";
-
-               logger.LogInformation("Token validated successfully - AuthType: {AuthType}, UserId: {UserId}, AppId: {AppId}, TenantId: {TenantId}",
-       authType, userId, appId ?? "N/A", tenantId ?? "N/A");
-
-               return Task.CompletedTask;
-           },
-
-                         OnAuthenticationFailed = context =>
-          {
-              // Log authentication failures
-              var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-              logger.LogWarning(context.Exception, "Authentication failed - Reason: {Reason}",
-context.Exception.Message);
-
-              return Task.CompletedTask;
-          },
-
-                         OnChallenge = context =>
-                  {
-                      // Log when authentication is challenged
-                      var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                      logger.LogWarning("Authentication challenged - Error: {Error}, ErrorDescription: {ErrorDescription}",
-                        context.Error, context.ErrorDescription);
-
-                      return Task.CompletedTask;
-                  }
-                     };
-
-                     // Save token in authentication properties (optional)
-                     options.SaveToken = authSection.GetValue("SaveToken", false);
-
-                     // Require HTTPS metadata in production
-                     options.RequireHttpsMetadata = authSection.GetValue("RequireHttpsMetadata", true);
-
-                 }, options =>
-          {
-              // Microsoft Identity options
-              options.Instance = instance;
-              options.TenantId = tenantId;
-              options.ClientId = clientId;
-          });
 
         // Configure authorization policies
         services.AddAuthorization(options =>
         {
             // Default policy - require authenticated user
-            options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-          .RequireAuthenticatedUser()
-        .Build();
+            options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("S2SAuthentication")
+                .RequireAuthenticatedUser()
+                .Build();
 
             // Policy for managed identity access (app-to-app)
             options.AddPolicy("ManagedIdentityOnly", policy =>
- {
-     policy.RequireAuthenticatedUser();
-     policy.RequireClaim("appid"); // Managed Identity tokens have 'appid' claim
- });
+            {
+                policy.AuthenticationSchemes.Add("S2SAuthentication");
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim("appid"); // Managed Identity tokens have 'appid' claim
+            });
 
             // Policy for user access (delegated)
             options.AddPolicy("DelegatedUserOnly", policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.RequireClaim("oid"); // User tokens have 'oid' (object ID) claim
-        });
+            {
+                policy.AuthenticationSchemes.Add("S2SAuthentication");
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim("oid"); // User tokens have 'oid' (object ID) claim
+            });
 
             // Policy for specific app role (for managed identity with specific role)
             options.AddPolicy("RequireEvalPlatformFullAccess", policy =>
-                  {
-                      policy.RequireAuthenticatedUser();
-                      policy.RequireClaim("roles", "EvalPlatform.FullAccess");
-                  });
+            {
+                policy.AuthenticationSchemes.Add("S2SAuthentication");
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim("roles", "EvalPlatform.FullAccess");
+            });
         });
 
         return services;
