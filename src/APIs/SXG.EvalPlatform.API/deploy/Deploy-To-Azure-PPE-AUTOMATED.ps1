@@ -25,10 +25,10 @@ param(
 [int]$HealthCheckWaitSeconds = 120
 )
 
-# Set error action preference
-$ErrorActionPreference = "Stop"
+# Set error action preference - use Continue to allow warning filtering
+$ErrorActionPreference = "Continue"
 
-# Suppress Azure CLI Python warnings globally for this session
+# Suppress Python/cryptography warnings from Azure CLI
 $env:PYTHONWARNINGS = "ignore"
 
 # Function to convert nested JSON to flat App Settings format
@@ -232,7 +232,7 @@ Write-Host ""
 
 # Login check
 Write-Host "[1/12] Checking Azure CLI login status..." -ForegroundColor Yellow
-$loginCheck = az account show --output json 2>$null
+$loginCheck = az account show --output json 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" }
 if (-not $loginCheck) {
     Write-Host "? Not logged in to Azure CLI." -ForegroundColor Red
     Write-Host "Please run: az login" -ForegroundColor Yellow
@@ -242,16 +242,16 @@ if (-not $loginCheck) {
 # Set subscription if provided
 if ($SubscriptionId) {
     Write-Host "Setting subscription to: $SubscriptionId" -ForegroundColor Yellow
-    az account set --subscription $SubscriptionId
+    az account set --subscription $SubscriptionId 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
 }
 
-$currentSub = (az account show --query name -o tsv)
+$currentSub = (az account show --query name -o tsv 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" })
 Write-Host "? Using subscription: $currentSub" -ForegroundColor Green
 Write-Host ""
 
 # Step 1: Verify Resource Group exists
 Write-Host "[2/12] Verifying resource group: $ResourceGroupName" -ForegroundColor Yellow
-$rgExists = az group show --name $ResourceGroupName --query "name" -o tsv 2>$null
+$rgExists = az group show --name $ResourceGroupName --query "name" -o tsv 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" }
 if (-not $rgExists) {
     Write-Host "? Resource group $ResourceGroupName does not exist." -ForegroundColor Red
     exit 1
@@ -261,7 +261,7 @@ Write-Host ""
 
 # Step 2: Verify App Service exists
 Write-Host "[3/12] Verifying App Service: $AppName" -ForegroundColor Yellow
-$appExists = az webapp show --name $AppName --resource-group $ResourceGroupName --query "name" -o tsv 2>$null
+$appExists = az webapp show --name $AppName --resource-group $ResourceGroupName --query "name" -o tsv 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" }
 
 if (-not $appExists) {
   Write-Host "? App Service $AppName does not exist" -ForegroundColor Red
@@ -274,7 +274,7 @@ Write-Host ""
 Write-Host "[4/12] Stopping App Service: $AppName" -ForegroundColor Yellow
 Write-Host "This ensures clean deployment without active connections..." -ForegroundColor Cyan
 
-az webapp stop --name $AppName --resource-group $ResourceGroupName --output none
+az webapp stop --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "? Failed to stop App Service" -ForegroundColor Red
@@ -305,14 +305,14 @@ try {
     --name $AppName `
         --resource-group $ResourceGroupName `
         --settings @appSettings `
-     --output none
+     --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "? Failed to configure App Settings" -ForegroundColor Red
   
       # Restart the app even if settings failed
         Write-Host "?? Restarting App Service despite configuration failure..." -ForegroundColor Yellow
-        az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+        az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
         exit 1
     }
     
@@ -324,7 +324,7 @@ catch {
  
     # Restart the app even if settings failed
  Write-Host "?? Restarting App Service despite configuration failure..." -ForegroundColor Yellow
-    az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+    az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
     exit 1
 }
 Write-Host ""
@@ -338,7 +338,7 @@ if (-not (Test-Path $projectPath)) {
     Write-Host "? Project file not found: $projectPath" -ForegroundColor Red
     
     # Restart the app
-    az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+    az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
     exit 1
 }
 
@@ -349,7 +349,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "? Build failed" -ForegroundColor Red
     
     # Restart the app
-    az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+    az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
     exit 1
 }
 Write-Host "? Build successful" -ForegroundColor Green
@@ -369,7 +369,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "? Publish failed" -ForegroundColor Red
     
     # Restart the app
-    az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+    az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
     exit 1
 }
 Write-Host "? Publish successful" -ForegroundColor Green
@@ -397,13 +397,13 @@ az webapp deploy `
     --src-path $zipPath `
     --type zip `
     --async false `
-    --timeout 600
+    --timeout 600 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" }
 
 if ($LASTEXITCODE -ne 0) {
 Write-Host "? Deployment failed" -ForegroundColor Red
     
     # Restart the app anyway
-    az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+    az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
     exit 1
 }
 Write-Host "? Application deployed successfully" -ForegroundColor Green
@@ -419,7 +419,7 @@ Write-Host ""
 # Step 10: START the App Service
 Write-Host "[11/12] Starting App Service: $AppName" -ForegroundColor Yellow
 
-az webapp start --name $AppName --resource-group $ResourceGroupName --output none
+az webapp start --name $AppName --resource-group $ResourceGroupName --output none 2>&1 | Where-Object { $_ -notmatch "cryptography|UserWarning|64-bit Python" } | Out-Null
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "? Failed to start App Service" -ForegroundColor Red

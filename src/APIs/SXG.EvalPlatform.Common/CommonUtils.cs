@@ -15,7 +15,7 @@ namespace SXG.EvalPlatform.Common
                 return new AzureCliCredential();
             }
                        
-            return new DefaultAzureCredential();
+            return new ManagedIdentityCredential();
         }
 
         public static string TrimAndRemoveSpaces(string input)
