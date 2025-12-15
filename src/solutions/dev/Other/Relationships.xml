@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="business_unit_cr890_evalrun" />
+  <EntityRelationship Name="ElasticFileAttachment_cr890_EvalRun_cr890_DatasetFile" />
+  <EntityRelationship Name="lk_cr890_evalrun_createdby" />
+  <EntityRelationship Name="lk_cr890_evalrun_modifiedby" />
+  <EntityRelationship Name="owner_cr890_evalrun" />
+  <EntityRelationship Name="team_cr890_evalrun" />
+  <EntityRelationship Name="user_cr890_evalrun" />
+</EntityRelationships>

@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="dataset">
+  <description default="dataset">
+    <label description="dataset" languagecode="1033" />
+  </description>
+  <displayname default="dataset">
+    <label description="dataset" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>dataset</name>
+  <type>10</type>
+</customapiresponseproperty>

@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="agentId">
+  <description default="agentId">
+    <label description="agentId" languagecode="1033" />
+  </description>
+  <displayname default="agentId">
+    <label description="agentId" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>agentId</name>
+  <type>10</type>
+</customapiresponseproperty>

@@ -1,0 +1,11 @@
+<environmentvariabledefinition schemaname="cr890_ApiScope">
+  <defaultvalue>443bbe62-c474-49f7-884c-d1b5a23eb735/.default</defaultvalue>
+  <displayname default="ApiScope">
+    <label description="ApiScope" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0.0.7</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

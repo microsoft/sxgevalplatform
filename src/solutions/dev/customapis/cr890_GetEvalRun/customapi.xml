@@ -1,0 +1,18 @@
+<customapi uniquename="cr890_GetEvalRun">
+  <allowedcustomprocessingsteptype>2</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="GetEvalRun">
+    <label description="GetEvalRun" languagecode="1033" />
+  </description>
+  <displayname default="GetEvalRun">
+    <label description="GetEvalRun" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>1</isfunction>
+  <isprivate>0</isprivate>
+  <name>GetEvalRun</name>
+  <plugintypeid>
+    <plugintypeexportkey>4fa1b60e-4fd1-4557-b7cb-d1ae44d995ad</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>0</workflowsdkstepenabled>
+</customapi>

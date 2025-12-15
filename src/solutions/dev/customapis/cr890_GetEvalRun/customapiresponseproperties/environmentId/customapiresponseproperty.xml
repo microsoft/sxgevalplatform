@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="environmentId">
+  <description default="environmentId">
+    <label description="environmentId" languagecode="1033" />
+  </description>
+  <displayname default="environmentId">
+    <label description="environmentId" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>environmentId</name>
+  <type>10</type>
+</customapiresponseproperty>
