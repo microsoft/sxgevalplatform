@@ -118,24 +118,21 @@ public static class AuthenticationExtensions
                logger.LogInformation("Token validated successfully - AuthType: {AuthType}, UserId: {UserId}, AppId: {AppId}, TenantId: {TenantId}",
        authType, userId, appId ?? "N/A", tenantId ?? "N/A");
 
-               // MISE Compliance: Log successful authentication to SIEM
+               // MISE Compliance: Log successful authentication to SIEM (enqueue for background processing)
                if (securityLogger != null)
                {
-                   _ = Task.Run(async () =>
+                   try
                    {
-                       try
-                       {
-                           await securityLogger.LogAuthenticationSuccessAsync(
-                               userId: userId,
-                               userEmail: userEmail,
-                               authenticationType: authType,
-                               ipAddress: ipAddress);
-                       }
-                       catch (Exception ex)
-                       {
-                           logger.LogError(ex, "Failed to log authentication success event");
-                       }
-                   });
+                       _ = securityLogger.LogAuthenticationSuccessAsync(
+                           userId: userId,
+                           userEmail: userEmail,
+                           authenticationType: authType,
+                           ipAddress: ipAddress);
+                   }
+                   catch (Exception ex)
+                   {
+                       logger.LogError(ex, "Failed to enqueue authentication success event");
+                   }
                }
 
                return Task.CompletedTask;
@@ -161,21 +158,18 @@ context.Exception.Message);
                       ["RequestPath"] = context.HttpContext.Request.Path.Value ?? "unknown"
                   };
 
-                  _ = Task.Run(async () =>
+                  try
                   {
-                      try
-                      {
-                          await securityLogger.LogAuthenticationFailureAsync(
-                              reason: context.Exception?.Message ?? "Authentication failed",
-                              ipAddress: ipAddress,
-                              userAgent: userAgent,
-                              details: details);
-                      }
-                      catch (Exception ex)
-                      {
-                          logger.LogError(ex, "Failed to log authentication failure event");
-                      }
-                  });
+                      _ = securityLogger.LogAuthenticationFailureAsync(
+                          reason: context.Exception?.Message ?? "Authentication failed",
+                          ipAddress: ipAddress,
+                          userAgent: userAgent,
+                          details: details);
+                  }
+                  catch (Exception ex)
+                  {
+                      logger.LogError(ex, "Failed to enqueue authentication failure event");
+                  }
               }
 
               return Task.CompletedTask;
@@ -195,20 +189,17 @@ context.Exception.Message);
                       if (securityLogger != null && !string.IsNullOrWhiteSpace(context.Error))
                       {
                           var reason = $"{context.Error}: {context.ErrorDescription}";
-                          _ = Task.Run(async () =>
+                          try
                           {
-                              try
-                              {
-                                  await securityLogger.LogInvalidTokenAsync(
-                                      reason: reason,
-                                      ipAddress: ipAddress,
-                                      tokenHint: context.Error);
-                              }
-                              catch (Exception ex)
-                              {
-                                  logger.LogError(ex, "Failed to log invalid token event");
-                              }
-                          });
+                              _ = securityLogger.LogInvalidTokenAsync(
+                                  reason: reason,
+                                  ipAddress: ipAddress,
+                                  tokenHint: context.Error);
+                          }
+                          catch (Exception ex)
+                          {
+                              logger.LogError(ex, "Failed to enqueue invalid token event");
+                          }
                       }
 
                       return Task.CompletedTask;

@@ -17,15 +17,18 @@ namespace SxgEvalPlatformApi.Services
         private readonly TelemetryClient? _telemetryClient;
         private readonly IConfiguration _configuration;
         private readonly bool _enableApplicationInsights;
+        private readonly ISecurityEventQueue? _eventQueue;
 
         public SecurityEventLogger(
             ILogger<SecurityEventLogger> logger,
             IConfiguration configuration,
+            ISecurityEventQueue? eventQueue = null,
             TelemetryClient? telemetryClient = null)
         {
             _logger = logger;
             _configuration = configuration;
             _telemetryClient = telemetryClient;
+            _eventQueue = eventQueue;
             _enableApplicationInsights = configuration.GetValue<bool>("OpenTelemetry:EnableApplicationInsights", true);
         }
 
@@ -251,7 +254,15 @@ namespace SxgEvalPlatformApi.Services
                 // Send to Application Insights for SIEM integration
                 if (_enableApplicationInsights && _telemetryClient != null)
                 {
-                    SendToApplicationInsights(securityEvent);
+                    // Prefer background queue for reliable delivery and batching
+                    if (_eventQueue != null)
+                    {
+                        _eventQueue.Enqueue(securityEvent);
+                    }
+                    else
+                    {
+                        SendToApplicationInsights(securityEvent);
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -347,6 +358,10 @@ namespace SxgEvalPlatformApi.Services
                     eventTelemetry.Properties["ExceptionMessage"] = securityEvent.ExceptionMessage;
                     eventTelemetry.Properties["ExceptionType"] = securityEvent.ExceptionType ?? "Unknown";
                 }
+
+                // Map severity to a property for Application Insights (EventTelemetry may not have SeverityLevel in all SDK versions)
+                var severityString = securityEvent.Severity.ToString();
+                eventTelemetry.Properties["SeverityLevel"] = severityString;
 
                 _telemetryClient.TrackEvent(eventTelemetry);
             }

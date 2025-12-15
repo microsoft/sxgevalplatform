@@ -129,6 +129,18 @@ var authEnabled = builder.Configuration.GetValue<bool>("FeatureFlags:EnableAuthe
 builder.Services.AddAzureAdAuthentication(builder.Configuration);
 
 // ?? MISE Compliance: Register security event logging service
+// Ensure memory cache is available for middleware and tracking
+builder.Services.AddMemoryCache();
+
+// Register SecurityEventQueue as a single instance and run it as hosted service
+builder.Services.AddSingleton<SecurityEventQueue>();
+builder.Services.AddSingleton<ISecurityEventQueue>(sp => sp.GetRequiredService<SecurityEventQueue>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<SecurityEventQueue>());
+
+builder.Services.AddSingleton<ISecurityEventLogger, SecurityEventLogger>();
+// Register security event queue (background service) and logger
+builder.Services.AddSingleton<ISecurityEventQueue, SecurityEventQueue>();
+builder.Services.AddHostedService<ServiceFactoryHostedService<ISecurityEventQueue>>();
 builder.Services.AddSingleton<ISecurityEventLogger, SecurityEventLogger>();
 
 builder.Services.AddAutoMapperServices();
