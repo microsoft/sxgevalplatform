@@ -1,0 +1,28 @@
+# Common variables for solution build pipelines
+
+variables:
+  # Version settings
+  Major: 1
+  Minor: 0
+  
+  # Build configuration
+  BuildConfiguration: 'Release'
+  BuildPlatform: 'Any CPU'
+  
+  # Path settings
+  REPO_ROOT: '$(Build.SourcesDirectory)'
+  SOLUTIONS_PATH: '$(Build.SourcesDirectory)\src\solutions'
+  PLUGINS_PATH: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins'
+  DROP_FOLDER: '$(Build.ArtifactStagingDirectory)\drop'
+  OUTPUT_FOLDER: '$(Build.ArtifactStagingDirectory)\output'
+  
+  # Container image
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
+  
+  # ESRP Signing configuration
+  # Note: These should be overridden with your actual service connection and certificate names
+  EsrpCodeSigningServiceConnection: 'ESRP CodeSigning'
+  SigningCertName: 'Microsoft400'
+  
+  # Solution Checker settings
+  SolutionCheckerEnabled: true

@@ -1,0 +1,18 @@
+<customapi uniquename="cr890_UpdateDatasetAsFile">
+  <allowedcustomprocessingsteptype>2</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="UpdateDatasetAsFile">
+    <label description="UpdateDatasetAsFile" languagecode="1033" />
+  </description>
+  <displayname default="UpdateDatasetAsFile">
+    <label description="UpdateDatasetAsFile" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>0</isfunction>
+  <isprivate>0</isprivate>
+  <name>UpdateDatasetAsFile</name>
+  <plugintypeid>
+    <plugintypeexportkey>032ec7bc-60eb-45df-9024-c1eece5f1ab2</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>1</workflowsdkstepenabled>
+</customapi>

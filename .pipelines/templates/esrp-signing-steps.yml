@@ -1,0 +1,122 @@
+# Template for ESRP Code Signing of plugin assemblies
+# This template handles signing of DLL files using ESRP service
+
+parameters:
+  - name: inputPath
+    type: string
+    displayName: 'Path containing files to sign'
+  
+  - name: outputPath
+    type: string
+    displayName: 'Path to output signed files'
+  
+  - name: filePattern
+    type: string
+    default: '*.dll'
+    displayName: 'Pattern of files to sign'
+  
+  - name: serviceConnection
+    type: string
+    displayName: 'ESRP service connection name'
+  
+  - name: clientId
+    type: string
+    displayName: 'ESRP App Registration Client ID'
+  
+  - name: tenantId
+    type: string
+    displayName: 'ESRP App Registration Tenant ID'
+  
+  - name: keyVaultName
+    type: string
+    displayName: 'ESRP Key Vault Name'
+  
+  - name: authCertName
+    type: string
+    displayName: 'ESRP Auth Certificate Name'
+  
+  - name: signCertName
+    type: string
+    displayName: 'ESRP Signing Certificate Name'
+
+steps:
+  # Prepare files for signing
+  - task: PowerShell@2
+    displayName: 'Prepare Files for ESRP Signing'
+    inputs:
+      targetType: inline
+      script: |
+        $inputPath = "${{ parameters.inputPath }}"
+        $signingPath = "${{ parameters.inputPath }}\ToSign"
+        
+        New-Item -ItemType Directory -Force -Path $signingPath | Out-Null
+        
+        $files = Get-ChildItem -Path $inputPath -Filter "${{ parameters.filePattern }}" -File
+        foreach ($file in $files) {
+            Copy-Item -Path $file.FullName -Destination $signingPath -Force
+            Write-Host "Prepared for signing: $($file.Name)"
+        }
+        
+        Write-Host "##vso[task.setvariable variable=SigningInputPath]$signingPath"
+
+  # ESRP Code Signing
+  - task: EsrpCodeSigning@5
+    displayName: 'ESRP Code Signing'
+    inputs:
+      ConnectedServiceName: '${{ parameters.serviceConnection }}'
+      AppRegistrationClientId: '${{ parameters.clientId }}'
+      AppRegistrationTenantId: '${{ parameters.tenantId }}'
+      AuthAKVName: '${{ parameters.keyVaultName }}'
+      AuthCertName: '${{ parameters.authCertName }}'
+      AuthSignCertName: '${{ parameters.signCertName }}'
+      FolderPath: '$(SigningInputPath)'
+      Pattern: '${{ parameters.filePattern }}'
+      signConfigType: 'inlineSignParams'
+      inlineOperation: |
+        [
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolSign",
+            "Parameters": {
+              "OpusName": "Microsoft",
+              "OpusInfo": "http://www.microsoft.com",
+              "FileDigest": "/fd \"SHA256\"",
+              "PageHash": "/NPH",
+              "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+            },
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          },
+          {
+            "KeyCode": "CP-230012",
+            "OperationCode": "SigntoolVerify",
+            "Parameters": {},
+            "ToolName": "sign",
+            "ToolVersion": "1.0"
+          }
+        ]
+      SessionTimeout: '60'
+      MaxConcurrency: '50'
+      MaxRetryAttempts: '5'
+
+  # Copy signed files to output
+  - task: PowerShell@2
+    displayName: 'Copy Signed Files to Output'
+    inputs:
+      targetType: inline
+      script: |
+        $signedPath = "$(SigningInputPath)"
+        $outputPath = "${{ parameters.outputPath }}"
+        
+        New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
+        
+        $signedFiles = Get-ChildItem -Path $signedPath -Filter "${{ parameters.filePattern }}"
+        foreach ($file in $signedFiles) {
+            Copy-Item -Path $file.FullName -Destination $outputPath -Force
+            Write-Host "Copied signed file: $($file.Name)"
+        }
+        
+        # Cleanup temp signing folder
+        Remove-Item -Path $signedPath -Recurse -Force
+        
+        Write-Host "Signed files copied to: $outputPath"

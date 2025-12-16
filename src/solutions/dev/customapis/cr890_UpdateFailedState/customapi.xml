@@ -1,0 +1,18 @@
+<customapi uniquename="cr890_UpdateFailedState">
+  <allowedcustomprocessingsteptype>0</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="UpdateFailedState">
+    <label description="UpdateFailedState" languagecode="1033" />
+  </description>
+  <displayname default="UpdateFailedState">
+    <label description="UpdateFailedState" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>0</isfunction>
+  <isprivate>0</isprivate>
+  <name>UpdateFailedState</name>
+  <plugintypeid>
+    <plugintypeexportkey>deebb1c9-c769-4b97-a735-d108a2126347</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>0</workflowsdkstepenabled>
+</customapi>

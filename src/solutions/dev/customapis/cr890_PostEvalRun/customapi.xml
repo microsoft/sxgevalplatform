@@ -1,0 +1,18 @@
+<customapi uniquename="cr890_PostEvalRun">
+  <allowedcustomprocessingsteptype>2</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="PostEvalRun">
+    <label description="PostEvalRun" languagecode="1033" />
+  </description>
+  <displayname default="PostEvalRun">
+    <label description="PostEvalRun" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>0</isfunction>
+  <isprivate>0</isprivate>
+  <name>PostEvalRun</name>
+  <plugintypeid>
+    <plugintypeexportkey>6b6b393f-7516-4d94-8c50-80c3df886064</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>1</workflowsdkstepenabled>
+</customapi>
