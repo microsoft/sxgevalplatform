@@ -55,7 +55,7 @@ namespace Sxg.EvalPlatform.API.Storage.TableEntities
 
         private string _configurationId = string.Empty;
 
-        public string ConainerName { get; set; } = string.Empty;
+        public string ContainerName { get; set; } = string.Empty;
 
         public string BlobFilePath { get; set; } = string.Empty;
 

@@ -209,6 +209,11 @@ namespace Sxg.EvalPlatform.API.Storage
             return tableName;
         }
 
+        public bool GetEnablePublishingEvalResultsToDataPlatform()
+        {
+            return _configuration.GetValue<bool>("FeatureFlags:EnablePublishingEvalResultsToDataPlatform", true);
+        }
+
         /// <summary>
         /// Determines if caching is enabled based on the cache provider setting
         /// Returns true if provider is "Memory" or "Redis", false if "None" or "Disabled"

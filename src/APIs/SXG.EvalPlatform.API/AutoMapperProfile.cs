@@ -38,7 +38,7 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
 
-                .ForMember(dest => dest.ConainerName, opt => opt.Ignore())
+                .ForMember(dest => dest.ContainerName, opt => opt.Ignore())
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
                 .ForMember(dest => dest.Timestamp, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
@@ -56,7 +56,7 @@ namespace SxgEvalPlatformApi
                 .ForMember(dest => dest.LastUpdatedOn, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "System"))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => "System"))
-                .ForMember(dest => dest.ConainerName, opt => opt.Ignore())
+                .ForMember(dest => dest.ContainerName, opt => opt.Ignore())
                 .ForMember(dest => dest.BlobFilePath, opt => opt.Ignore())
                 .ForMember(dest => dest.Timestamp, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.ETag, opt => opt.Ignore());
