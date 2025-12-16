@@ -69,5 +69,5 @@ TestResults.xml
 /src/APIs/SXG.EvalPlatform.API/appsettings.Development.json
 /src/APIs/SXG.EvalPlatform.API/appsettings.Local.json
 /.vs
-/src/APIs/Sxg.EvalPlatform.Common.UnitTests/bin/Debug/net9.0
+/src/APIs/Sxg.EvalPlatform.Common.UnitTests/bin
 /src/APIs/Sxg.EvalPlatform.Common.UnitTests/obj
