@@ -449,7 +449,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 // Read blob content for Metrics configuration
-                var configContent = await _blobStorageService.ReadBlobContentAsync(metricsConfig.ConainerName, metricsConfig.BlobFilePath);
+                var configContent = await _blobStorageService.ReadBlobContentAsync(metricsConfig.ContainerName, metricsConfig.BlobFilePath);
                 if (string.IsNullOrEmpty(configContent))
                 {
                     _logger.LogWarning("Empty Metrics configuration content for ID: {MetricsConfigurationId}", metricsConfigurationId);

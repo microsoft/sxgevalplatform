@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sxg.EvalPlatform.API.Storage.Entities;
+using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
@@ -271,7 +272,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", vex.Message);
                 activity?.SetTag("error.type", vex.GetType().Name);
-                _logger.LogWarning(vex, "Validation error while creating configuration for agent: {AgentId}", createConfigDto?.AgentId);
+                _logger.LogWarning(vex, "Validation error while creating configuration for agent: {AgentId}", CommonUtils.SanitizeForLog(createConfigDto?.AgentId));
                 return BadRequest(new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = string.Empty,
@@ -344,7 +345,7 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (result.Status == "not_found")
                 {
-                    _logger.LogWarning("Configuration not found for update: {ConfigId}", configurationId);
+                    _logger.LogWarning("Configuration not found for update: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                     activity?.SetTag("success", false);
                     activity?.SetTag("found", false);
                     return NotFound(new ErrorResponseDto
@@ -367,7 +368,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", true);
                 activity?.SetTag("configuration_id", result.ConfigurationId);
 
-                _logger.LogInformation("Configuration updated successfully: {ConfigId}", result.ConfigurationId);
+                _logger.LogInformation("Configuration updated successfully: {ConfigId}", CommonUtils.SanitizeForLog(result.ConfigurationId));
 
                 return Ok(result);
             }
@@ -376,7 +377,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", vex.Message);
                 activity?.SetTag("error.type", vex.GetType().Name);
-                _logger.LogWarning(vex, "Validation error while updating configuration: {ConfigId}", configurationId);
+                _logger.LogWarning(vex, "Validation error while updating configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                 return BadRequest(new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = configurationId.ToString(),
@@ -433,7 +434,7 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (!deleted)
                 {
-                    _logger.LogWarning("Configuration not found for deletion: {ConfigId}", configurationId);
+                    _logger.LogWarning("Configuration not found for deletion: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                     activity?.SetTag("success", false);
                     activity?.SetTag("found", false);
                     return NotFound($"Configuration with ID '{configurationId}' not found");

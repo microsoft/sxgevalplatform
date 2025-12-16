@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Middleware
 {
@@ -47,7 +48,11 @@ namespace SxgEvalPlatformApi.Middleware
      EnrichActivity(activity, context, requestId);
      }
 
-            LogRequestStarted(_logger, context.Request.Method, context.Request.Path, requestId, null);
+            LogRequestStarted(_logger, 
+                CommonUtils.SanitizeForLog(context.Request.Method), 
+                CommonUtils.SanitizeForLog(context.Request.Path), 
+                CommonUtils.SanitizeForLog(requestId), 
+                null);
 
             Exception? exception = null;
        try
@@ -79,37 +84,37 @@ LogRequestResult(context, requestId, duration, exception);
 
         private static void EnrichActivity(Activity activity, HttpContext context, string requestId)
     {
-            activity.SetTag("http.request.id", requestId);
-   activity.SetTag("http.request.path", context.Request.Path.Value);
-            activity.SetTag("http.request.method", context.Request.Method);
+            activity.SetTag("http.request.id", CommonUtils.SanitizeForLog(requestId));
+   activity.SetTag("http.request.path", CommonUtils.SanitizeForLog(context.Request.Path.Value));
+            activity.SetTag("http.request.method", CommonUtils.SanitizeForLog(context.Request.Method));
    
          if (context.Request.QueryString.HasValue)
             {
-                activity.SetTag("http.request.query", context.Request.QueryString.Value);
+                activity.SetTag("http.request.query", CommonUtils.SanitizeForLog(context.Request.QueryString.Value));
    }
             
       var userAgent = context.Request.Headers.UserAgent.ToString();
  if (!string.IsNullOrEmpty(userAgent))
     {
-        activity.SetTag("user.agent", userAgent);
+        activity.SetTag("user.agent", CommonUtils.SanitizeForLog(userAgent));
             }
     
             var clientIp = context.Connection.RemoteIpAddress?.ToString();
             if (!string.IsNullOrEmpty(clientIp))
             {
-    activity.SetTag("client.ip", clientIp);
+    activity.SetTag("client.ip", CommonUtils.SanitizeForLog(clientIp));
   }
     }
 
         private static void EnrichActivityWithError(Activity activity, Exception exception)
         {
-   activity.SetTag("error.message", exception.Message);
+   activity.SetTag("error.message", CommonUtils.SanitizeForLog(exception.Message));
  activity.SetTag("error.type", exception.GetType().Name);
-            activity.SetStatus(ActivityStatusCode.Error, exception.Message);
+            activity.SetStatus(ActivityStatusCode.Error, CommonUtils.SanitizeForLog(exception.Message));
           
     // Only include stack trace in development/staging
  #if DEBUG
-     activity.SetTag("error.stack", exception.StackTrace);
+     activity.SetTag("error.stack", CommonUtils.SanitizeForLog(exception.StackTrace));
  #endif
         }
 
@@ -131,13 +136,21 @@ LogRequestResult(context, requestId, duration, exception);
     
        if (isError)
    {
-     LogRequestFailed(_logger, context.Request.Method, context.Request.Path, 
-              context.Response.StatusCode, duration, requestId, exception);
+     LogRequestFailed(_logger, 
+                CommonUtils.SanitizeForLog(context.Request.Method), 
+                CommonUtils.SanitizeForLog(context.Request.Path), 
+              context.Response.StatusCode, duration, 
+                CommonUtils.SanitizeForLog(requestId), 
+                exception);
             }
   else
 {
-    LogRequestCompleted(_logger, context.Request.Method, context.Request.Path, 
-     context.Response.StatusCode, duration, requestId, null);
+    LogRequestCompleted(_logger, 
+                CommonUtils.SanitizeForLog(context.Request.Method), 
+                CommonUtils.SanitizeForLog(context.Request.Path), 
+     context.Response.StatusCode, duration, 
+                CommonUtils.SanitizeForLog(requestId), 
+                null);
          }
         }
     }

@@ -202,7 +202,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 entity.ConfigurationId = configurationId;
                 entity.BlobFilePath = blobFilePath;
-                entity.ConainerName = blobContainer;
+                entity.ContainerName = blobContainer;
 
                 if (!isExistingConfig)
                 {
@@ -260,7 +260,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 // Update blob storage
                 await _blobStorageService.WriteBlobContentAsync(
-                     existingEntity.ConainerName,
+                     existingEntity.ContainerName,
                     existingEntity.BlobFilePath,
  JsonSerializer.Serialize(updateConfigDto.MetricsConfiguration));
 
@@ -319,7 +319,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (deleted)
                 {
                     //await RemoveConfigurationFromCacheAsync(configurationId, existingConfig.AgentId);
-                    await TryDeleteBlobAsync(existingConfig.ConainerName, existingConfig.BlobFilePath, configurationId);
+                    await TryDeleteBlobAsync(existingConfig.ContainerName, existingConfig.BlobFilePath, configurationId);
 
                     _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
                 }
@@ -553,7 +553,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath))
             {
-                return (entity.ConainerName, entity.BlobFilePath);
+                return (entity.ContainerName, entity.BlobFilePath);
             }
 
             var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);

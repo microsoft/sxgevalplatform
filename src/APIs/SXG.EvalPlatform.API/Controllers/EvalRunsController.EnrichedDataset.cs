@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -35,7 +36,7 @@ public partial class EvalRunsController
 
         try
         {
-            activity?.SetTag("evalRunId", evalRunId.ToString());
+            activity?.SetTag("evalRunId", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             activity?.SetTag("operation", "CreateEnrichedDataset");
 
             // Validate EvalRunId
@@ -65,7 +66,8 @@ public partial class EvalRunsController
                 return CreateFieldValidationError<EnrichedDatasetResponseDto>("EnrichedDataset", "Enriched dataset cannot be null or undefined");
             }
 
-            _logger.LogInformation("Storing enriched dataset for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogInformation("Storing enriched dataset for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             var response = await _evalArtifactsRequestHandler.StoreEnrichedDatasetAsync(evalRunId, createDto.EnrichedDataset);
 
@@ -75,7 +77,9 @@ public partial class EvalRunsController
             activity?.SetTag("http.status_code", 201);
 
             _logger.LogInformation("Successfully stored enriched dataset - EvalRunId: {EvalRunId}, BlobPath: {BlobPath}, Duration: {Duration}ms",
-                evalRunId, response.BlobPath, stopwatch.ElapsedMilliseconds);
+                CommonUtils.SanitizeForLog(evalRunId.ToString()), 
+                CommonUtils.SanitizeForLog(response.BlobPath), 
+                stopwatch.ElapsedMilliseconds);
 
             return CreatedAtAction(
                 nameof(GetEnrichedDatasetArtifact),
@@ -87,7 +91,8 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
 
-            _logger.LogError(ex, "Invalid operation while storing enriched dataset for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Invalid operation while storing enriched dataset for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             if (ex.Message.Contains("not found"))
             {
@@ -103,7 +108,8 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
 
-            _logger.LogError(ex, "Azure error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Azure error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             return HandleAzureException<EnrichedDatasetResponseDto>(ex, "Failed to store enriched dataset");
         }
@@ -116,12 +122,14 @@ public partial class EvalRunsController
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("http.status_code", 403);
-                _logger.LogWarning(ex, "Authorization error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogWarning(ex, "Authorization error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", 
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()));
                 return CreateErrorResponse<EnrichedDatasetResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
             activity?.SetTag("http.status_code", 500);
-            _logger.LogError(ex, "Error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error occurred while storing enriched dataset for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse<EnrichedDatasetResponseDto>("Failed to store enriched dataset", StatusCodes.Status500InternalServerError);
         }
     }
@@ -147,7 +155,7 @@ public partial class EvalRunsController
 
         try
         {
-            activity?.SetTag("evalRunId", evalRunId.ToString());
+            activity?.SetTag("evalRunId", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             activity?.SetTag("operation", "GetEnrichedDatasetArtifact");
 
             // Validate EvalRunId
@@ -159,7 +167,8 @@ public partial class EvalRunsController
                 return CreateFieldValidationError<EnrichedDatasetArtifactDto>("evalRunId", "Evaluation run ID is required and must be a valid GUID");
             }
 
-            _logger.LogInformation("Retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogInformation("Retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             var artifact = await _evalArtifactsRequestHandler.GetEnrichedDatasetArtifactAsync(evalRunId);
 
@@ -177,7 +186,9 @@ public partial class EvalRunsController
             activity?.SetTag("http.status_code", 200);
 
             _logger.LogInformation("Successfully retrieved enriched dataset artifact - EvalRunId: {EvalRunId}, AgentId: {AgentId}, Duration: {Duration}ms",
-                evalRunId, artifact.AgentId, stopwatch.ElapsedMilliseconds);
+                CommonUtils.SanitizeForLog(evalRunId.ToString()), 
+                CommonUtils.SanitizeForLog(artifact.AgentId), 
+                stopwatch.ElapsedMilliseconds);
 
             return Ok(artifact);
         }
@@ -187,7 +198,8 @@ public partial class EvalRunsController
             activity?.SetTag("success", false);
             activity?.SetTag("http.status_code", 400);
 
-            _logger.LogError(ex, "Invalid operation while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Invalid operation while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse<EnrichedDatasetArtifactDto>(ex.Message, StatusCodes.Status400BadRequest);
         }
         catch (RequestFailedException ex)
@@ -195,7 +207,8 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
 
-            _logger.LogError(ex, "Azure error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Azure error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return HandleAzureException<EnrichedDatasetArtifactDto>(ex, "Failed to retrieve enriched dataset artifact");
         }
         catch (Exception ex)
@@ -207,12 +220,14 @@ public partial class EvalRunsController
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("http.status_code", 403);
-                _logger.LogWarning(ex, "Authorization error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogWarning(ex, "Authorization error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", 
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()));
                 return CreateErrorResponse<EnrichedDatasetArtifactDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
             activity?.SetTag("http.status_code", 500);
-            _logger.LogError(ex, "Error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error occurred while retrieving enriched dataset artifact for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse<EnrichedDatasetArtifactDto>("Failed to retrieve enriched dataset artifact", StatusCodes.Status500InternalServerError);
         }
     }
@@ -238,7 +253,7 @@ public partial class EvalRunsController
 
         try
         {
-            activity?.SetTag("evalRunId", evalRunId.ToString());
+            activity?.SetTag("evalRunId", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             activity?.SetTag("operation", "EnqueueDatasetEnrichment");
 
             // Validate EvalRunId
@@ -250,7 +265,8 @@ public partial class EvalRunsController
                 return CreateFieldValidationError("evalRunId", "Evaluation run ID is required and must be a valid GUID");
             }
 
-            _logger.LogInformation("Enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogInformation("Enqueuing dataset enrichment for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             var (isSuccessful, httpStatusCode, message) = await _evalRunRequestHandler.PlaceEnrichmentRequestToDataVerseAPI(evalRunId);
 
@@ -282,7 +298,8 @@ public partial class EvalRunsController
             activity?.SetTag("http.status_code", 202);
 
             _logger.LogInformation("Successfully enqueued dataset enrichment - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
-                evalRunId, stopwatch.ElapsedMilliseconds);
+                CommonUtils.SanitizeForLog(evalRunId.ToString()), 
+                stopwatch.ElapsedMilliseconds);
 
             return Accepted();
         }
@@ -292,7 +309,8 @@ public partial class EvalRunsController
             activity?.SetTag("success", false);
             activity?.SetTag("http.status_code", 400);
 
-            _logger.LogError(ex, "Invalid operation while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Invalid operation while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse(ex.Message, StatusCodes.Status400BadRequest);
         }
         catch (Exception ex)
@@ -304,12 +322,14 @@ public partial class EvalRunsController
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
                 activity?.SetTag("http.status_code", 403);
-                _logger.LogWarning(ex, "Authorization error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+                _logger.LogWarning(ex, "Authorization error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", 
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()));
                 return CreateErrorResponse("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
             activity?.SetTag("http.status_code", 500);
-            _logger.LogError(ex, "Error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error occurred while enqueuing dataset enrichment for EvalRunId: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse("Failed to enqueue dataset enrichment", StatusCodes.Status500InternalServerError);
         }
     }
