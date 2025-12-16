@@ -101,19 +101,19 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 // Save to blob storage first (write to backend store)
                 await _blobService.WriteBlobContentAsync(containerName, evalSummaryFileName, evalResultSummary.ToString());
 
-                _logger.LogInformation("Successfully saved evaluation fetchRequestStatus summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
                     evalRunId, $"{containerName}/{evalSummaryFileName}", callerEmail);
 
                 
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
-                _logger.LogInformation("Successfully saved evaluation fetchRequestStatus dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
+                _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
                     evalRunId, $"{containerName}/{evalDatasetFileName}", callerEmail);
 
                 if (_configHelper.GetEnablePublishingEvalResultsToDataPlatform())
                 {
                     //Write the same to service bus
-                    var (evalResultData, fetchRequestStatus) = await GetEvaluationResultFromStorageAsync(evalRunId);
+                    var (evalResultData, fetchRequestStatus) = await GetEvaluationResultFromStorageAsync(evalRunId, false);
                     if (fetchRequestStatus.IsSuccessful == false || evalResultData == null)
                     {
                         _logger.LogWarning("Failed to retrieve evaluation results for EvalRunId: {EvalRunId} after saving. Skipping publishing to downstream.",
@@ -189,7 +189,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// <summary>
         /// Get evaluation results from storage (original logic without caching)
         /// </summary>
-        private async Task<(EvaluationResultResponseDto?, APIRequestProcessingResultDto?)> GetEvaluationResultFromStorageAsync(Guid evalRunId)
+        private async Task<(EvaluationResultResponseDto?, APIRequestProcessingResultDto?)> GetEvaluationResultFromStorageAsync(Guid evalRunId, bool checkForStatus = true)
         {
             var evalSummaryBlobPath = $"evaluation-results/{evalRunId}_summary.json";
             var evalResultDatasetPath = $"evaluation-results/{evalRunId}_dataset.json";
@@ -209,7 +209,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
 
             // Check if the evaluation run status is EvalRunCompleted
-            if (!string.Equals(evalRunEntity.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
+            if (checkForStatus && !string.Equals(evalRunEntity.Status, EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Evaluation results not available for EvalRunId: {EvalRunId} with status: {Status}. Results are only available for completed evaluations.", evalRunId, evalRunEntity.Status);
                 return (null, new APIRequestProcessingResultDto
