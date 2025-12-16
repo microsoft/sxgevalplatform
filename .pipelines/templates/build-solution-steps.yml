@@ -1,0 +1,135 @@
+# Template for building and packaging Dataverse solutions
+# This template handles plugin build, solution packaging, and artifact creation
+
+parameters:
+  - name: solutionName
+    type: string
+    displayName: 'Solution name to build'
+  
+  - name: solutionVersion
+    type: string
+    displayName: 'Solution version'
+    default: '$(SolutionVersion)'
+  
+  - name: pluginsPath
+    type: string
+    displayName: 'Path to plugins project'
+    default: '$(PLUGINS_PATH)'
+  
+  - name: solutionsPath
+    type: string
+    displayName: 'Path to solutions folder'
+    default: '$(SOLUTIONS_PATH)'
+  
+  - name: outputFolder
+    type: string
+    displayName: 'Output folder for artifacts'
+    default: '$(OUTPUT_FOLDER)'
+  
+  - name: buildConfiguration
+    type: string
+    default: 'Release'
+
+steps:
+  # Create output directories
+  - task: PowerShell@2
+    displayName: 'Create Output Directories'
+    inputs:
+      targetType: inline
+      script: |
+        $outputFolder = "${{ parameters.outputFolder }}"
+        
+        New-Item -ItemType Directory -Force -Path $outputFolder | Out-Null
+        New-Item -ItemType Directory -Force -Path "$outputFolder\Solutions" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$outputFolder\Plugins" | Out-Null
+        
+        Write-Host "Created output directories at: $outputFolder"
+
+  # Restore and Build Plugins
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore Plugins NuGet Packages'
+    inputs:
+      command: 'restore'
+      projects: '${{ parameters.pluginsPath }}\SxG.EvalPlatform.Plugins.csproj'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Build Plugins'
+    inputs:
+      command: 'build'
+      projects: '${{ parameters.pluginsPath }}\SxG.EvalPlatform.Plugins.csproj'
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --output ${{ parameters.outputFolder }}\Plugins --no-restore'
+
+  # Update Solution Version in Solution.xml
+  - task: PowerShell@2
+    displayName: 'Update Solution Version'
+    inputs:
+      targetType: inline
+      script: |
+        $solutionPath = "${{ parameters.solutionsPath }}\${{ parameters.solutionName }}"
+        $solutionXmlPath = "$solutionPath\Other\Solution.xml"
+        
+        if (Test-Path $solutionXmlPath) {
+            Write-Host "Updating Solution.xml at: $solutionXmlPath"
+            
+            [xml]$solutionXml = Get-Content $solutionXmlPath
+            $currentVersion = $solutionXml.ImportExportXml.SolutionManifest.Version
+            Write-Host "Current Version: $currentVersion"
+            
+            $solutionXml.ImportExportXml.SolutionManifest.Version = "${{ parameters.solutionVersion }}"
+            Write-Host "New Version: ${{ parameters.solutionVersion }}"
+            
+            $solutionXml.Save($solutionXmlPath)
+            Write-Host "Solution.xml updated successfully"
+        } else {
+            Write-Host "##vso[task.logissue type=warning]Solution.xml not found at: $solutionXmlPath"
+        }
+
+  # Copy Plugin DLLs to Solution PluginAssemblies folder
+  - task: PowerShell@2
+    displayName: 'Copy Plugin Assemblies to Solution'
+    inputs:
+      targetType: inline
+      script: |
+        $pluginOutput = "${{ parameters.outputFolder }}\Plugins"
+        $solutionPluginPath = "${{ parameters.solutionsPath }}\${{ parameters.solutionName }}\PluginAssemblies"
+        
+        if (Test-Path $solutionPluginPath) {
+            Write-Host "Copying plugin assemblies from: $pluginOutput"
+            Write-Host "To: $solutionPluginPath"
+            
+            $pluginDlls = Get-ChildItem -Path $pluginOutput -Filter "*.Plugins.dll" -Recurse
+            foreach ($dll in $pluginDlls) {
+                Write-Host "Copying: $($dll.Name)"
+                Copy-Item -Path $dll.FullName -Destination $solutionPluginPath -Force
+            }
+        } else {
+            Write-Host "PluginAssemblies folder not found at: $solutionPluginPath"
+            Write-Host "Skipping plugin copy step"
+        }
+
+  # Pack Solution into ZIP
+  - task: PowerShell@2
+    displayName: 'Pack Solution'
+    inputs:
+      targetType: inline
+      script: |
+        $solutionPath = "${{ parameters.solutionsPath }}\${{ parameters.solutionName }}"
+        $outputPath = "${{ parameters.outputFolder }}\Solutions"
+        $solutionName = "${{ parameters.solutionName }}"
+        $version = "${{ parameters.solutionVersion }}"
+        
+        Write-Host "Packing solution from: $solutionPath"
+        Write-Host "Output path: $outputPath"
+        
+        # Create solution ZIP file
+        $zipFileName = "${solutionName}_${version}.zip"
+        $zipFilePath = Join-Path $outputPath $zipFileName
+        
+        Write-Host "Creating ZIP: $zipFilePath"
+        
+        # Compress the solution folder
+        Compress-Archive -Path "$solutionPath\*" -DestinationPath $zipFilePath -Force
+        
+        Write-Host "Solution packed successfully: $zipFilePath"
+        Write-Host "##vso[task.setvariable variable=SolutionZipPath]$zipFilePath"
+        Write-Host "##vso[task.setvariable variable=SolutionZipFileName]$zipFileName"
