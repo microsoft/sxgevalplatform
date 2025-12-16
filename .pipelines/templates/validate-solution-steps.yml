@@ -1,0 +1,119 @@
+# Template for validating Dataverse solution packages
+# This template verifies the solution ZIP structure and contents
+
+parameters:
+  - name: artifactPath
+    type: string
+    displayName: 'Path to solution artifacts'
+  
+  - name: solutionName
+    type: string
+    displayName: 'Expected solution name'
+
+steps:
+  - task: PowerShell@2
+    displayName: 'Validate Solution Package'
+    inputs:
+      targetType: inline
+      script: |
+        $artifactPath = "${{ parameters.artifactPath }}"
+        $expectedSolutionName = "${{ parameters.solutionName }}"
+        
+        Write-Host "=== Validating Solution Package ==="
+        Write-Host "Artifact Path: $artifactPath"
+        Write-Host "Expected Solution Name: $expectedSolutionName"
+        Write-Host ""
+        
+        # Check for solution ZIP files
+        $zipFiles = Get-ChildItem -Path $artifactPath -Filter "*.zip" -Recurse
+        
+        if ($zipFiles.Count -eq 0) {
+            Write-Host "##vso[task.logissue type=error]No solution ZIP files found!"
+            exit 1
+        }
+        
+        $validationPassed = $true
+        
+        foreach ($zip in $zipFiles) {
+            Write-Host "----------------------------------------"
+            Write-Host "Validating: $($zip.Name)"
+            Write-Host "  Size: $([math]::Round($zip.Length / 1KB, 2)) KB"
+            Write-Host "  Path: $($zip.FullName)"
+            
+            # Extract and validate contents
+            $extractPath = Join-Path $artifactPath "extracted_$($zip.BaseName)"
+            
+            try {
+                Expand-Archive -Path $zip.FullName -DestinationPath $extractPath -Force
+                
+                # Check for required files and folders
+                $requiredItems = @(
+                    "Other\Solution.xml",
+                    "Other\Customizations.xml"
+                )
+                
+                $missingItems = @()
+                foreach ($item in $requiredItems) {
+                    $itemPath = Join-Path $extractPath $item
+                    if (-not (Test-Path $itemPath)) {
+                        $missingItems += $item
+                    }
+                }
+                
+                if ($missingItems.Count -gt 0) {
+                    Write-Host "##vso[task.logissue type=warning]Missing required items in $($zip.Name): $($missingItems -join ', ')"
+                }
+                
+                # Validate Solution.xml
+                $solutionXml = Join-Path $extractPath "Other\Solution.xml"
+                if (Test-Path $solutionXml) {
+                    [xml]$xml = Get-Content $solutionXml
+                    $solutionName = $xml.ImportExportXml.SolutionManifest.UniqueName
+                    $version = $xml.ImportExportXml.SolutionManifest.Version
+                    $managed = $xml.ImportExportXml.SolutionManifest.Managed
+                    
+                    Write-Host "  Solution Name: $solutionName"
+                    Write-Host "  Version: $version"
+                    Write-Host "  Managed: $(if ($managed -eq '1') { 'Yes' } else { 'No' })"
+                    
+                    # Validate version format
+                    if ($version -match '^\d+\.\d+\.\d+\.\d+$') {
+                        Write-Host "  Version Format: VALID"
+                    } else {
+                        Write-Host "##vso[task.logissue type=warning]Version format invalid: $version (expected: X.X.X.X)"
+                    }
+                    
+                    Write-Host "  Status: VALID"
+                } else {
+                    Write-Host "##vso[task.logissue type=error]Solution.xml not found in $($zip.Name)"
+                    $validationPassed = $false
+                }
+                
+                # Check for plugin assemblies
+                $pluginPath = Join-Path $extractPath "PluginAssemblies"
+                if (Test-Path $pluginPath) {
+                    $plugins = Get-ChildItem -Path $pluginPath -Filter "*.dll" -Recurse
+                    Write-Host "  Plugin Assemblies: $($plugins.Count) found"
+                    foreach ($plugin in $plugins) {
+                        Write-Host "    - $($plugin.Name)"
+                    }
+                }
+                
+                # Cleanup extracted folder
+                Remove-Item -Path $extractPath -Recurse -Force
+                
+            } catch {
+                Write-Host "##vso[task.logissue type=error]Failed to extract/validate $($zip.Name): $($_.Exception.Message)"
+                $validationPassed = $false
+            }
+        }
+        
+        Write-Host ""
+        Write-Host "=== Validation Complete ==="
+        
+        if (-not $validationPassed) {
+            Write-Host "##vso[task.logissue type=error]Solution validation failed!"
+            exit 1
+        }
+        
+        Write-Host "All solutions validated successfully!"

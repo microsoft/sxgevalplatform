@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="cr890_AppInsightsConnectionString">
+  <defaultvalue>InstrumentationKey=11aea68a-d038-460d-9ffc-5531760d8df7;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ef2ddea1-6869-4590-8d30-682ab0824cee</defaultvalue>
+  <description default="Azure App Insights connection string">
+    <label description="Azure App Insights connection string" languagecode="1033" />
+  </description>
+  <displayname default="AppInsightsConnectionString">
+    <label description="AppInsightsConnectionString" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0.0.3</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

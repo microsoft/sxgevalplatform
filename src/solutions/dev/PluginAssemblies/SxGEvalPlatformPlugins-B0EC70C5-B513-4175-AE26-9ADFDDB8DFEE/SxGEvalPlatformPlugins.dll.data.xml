@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PluginAssembly FullName="SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginAssemblyId="b0ec70c5-b513-4175-ae26-9adfddb8dfee" CustomizationLevel="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <IsolationMode>2</IsolationMode>
+  <SourceType>0</SourceType>
+  <IntroducedVersion>1.0</IntroducedVersion>
+  <ManagedIdentityId>1f0e0d0d-de04-4193-972e-e27b830d7183</ManagedIdentityId>
+  <FileName>/PluginAssemblies/SxGEvalPlatformPlugins-B0EC70C5-B513-4175-AE26-9ADFDDB8DFEE/SxGEvalPlatformPlugins.dll</FileName>
+  <PluginTypes>
+    <PluginType AssemblyQualifiedName="SxG.EvalPlatform.Plugins.GetEvalRun, SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginTypeId="4fa1b60e-4fd1-4557-b7cb-d1ae44d995ad" Name="SxG.EvalPlatform.Plugins.GetEvalRun">
+      <FriendlyName>e3ba2a05-c6c3-4d41-a8e7-f8a71378d7cb</FriendlyName>
+    </PluginType>
+    <PluginType AssemblyQualifiedName="SxG.EvalPlatform.Plugins.PostEvalRun, SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginTypeId="6b6b393f-7516-4d94-8c50-80c3df886064" Name="SxG.EvalPlatform.Plugins.PostEvalRun">
+      <FriendlyName>5fa60b22-5e3a-4359-9005-9191c404ad53</FriendlyName>
+    </PluginType>
+    <PluginType AssemblyQualifiedName="SxG.EvalPlatform.Plugins.PublishEnrichedDataset, SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginTypeId="5f0df67a-3bd0-4b8f-a84e-182a86c6ed06" Name="SxG.EvalPlatform.Plugins.PublishEnrichedDataset">
+      <FriendlyName>989aa79b-fb08-4893-9cda-87f3f96f588d</FriendlyName>
+    </PluginType>
+    <PluginType AssemblyQualifiedName="SxG.EvalPlatform.Plugins.UpdateDatasetAsFile, SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginTypeId="032ec7bc-60eb-45df-9024-c1eece5f1ab2" Name="SxG.EvalPlatform.Plugins.UpdateDatasetAsFile">
+      <FriendlyName>b53847e2-0e31-4a21-963d-e9436884e113</FriendlyName>
+    </PluginType>
+    <PluginType AssemblyQualifiedName="SxG.EvalPlatform.Plugins.UpdateFailedState, SxG.EvalPlatform.Plugins, Version=0.1.0.0, Culture=neutral, PublicKeyToken=55054b4f5ce668bd" PluginTypeId="deebb1c9-c769-4b97-a735-d108a2126347" Name="SxG.EvalPlatform.Plugins.UpdateFailedState">
+      <FriendlyName>0acfcdc8-cee7-40fe-a434-b04a63008568</FriendlyName>
+    </PluginType>
+  </PluginTypes>
+</PluginAssembly>

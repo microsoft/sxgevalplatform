@@ -3,7 +3,7 @@ using SxgEvalPlatformApi.Middleware;
 using SXG.EvalPlatform.API.Middleware;  // ? Added for UserContextMiddleware
 using SxgEvalPlatformApi.Extensions;
 using System.Threading.RateLimiting;
-using SXG.EvalPlatform.Common;
+using Microsoft.Identity.ServiceEssentials;  // Added for UseMise middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,51 +63,7 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-//builder.Services.AddRateLimiter(options =>
-//{
-//    // Per IP address
-//    options.AddPolicy("IpPolicy", context =>
-//    {
-//        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-//        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-//        {
-//            PermitLimit = 100, // requests per minute per IP
-//            Window = TimeSpan.FromMinutes(1),
-//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-//            QueueLimit = 0
-//        });
-//    });
 
-//    // Per user (from claims)
-//    options.AddPolicy("UserPolicy", context =>
-//    {
-//        var userId = context.User?.Identity?.IsAuthenticated == true
-//            ? context.User.FindFirst("oid")?.Value ?? context.User.Identity.Name ?? "anonymous"
-//            : "anonymous";
-//        return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
-//        {
-//            PermitLimit = 50, // requests per minute per user
-//            Window = TimeSpan.FromMinutes(1),
-//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-//            QueueLimit = 0
-//        });
-//    });
-
-//    // Per session (from header/cookie)
-//    options.AddPolicy("SessionPolicy", context =>
-//    {
-//        var sessionId = context.Request.Headers["X-Session-Id"].FirstOrDefault()
-//            ?? context.Request.Cookies["SessionId"]
-//            ?? "nosession";
-//        return RateLimitPartition.GetFixedWindowLimiter(sessionId, _ => new FixedWindowRateLimiterOptions
-//        {
-//            PermitLimit = 30, // requests per minute per session
-//            Window = TimeSpan.FromMinutes(1),
-//            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-//            QueueLimit = 0
-//        });
-//    });
-//});
 
 // Add HttpContextAccessor (required for CallerIdentificationService)
 builder.Services.AddHttpContextAccessor();
@@ -160,6 +116,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 
 // Authentication/Authorization - Swagger endpoints are already registered above, so they're accessible
+// MISE authentication middleware is automatically configured via AddMiseWithDefaultModules
 app.UseAuthentication();
 
 // ? ADDED: Extract user context from headers when service principals call the API

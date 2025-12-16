@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="cr890_EnableAuditLogging">
+  <defaultvalue>yes</defaultvalue>
+  <description default="Enable Dataverse audit logs">
+    <label description="Enable Dataverse audit logs" languagecode="1033" />
+  </description>
+  <displayname default="EnableAuditLogging">
+    <label description="EnableAuditLogging" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0.0.3</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000002</type>
+</environmentvariabledefinition>

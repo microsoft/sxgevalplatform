@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="status">
+  <description default="status">
+    <label description="status" languagecode="1033" />
+  </description>
+  <displayname default="status">
+    <label description="status" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>status</name>
+  <type>10</type>
+</customapiresponseproperty>
