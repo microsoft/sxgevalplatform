@@ -259,15 +259,10 @@ stages:
                   
                   Write-Host "##vso[task.setvariable variable=SigningInputPath]$signPath"
 
-            - task: EsrpCodeSigning@5
+            - task: EsrpCodeSigning@2
               displayName: 'ESRP Code Signing - Plugin DLLs'
               inputs:
                 ConnectedServiceName: '$(EsrpCodeSigningServiceConnection)'
-                AppRegistrationClientId: '$(EsrpClientId)'
-                AppRegistrationTenantId: '$(EsrpTenantId)'
-                AuthAKVName: '$(EsrpKeyVaultName)'
-                AuthCertName: '$(EsrpAuthCertName)'
-                AuthSignCertName: '$(EsrpSignCertName)'
                 FolderPath: '$(SigningInputPath)'
                 Pattern: '*.dll'
                 signConfigType: 'inlineSignParams'
