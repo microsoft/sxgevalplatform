@@ -56,47 +56,47 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 
                 // ENHANCED LOGGING - Log complete caller info
                 _logger.LogWarning("=== AUDIT USER DEBUG ===");
-                _logger.LogWarning("CallerInfo Full: {CallerInfo}", callerInfo.ToString());
+                _logger.LogWarning("CallerInfo Full: {CallerInfo}", CommonUtils.SanitizeForLog(callerInfo.ToString()));
                 _logger.LogWarning("IsServicePrincipal: {IsServicePrincipal}", callerInfo.IsServicePrincipal);
                 _logger.LogWarning("HasDelegatedUser: {HasDelegatedUser}", callerInfo.HasDelegatedUser);
-                _logger.LogWarning("UserEmail: '{UserEmail}' (Length: {Length})", callerInfo.UserEmail, callerInfo.UserEmail?.Length ?? 0);
-                _logger.LogWarning("UserId: '{UserId}' (Length: {Length})", callerInfo.UserId, callerInfo.UserId?.Length ?? 0);
-                _logger.LogWarning("AppName: '{AppName}'", callerInfo.ApplicationName);
-                _logger.LogWarning("AppId: '{AppId}'", callerInfo.ApplicationId);
-                _logger.LogWarning("AuthType: '{AuthType}'", callerInfo.AuthenticationType);
+                _logger.LogWarning("UserEmail: '{UserEmail}' (Length: {Length})", CommonUtils.SanitizeForLog(callerInfo.UserEmail), callerInfo.UserEmail?.Length ?? 0);
+                _logger.LogWarning("UserId: '{UserId}' (Length: {Length})", CommonUtils.SanitizeForLog(callerInfo.UserId), callerInfo.UserId?.Length ?? 0);
+                _logger.LogWarning("AppName: '{AppName}'", CommonUtils.SanitizeForLog(callerInfo.ApplicationName));
+                _logger.LogWarning("AppId: '{AppId}'", CommonUtils.SanitizeForLog(callerInfo.ApplicationId));
+                _logger.LogWarning("AuthType: '{AuthType}'", CommonUtils.SanitizeForLog(callerInfo.AuthenticationType));
 
                 if (_callerService.IsServicePrincipalCall() && !_callerService.HasDelegatedUserContext())
                 {
                     // AppToApp flow - use application name
                     var appName = _callerService.GetCallingApplicationName();
                     var auditUser = !string.IsNullOrWhiteSpace(appName) && appName != "unknown" ? appName : "System";
-                    _logger.LogWarning("AUDIT DECISION: AppToApp flow - Using: '{AuditUser}'", auditUser);
+                    _logger.LogWarning("AUDIT DECISION: AppToApp flow - Using: '{AuditUser}'", CommonUtils.SanitizeForLog(auditUser));
                     return auditUser;
                 }
                 else
                 {
                     // DirectUser or DelegatedAppToApp - use UPN/email
                     var userEmail = _callerService.GetCurrentUserEmail();
-                    _logger.LogWarning("Got UserEmail: '{UserEmail}' (Type: {Type})", userEmail, userEmail?.GetType().Name ?? "null");
+                    _logger.LogWarning("Got UserEmail: '{UserEmail}' (Type: {Type})", CommonUtils.SanitizeForLog(userEmail), userEmail?.GetType().Name ?? "null");
                     
                     // Check if we got a meaningful value
                     if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown" && userEmail != "0")
                     {
-                        _logger.LogWarning("AUDIT DECISION: Using UserEmail: '{AuditUser}'", userEmail);
+                        _logger.LogWarning("AUDIT DECISION: Using UserEmail: '{AuditUser}'", CommonUtils.SanitizeForLog(userEmail));
                         return userEmail;
                     }
                     
                     // Try to get user ID as fallback
                     var userId = _callerService.GetCurrentUserId();
-                    _logger.LogWarning("Got UserId: '{UserId}' (Type: {Type})", userId, userId?.GetType().Name ?? "null");
+                    _logger.LogWarning("Got UserId: '{UserId}' (Type: {Type})", CommonUtils.SanitizeForLog(userId), userId?.GetType().Name ?? "null");
                     
                     if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown" && userId != "0")
                     {
-                        _logger.LogWarning("AUDIT DECISION: Using UserId fallback: '{AuditUser}'", userId);
+                        _logger.LogWarning("AUDIT DECISION: Using UserId fallback: '{AuditUser}'", CommonUtils.SanitizeForLog(userId));
                         return userId;
                     }
                     
-                    _logger.LogWarning("AUDIT DECISION: Could not determine audit user, using 'System'. UserEmail: '{UserEmail}', UserId: '{UserId}'", userEmail, userId);
+                    _logger.LogWarning("AUDIT DECISION: Could not determine audit user, using 'System'. UserEmail: '{UserEmail}', UserId: '{UserId}'", CommonUtils.SanitizeForLog(userEmail), CommonUtils.SanitizeForLog(userId));
                     return "System";
                 }
             }
@@ -164,7 +164,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 evalRunDto.MetricsConfigurationName = metricsConfigEntity.ConfigurationName;
                               
 
-                _logger.LogInformation("Created evaluation run with ID: {EvalRunId} by {AuditUser}", evalRunId, auditUser);
+                _logger.LogInformation("Created evaluation run with ID: {EvalRunId} by {AuditUser}", evalRunId, CommonUtils.SanitizeForLog(auditUser));
 
                 // Send dataset enrichment request to DataVerse API (no caching needed for external API calls)
                 var enrichmentRequestResult = await SendDatasetEnrichmentToDataVerseAsync(evalRunId, createDto);
@@ -174,7 +174,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error creating evaluation run for AgentId: {createDto.AgentId}, DataSetId: {createDto.DataSetId}");
+                _logger.LogError(ex, "Error creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}",
+                    CommonUtils.SanitizeForLog(createDto.AgentId), CommonUtils.SanitizeForLog(createDto.DataSetId.ToString()));
                 throw;
             }
         }
@@ -215,7 +216,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 
                 var evalRunDto = await MapEntityToDtoAsync(updatedEntity);
 
-                _logger.LogInformation($"Updated evaluation run status to {normalizedStatus} for ID: {updateDto.EvalRunId} and updated cache");
+                _logger.LogInformation("Updated evaluation run status to {Status} for ID: {EvalRunId} and updated cache",
+                    CommonUtils.SanitizeForLog(normalizedStatus), CommonUtils.SanitizeForLog(updateDto.EvalRunId.ToString()));
 
                 return evalRunDto;
             }
@@ -286,7 +288,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var entities = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
                 var results = entities.Select(MapEntityToDto).ToList();
                 _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId}",
-                  results.Count, agentId);
+                  results.Count, CommonUtils.SanitizeForLog(agentId));
                 return results;
             }
             catch (Exception ex)
@@ -359,7 +361,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Sending dataset enrichment request to DataVerse API for EvalRunId: {EvalRunId}, DatasetId: {DatasetId}",
-                       evalRunId, createDto.DataSetId);
+                       evalRunId, CommonUtils.SanitizeForLog(createDto.DataSetId.ToString()));
 
                 // Create DataVerse API request object
                 var dataVerseRequest = new DataVerseApiRequest
@@ -383,14 +385,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 else
                 {
                     _logger.LogWarning("Failed to post evaluation run request to DataVerse API for EvalRunId: {EvalRunId}. Status: {StatusCode}, Message: {Message}",
-                    evalRunId, dataVerseResponse.StatusCode, dataVerseResponse.Message);
+                    evalRunId, dataVerseResponse.StatusCode, CommonUtils.SanitizeForLog(dataVerseResponse.Message));
                     return (false, dataVerseResponse.StatusCode.ToString(), dataVerseResponse.Message);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending dataset enrichment request to DataVerse API for EvalRunId: {EvalRunId}, DatasetId: {DatasetId}",
-                   evalRunId, createDto.DataSetId);
+                   evalRunId, CommonUtils.SanitizeForLog(createDto.DataSetId.ToString()));
                 return (false, StatusCodes.Status500InternalServerError.ToString(), "Internal server error");
             }
         }
@@ -422,7 +424,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch dataset name for DataSetId: {DataSetId}", entity.DataSetId);
+                _logger.LogWarning(ex, "Failed to fetch dataset name for DataSetId: {DataSetId}", CommonUtils.SanitizeForLog(entity.DataSetId));
                 dto.DataSetName = null; // Set to null if fetch fails
             }
 
@@ -434,7 +436,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch metrics configuration name for MetricsConfigurationId: {MetricsConfigurationId}", entity.MetricsConfigurationId);
+                _logger.LogWarning(ex, "Failed to fetch metrics configuration name for MetricsConfigurationId: {MetricsConfigurationId}", CommonUtils.SanitizeForLog(entity.MetricsConfigurationId));
                 dto.MetricsConfigurationName = null; // Set to null if fetch fails
             }
 
@@ -471,14 +473,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
             var isValidDataSet = await _entityValidators.IsValidDatasetId(createDto.DataSetId.ToString(), createDto.AgentId);
             if (!isValidDataSet)
             {
-                return (false, $"DatasetId: {createDto.DataSetId} is invalid for AgentId: {createDto.AgentId}");
+                return (false, $"DatasetId: {CommonUtils.SanitizeForLog(createDto.DataSetId.ToString())} is invalid for AgentId: {CommonUtils.SanitizeForLog(createDto.AgentId)}");
             }
 
             // Validate Metrics Configuration
             var isValidMetrics = await _entityValidators.IsValidMetricsConfigurationId(createDto.MetricsConfigurationId.ToString(), createDto.AgentId);
             if (!isValidMetrics)
             {
-                return (false, $"MetricsConfigurationId: {createDto.MetricsConfigurationId} is invalid for AgentId: {createDto.AgentId}");
+                return (false, $"MetricsConfigurationId: {CommonUtils.SanitizeForLog(createDto.MetricsConfigurationId.ToString())} is invalid for AgentId: {CommonUtils.SanitizeForLog(createDto.AgentId)}");
             }
 
             return (true, string.Empty);
