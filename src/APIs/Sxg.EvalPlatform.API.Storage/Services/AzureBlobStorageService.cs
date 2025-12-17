@@ -1,10 +1,12 @@
-﻿using Azure.Core;
+﻿using Azure;
+using Azure.Core;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using SXG.EvalPlatform.Common;
+using SXG.EvalPlatform.Common.Exceptions;
 
 namespace Sxg.EvalPlatform.API.Storage.Services
 {
@@ -84,6 +86,43 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 return content;
             }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob read | " +
+                    "Operation: ReadBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob read operation: {ex.Message}",
+                    "ReadBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob read | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to read blob content from {ContainerName}/{BlobName}",
@@ -126,6 +165,45 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                   CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 return true;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob write | " +
+                    "Operation: WriteBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await InvalidateListCache(containerName, blobName);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob write operation: {ex.Message}",
+                    "WriteBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob write | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await InvalidateListCache(containerName, blobName);
+                throw;
             }
             catch (Exception ex)
             {
@@ -206,6 +284,47 @@ namespace Sxg.EvalPlatform.API.Storage.Services
        CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 return response.Value;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob delete | " +
+                    "Operation: DeleteBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await _cacheManager.RemoveAsync(existsCacheKey);
+                await InvalidateListCache(containerName, blobName);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob delete operation: {ex.Message}",
+                    "DeleteBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob delete | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await _cacheManager.RemoveAsync(existsCacheKey);
+                await InvalidateListCache(containerName, blobName);
+                return false;
             }
             catch (Exception ex)
             {
