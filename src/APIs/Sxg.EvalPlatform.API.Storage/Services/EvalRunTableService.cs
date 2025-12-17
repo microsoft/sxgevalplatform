@@ -47,7 +47,7 @@ public class EvalRunTableService : IEvalRunTableService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create or access table {_storageTableName}", _storageTableName);
+            _logger.LogError(ex, "Failed to create or access table {_storageTableName}", CommonUtils.SanitizeForLog(_storageTableName));
             throw;
         }
     }
@@ -62,13 +62,13 @@ public class EvalRunTableService : IEvalRunTableService
             entity.StartedDatetime = DateTime.UtcNow;
 
             await _tableClient.AddEntityAsync(entity);
-            _logger.LogInformation("Created evaluation run with ID: {EvalRunId}", entity.EvalRunId);
+            _logger.LogInformation("Created evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
             return entity;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating evaluation run for AgentId: {AgentId}, EvalRunId: {EvalRunId}", 
-                entity.AgentId, entity.EvalRunId);
+                CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
             throw;
         }
     }
@@ -86,7 +86,7 @@ public class EvalRunTableService : IEvalRunTableService
             
             if (entity == null)
             {
-                _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+                _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
                 return null;
             }
 
@@ -105,18 +105,18 @@ public class EvalRunTableService : IEvalRunTableService
             await _tableClient.UpdateEntityAsync(entity, entity.ETag);
             
             _logger.LogInformation("Updated evaluation run status to {Status} for ID: {EvalRunId}", 
-                status, evalRunId);
+                CommonUtils.SanitizeForLog(status), CommonUtils.SanitizeForLog(evalRunId.ToString()));
             
             return entity;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating evaluation run status for ID: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error updating evaluation run status for ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             throw;
         }
     }
@@ -133,12 +133,12 @@ public class EvalRunTableService : IEvalRunTableService
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error retrieving evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             throw;
         }
     }
@@ -159,12 +159,12 @@ public class EvalRunTableService : IEvalRunTableService
                 return entity;
             }
             
-            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", evalRunId);
+            _logger.LogWarning("Evaluation run not found with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error retrieving evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             throw;
         }
     }
@@ -187,13 +187,13 @@ public class EvalRunTableService : IEvalRunTableService
             }
             
             _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId}", 
-                results.Count, agentId);
+                results.Count, CommonUtils.SanitizeForLog(agentId));
             
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId}", agentId);
+            _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId}", CommonUtils.SanitizeForLog(agentId));
             throw;
         }
     }
@@ -218,7 +218,7 @@ public class EvalRunTableService : IEvalRunTableService
                 filter += $" and LastUpdatedOn le datetime'{endDateForFilter:yyyy-MM-ddTHH:mm:ss.fffZ}'";
             }
 
-            _logger.LogInformation("Executing query with filter: {Filter}", filter);
+            _logger.LogInformation("Executing query with filter: {Filter}", CommonUtils.SanitizeForLog(filter));
 
             var query = _tableClient.QueryAsync<EvalRunTableEntity>(
                 filter: filter);
@@ -234,13 +234,13 @@ public class EvalRunTableService : IEvalRunTableService
             results = results.OrderByDescending(x => x.LastUpdatedOn).ToList();
             
             _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId} with date filter, ordered by LastUpdatedOn desc", 
-                results.Count, agentId);
+                results.Count, CommonUtils.SanitizeForLog(agentId));
             
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId} with date filter", agentId);
+            _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId} with date filter", CommonUtils.SanitizeForLog(agentId));
             throw;
         }
     }
@@ -254,12 +254,12 @@ public class EvalRunTableService : IEvalRunTableService
         try
         {
             await _tableClient.UpdateEntityAsync(entity, entity.ETag);
-            _logger.LogInformation("Updated evaluation run with ID: {EvalRunId}", entity.EvalRunId);
+            _logger.LogInformation("Updated evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
             return entity;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating evaluation run with ID: {EvalRunId}", entity.EvalRunId);
+            _logger.LogError(ex, "Error updating evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
             throw;
         }
     }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Collections.Concurrent;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.Services
 {
@@ -36,17 +37,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     Interlocked.Increment(ref _hitCount);
                     _keyAccessTimes[key] = DateTime.UtcNow;
 
-                    _logger.LogDebug("Cache hit for key: {Key}", key);
+                    _logger.LogDebug("Cache hit for key: {Key}", CommonUtils.SanitizeForLog(key));
                     return Task.FromResult(cachedValue as T);
                 }
 
                 Interlocked.Increment(ref _missCount);
-                _logger.LogDebug("Cache miss for key: {Key}", key);
+                _logger.LogDebug("Cache miss for key: {Key}", CommonUtils.SanitizeForLog(key));
                 return Task.FromResult<T?>(null);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting item from memory cache with key: {Key}", key);
+                _logger.LogError(ex, "Error getting item from memory cache with key: {Key}", CommonUtils.SanitizeForLog(key));
                 return Task.FromResult<T?>(null);
             }
         }
@@ -77,17 +78,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 options.RegisterPostEvictionCallback((evictedKey, evictedValue, reason, state) =>
                  {
                      _keyAccessTimes.TryRemove(evictedKey.ToString()!, out _);
-                     _logger.LogDebug("Cache entry evicted - Key: {Key}, Reason: {Reason}", evictedKey, reason);
+                     _logger.LogDebug("Cache entry evicted - Key: {Key}, Reason: {Reason}", CommonUtils.SanitizeForLog(evictedKey?.ToString() ?? ""), reason);
                  });
 
                 _memoryCache.Set(key, value, options);
                 _keyAccessTimes[key] = DateTime.UtcNow;
 
-                _logger.LogDebug("Cache entry set - Key: {Key}, Expiration: {Expiration}, Size: 1", key, expiration);
+                _logger.LogDebug("Cache entry set - Key: {Key}, Expiration: {Expiration}, Size: 1", CommonUtils.SanitizeForLog(key), expiration);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting item in memory cache with key: {Key}", key);
+                _logger.LogError(ex, "Error setting item in memory cache with key: {Key}", CommonUtils.SanitizeForLog(key));
             }
 
             return Task.CompletedTask;
@@ -115,17 +116,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 options.RegisterPostEvictionCallback((evictedKey, evictedValue, reason, state) =>
                  {
                      _keyAccessTimes.TryRemove(evictedKey.ToString()!, out _);
-                     _logger.LogDebug("Cache entry evicted - Key: {Key}, Reason: {Reason}", evictedKey, reason);
+                     _logger.LogDebug("Cache entry evicted - Key: {Key}, Reason: {Reason}", CommonUtils.SanitizeForLog(evictedKey?.ToString() ?? ""), reason);
                  });
 
                 _memoryCache.Set(key, value, options);
                 _keyAccessTimes[key] = DateTime.UtcNow;
 
-                _logger.LogDebug("Cache entry set - Key: {Key}, AbsoluteExpiration: {AbsoluteExpiration}, Size: 1", key, absoluteExpiration);
+                _logger.LogDebug("Cache entry set - Key: {Key}, AbsoluteExpiration: {AbsoluteExpiration}, Size: 1", CommonUtils.SanitizeForLog(key), absoluteExpiration);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting item in memory cache with key: {Key}", key);
+                _logger.LogError(ex, "Error setting item in memory cache with key: {Key}", CommonUtils.SanitizeForLog(key));
             }
 
             return Task.CompletedTask;
@@ -141,11 +142,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             {
                 _memoryCache.Remove(key);
                 _keyAccessTimes.TryRemove(key, out _);
-                _logger.LogDebug("Cache entry removed - Key: {Key}", key);
+                _logger.LogDebug("Cache entry removed - Key: {Key}", CommonUtils.SanitizeForLog(key));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error removing item from memory cache with key: {Key}", key);
+                _logger.LogError(ex, "Error removing item from memory cache with key: {Key}", CommonUtils.SanitizeForLog(key));
             }
 
             return Task.CompletedTask;
@@ -164,7 +165,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking if item exists in memory cache with key: {Key}", key);
+                _logger.LogError(ex, "Error checking if item exists in memory cache with key: {Key}", CommonUtils.SanitizeForLog(key));
                 return Task.FromResult(false);
             }
         }
@@ -195,7 +196,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetOrCreateAsync for key: {Key}", key);
+                _logger.LogError(ex, "Error in GetOrCreateAsync for key: {Key}", CommonUtils.SanitizeForLog(key));
                 throw;
             }
         }
@@ -212,12 +213,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (_memoryCache.TryGetValue(key, out var value))
                 {
                     _keyAccessTimes[key] = DateTime.UtcNow;
-                    _logger.LogDebug("Cache entry refreshed - Key: {Key}", key);
+                    _logger.LogDebug("Cache entry refreshed - Key: {Key}", CommonUtils.SanitizeForLog(key));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing memory cache entry with key: {Key}", key);
+                _logger.LogError(ex, "Error refreshing memory cache entry with key: {Key}", CommonUtils.SanitizeForLog(key));
             }
 
             return Task.CompletedTask;
