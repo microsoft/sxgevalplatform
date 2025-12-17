@@ -124,13 +124,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await Task.WhenAll(invalidationTasks);
 
                 _logger.LogDebug("Invalidated cache for metrics config - Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-                         agentId, configurationId);
+                         CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
             }
             catch (Exception ex)
             {
                 // Log but don't throw - cache invalidation failure shouldn't break the operation
                 _logger.LogWarning(ex, "Failed to invalidate cache for metrics config - Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-                  agentId, configurationId);
+                  CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
             }
         }
 
@@ -142,11 +142,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 await _cacheManager.RemoveAsync(string.Format(GET_ALL_METRICS_CONFIGS_BY_AGENT_CACHE_KEY, agentId));
-                _logger.LogDebug("Invalidated agent-level cache for Agent: {AgentId}", agentId);
+                _logger.LogDebug("Invalidated agent-level cache for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to invalidate agent cache for Agent: {AgentId}", agentId);
+                _logger.LogWarning(ex, "Failed to invalidate agent cache for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
             }
         }
 
@@ -155,7 +155,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Saving Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
+        CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName));
 
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
@@ -164,14 +164,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await InvalidateMetricsConfigCacheAsync(entity.AgentId, entity.ConfigurationId, entity);
 
                 _logger.LogInformation("Successfully saved Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-                         entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
+                         CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName));
 
                 return entity;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-                   entity.AgentId, entity.ConfigurationName, entity.EnvironmentName);
+                   CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName));
                 throw;
             }
         }
@@ -196,12 +196,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (cachedEntities != null)
                 {
                     _logger.LogDebug("Cache hit for metrics configs - Agent: {AgentId}, Environment: {Environment}, Count: {Count}",
-                         agentId, environmentName, cachedEntities.Count);
+                         CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName), cachedEntities.Count);
                     return cachedEntities;
                 }
 
                 _logger.LogInformation("Retrieving all Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
-                   agentId, environmentName);
+                   CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
 
                 var entities = new List<MetricsConfigurationTableEntity>();
                 string filter;
@@ -224,14 +224,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Retrieved {Count} Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
-                         entities.Count, agentId, environmentName);
+                         entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
 
                 return entities;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve Metrics configurations for Agent: {AgentId}, Environment: {Environment}",
-                    agentId, environmentName);
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
                 throw;
             }
         }
@@ -247,12 +247,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (cachedEntities != null)
                 {
                     _logger.LogDebug("Cache hit for metrics configs - Agent: {AgentId}, Name: {ConfigName}, Environment: {Environment}, Count: {Count}",
-                          agentId, configurationName, environmentName, cachedEntities.Count);
+                          CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationName), CommonUtils.SanitizeForLog(environmentName), cachedEntities.Count);
                     return cachedEntities;
                 }
 
                 _logger.LogInformation("Retrieving all Metrics configurations for Agent: {AgentId}, ConfigName: {ConfigName}, Environment: {Environment}",
-                   agentId, configurationName, environmentName);
+                   CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationName), CommonUtils.SanitizeForLog(environmentName));
 
                 var entities = new List<MetricsConfigurationTableEntity>();
                 string filter = $"PartitionKey eq '{agentId}' and EnvironmentName eq '{environmentName}' and ConfigurationName eq '{configurationName}'";
@@ -266,14 +266,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Retrieved {Count} Metrics configurations for Agent: {AgentId}, ConfigName: {ConfigName}, Environment: {Environment}",
-                  entities.Count, agentId, configurationName, environmentName);
+                  entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationName), CommonUtils.SanitizeForLog(environmentName));
 
                 return entities;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve Metrics configurations for Agent: {AgentId}, ConfigName: {ConfigName}, Environment: {Environment}",
-              agentId, configurationName, environmentName);
+              CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationName), CommonUtils.SanitizeForLog(environmentName));
                 throw;
             }
         }
@@ -288,11 +288,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 var cachedEntity = await _cacheManager.GetAsync<MetricsConfigurationTableEntity>(cacheKey);
                 if (cachedEntity != null)
                 {
-                    _logger.LogDebug("Cache hit for metrics config by ID: {ConfigurationId}", configurationId);
+                    _logger.LogDebug("Cache hit for metrics config by ID: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
                     return cachedEntity;
                 }
 
-                _logger.LogInformation("Retrieving Metrics configuration by ConfigurationId: {ConfigurationId}", configurationId);
+                _logger.LogInformation("Retrieving Metrics configuration by ConfigurationId: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
 
                 var entities = new List<MetricsConfigurationTableEntity>();
                 string filter = $"RowKey eq '{configurationId}'";
@@ -311,13 +311,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 }
 
                 _logger.LogInformation("Retrieved Metrics configuration by ConfigurationId: {ConfigurationId}, Found: {Found}",
-           configurationId, result != null);
+           CommonUtils.SanitizeForLog(configurationId), result != null);
 
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve Metrics configuration by ConfigurationId: {ConfigurationId}", configurationId);
+                _logger.LogError(ex, "Failed to retrieve Metrics configuration by ConfigurationId: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
                 throw;
             }
         }
@@ -327,7 +327,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Deleting Metrics configuration by ID for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-                       agentId, configurationId);
+                       CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
 
                 // Get the entity first to have full details for cache invalidation
                 var entity = await GetMetricsConfigurationByConfigurationIdAsync(configurationId);
@@ -338,20 +338,20 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await InvalidateMetricsConfigCacheAsync(agentId, configurationId, entity);
 
                 _logger.LogInformation("Successfully deleted Metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-             agentId, configurationId);
+             CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
 
                 return true;
             }
             catch (Azure.RequestFailedException ex) when (ex.Status == 404)
             {
                 _logger.LogInformation("Metrics configuration not found for deletion - Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-           agentId, configurationId);
+           CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
                 return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete Metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-                    agentId, configurationId);
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
                 throw;
             }
         }

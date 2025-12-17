@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SXG.EvalPlatform.Common;
 
 namespace Sxg.EvalPlatform.API.Storage.Services
 {
@@ -19,35 +20,35 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// <inheritdoc />
         public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
         {
-            _logger.LogDebug("Cache bypass (GetAsync) - Caching disabled, returning null for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (GetAsync) - Caching disabled, returning null for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.FromResult<T?>(null);
         }
 
         /// <inheritdoc />
         public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) where T : class
         {
-            _logger.LogDebug("Cache bypass (SetAsync) - Caching disabled, ignoring set operation for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (SetAsync) - Caching disabled, ignoring set operation for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.CompletedTask;
         }
 
         /// <inheritdoc />
         public Task SetAsync<T>(string key, T value, DateTimeOffset absoluteExpiration, CancellationToken cancellationToken = default) where T : class
         {
-            _logger.LogDebug("Cache bypass (SetAsync with absolute expiration) - Caching disabled, ignoring set operation for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (SetAsync with absolute expiration) - Caching disabled, ignoring set operation for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.CompletedTask;
         }
 
         /// <inheritdoc />
         public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Cache bypass (RemoveAsync) - Caching disabled, ignoring remove operation for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (RemoveAsync) - Caching disabled, ignoring remove operation for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.CompletedTask;
         }
 
         /// <inheritdoc />
         public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Cache bypass (ExistsAsync) - Caching disabled, returning false for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (ExistsAsync) - Caching disabled, returning false for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.FromResult(false);
         }
 
@@ -57,7 +58,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             if (factory == null)
                 throw new ArgumentNullException(nameof(factory));
 
-            _logger.LogDebug("Cache bypass (GetOrCreateAsync) - Caching disabled, executing factory for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (GetOrCreateAsync) - Caching disabled, executing factory for key: {Key}", CommonUtils.SanitizeForLog(key));
 
             // Always execute the factory since cache is disabled
             return await factory();
@@ -66,7 +67,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// <inheritdoc />
         public Task RefreshAsync(string key, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Cache bypass (RefreshAsync) - Caching disabled, ignoring refresh operation for key: {Key}", key);
+            _logger.LogDebug("Cache bypass (RefreshAsync) - Caching disabled, ignoring refresh operation for key: {Key}", CommonUtils.SanitizeForLog(key));
             return Task.CompletedTask;
         }
 
