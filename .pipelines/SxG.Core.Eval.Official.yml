@@ -122,12 +122,13 @@ extends:
           - task: CmdLine@2
             displayName: 'Restore Package'
             inputs:
-              script: 'dotnet restore "$(Build.SourcesDirectory)\src\APIs\SXG.Eval.Platform.Api.sln"'
+              script: 'dotnet restore "$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj"'
+              workingDirectory: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API'
 
           - task: MSBuild@1
             displayName: "Build Eval API"
             inputs:
-                solution: '$(Build.SourcesDirectory)\src\APIs\Sxg.Eval.Platform.Api.sln'
+                solution: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj'
                 configuration: "Release"
                 msbuildArguments: '/t:rebuild /p:CreatePackage="true"'
                 clean: true
