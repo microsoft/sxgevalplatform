@@ -3,7 +3,8 @@ using SxgEvalPlatformApi.Middleware;
 using SXG.EvalPlatform.API.Middleware;  // ? Added for UserContextMiddleware
 using SxgEvalPlatformApi.Extensions;
 using System.Threading.RateLimiting;
-using Microsoft.Identity.ServiceEssentials;  // Added for UseMise middleware
+using Microsoft.Identity.ServiceEssentials;
+using SXG.EvalPlatform.Common;  // Added for UseMise middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
