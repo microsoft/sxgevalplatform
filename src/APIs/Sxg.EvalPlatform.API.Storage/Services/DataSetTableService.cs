@@ -148,12 +148,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<DataSetTableEntity> SaveDataSetAsync(DataSetTableEntity entity)
+        public async Task<DataSetTableEntity> SaveDataSetAsync(DataSetTableEntity entity, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Saving dataset for Agent: {AgentId}, DatasetId: {DatasetId}, Type: {DatasetType}",
-                         entity.AgentId, entity.DatasetId, entity.DatasetType);
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Saving dataset - Agent: {AgentId}, DatasetId: {DatasetId}, Type: {DatasetType}, User: {AuditUser}",
+                         CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.DatasetId), CommonUtils.SanitizeForLog(entity.DatasetType), CommonUtils.SanitizeForLog(user));
 
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
@@ -161,8 +162,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateDataSetCacheAsync(entity.AgentId, entity.DatasetId, entity);
 
-                _logger.LogInformation("Successfully saved dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.DatasetId));
+                _logger.LogInformation("[AUDIT] Successfully saved dataset - Agent: {AgentId}, DatasetId: {DatasetId}, User: {AuditUser}",
+                    CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.DatasetId), CommonUtils.SanitizeForLog(user));
 
                 return entity;
             }
@@ -424,12 +425,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<bool> DeleteDataSetAsync(string agentId, string datasetId)
+        public async Task<bool> DeleteDataSetAsync(string agentId, string datasetId, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Deleting dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                     agentId, datasetId);
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Deleting dataset - Agent: {AgentId}, DatasetId: {DatasetId}, User: {AuditUser}",
+                     CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId), CommonUtils.SanitizeForLog(user));
 
                 // Get the entity first to have full details for cache invalidation
                 var entity = await GetDataSetAsync(agentId, datasetId);
@@ -439,8 +441,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateDataSetCacheAsync(agentId, datasetId, entity);
 
-                _logger.LogInformation("Successfully deleted dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                agentId, datasetId);
+                _logger.LogInformation("[AUDIT] Successfully deleted dataset - Agent: {AgentId}, DatasetId: {DatasetId}, User: {AuditUser}",
+                CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId), CommonUtils.SanitizeForLog(user));
 
                 return true;
             }
@@ -458,11 +460,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<int> DeleteAllDataSetsByAgentIdAsync(string agentId)
+        public async Task<int> DeleteAllDataSetsByAgentIdAsync(string agentId, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Deleting all datasets for Agent: {AgentId}", agentId);
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Deleting all datasets - Agent: {AgentId}, User: {AuditUser}", CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(user));
 
                 var datasets = await GetAllDataSetsByAgentIdAsync(agentId);
                 int deletedCount = 0;
@@ -490,8 +493,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     await InvalidateDataSetCacheAsync(agentId, dataset.DatasetId, dataset);
                 }
 
-                _logger.LogInformation("Successfully deleted {DeletedCount} datasets for Agent: {AgentId}",
-                 deletedCount, CommonUtils.SanitizeForLog(agentId));
+                _logger.LogInformation("[AUDIT] Successfully deleted {DeletedCount} datasets - Agent: {AgentId}, User: {AuditUser}",
+                 deletedCount, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(user));
 
                 return deletedCount;
             }
@@ -502,12 +505,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<DataSetTableEntity?> UpdateDataSetMetadataAsync(string agentId, string datasetId, Action<DataSetTableEntity> updateAction)
+        public async Task<DataSetTableEntity?> UpdateDataSetMetadataAsync(string agentId, string datasetId, Action<DataSetTableEntity> updateAction, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Updating dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-      agentId, datasetId);
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Updating dataset metadata - Agent: {AgentId}, DatasetId: {DatasetId}, User: {AuditUser}",
+      CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId), CommonUtils.SanitizeForLog(user));
 
                 // Get the existing entity
                 var existingEntity = await GetDataSetAsync(agentId, datasetId);
@@ -527,8 +531,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateDataSetCacheAsync(agentId, datasetId, existingEntity);
 
-                _logger.LogInformation("Successfully updated dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-          CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
+                _logger.LogInformation("[AUDIT] Successfully updated dataset metadata - Agent: {AgentId}, DatasetId: {DatasetId}, User: {AuditUser}",
+          CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId), CommonUtils.SanitizeForLog(user));
 
                 return existingEntity;
             }
@@ -539,5 +543,6 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 throw;
             }
         }
+
     }
 }

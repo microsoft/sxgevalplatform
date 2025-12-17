@@ -154,7 +154,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 entity.SetCreationAudit(auditUser);
 
                 // Create in storage
-                var createdEntity = await _evalRunTableService.CreateEvalRunAsync(entity);
+                var createdEntity = await _evalRunTableService.CreateEvalRunAsync(entity, auditUser);
                 var datasetEntity = await _dataSetTableService.GetDataSetByIdAsync(createDto.DataSetId.ToString());
                 var metricsConfigEntity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(createDto.MetricsConfigurationId.ToString());
 

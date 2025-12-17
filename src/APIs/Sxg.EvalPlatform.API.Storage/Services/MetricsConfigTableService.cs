@@ -150,12 +150,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity)
+        public async Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Saving Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-        CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName));
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Saving Metrics configuration - Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}, User: {AuditUser}",
+        CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName), CommonUtils.SanitizeForLog(user));
 
                 // Keys are automatically set by the entity properties
                 await TableClient.UpsertEntityAsync(entity);
@@ -163,8 +164,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateMetricsConfigCacheAsync(entity.AgentId, entity.ConfigurationId, entity);
 
-                _logger.LogInformation("Successfully saved Metrics configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-                         CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName));
+                _logger.LogInformation("[AUDIT] Successfully saved Metrics configuration - Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}, User: {AuditUser}",
+                         CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.ConfigurationName), CommonUtils.SanitizeForLog(entity.EnvironmentName), CommonUtils.SanitizeForLog(user));
 
                 return entity;
             }
@@ -322,12 +323,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId)
+        public async Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId, string? auditUser = null)
         {
             try
             {
-                _logger.LogInformation("Deleting Metrics configuration by ID for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-                       CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
+                var user = auditUser ?? "System";
+                _logger.LogInformation("[AUDIT] Deleting Metrics configuration - Agent: {AgentId}, ConfigurationId: {ConfigurationId}, User: {AuditUser}",
+                       CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId), CommonUtils.SanitizeForLog(user));
 
                 // Get the entity first to have full details for cache invalidation
                 var entity = await GetMetricsConfigurationByConfigurationIdAsync(configurationId);
@@ -337,8 +339,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateMetricsConfigCacheAsync(agentId, configurationId, entity);
 
-                _logger.LogInformation("Successfully deleted Metrics configuration for Agent: {AgentId}, ConfigurationId: {ConfigurationId}",
-             CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId));
+                _logger.LogInformation("[AUDIT] Successfully deleted Metrics configuration - Agent: {AgentId}, ConfigurationId: {ConfigurationId}, User: {AuditUser}",
+             CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(configurationId), CommonUtils.SanitizeForLog(user));
 
                 return true;
             }
@@ -360,5 +362,6 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             throw new NotImplementedException();
         }
+
     }
 }

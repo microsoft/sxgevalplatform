@@ -11,8 +11,9 @@ public interface IEvalRunTableService
     /// Create a new evaluation run
     /// </summary>
     /// <param name="entity">EvalRun table entity to create</param>
+    /// <param name="auditUser">User performing the operation (for audit logging)</param>
     /// <returns>Created EvalRun table entity</returns>
-    Task<EvalRunTableEntity> CreateEvalRunAsync(EvalRunTableEntity entity);
+    Task<EvalRunTableEntity> CreateEvalRunAsync(EvalRunTableEntity entity, string? auditUser = null);
 
     /// <summary>
     /// Update evaluation run status
@@ -52,6 +53,7 @@ public interface IEvalRunTableService
     /// Update an evaluation run entity
     /// </summary>
     /// <param name="entity">EvalRun table entity to update</param>
+    /// <param name="auditUser">User performing the operation (for audit logging)</param>
     /// <returns>Updated EvalRun table entity</returns>
-    Task<EvalRunTableEntity> UpdateEvalRunAsync(EvalRunTableEntity entity);
+    Task<EvalRunTableEntity> UpdateEvalRunAsync(EvalRunTableEntity entity, string? auditUser = null);
 }

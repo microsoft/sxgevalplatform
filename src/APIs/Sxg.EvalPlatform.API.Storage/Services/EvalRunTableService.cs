@@ -14,7 +14,7 @@ public class EvalRunTableService : IEvalRunTableService
     private readonly TableClient _tableClient;
     private readonly ILogger<EvalRunTableService> _logger;
     private string _storageTableName = "EvalRun";
-    private readonly IConfigHelper _configHelper; 
+    private readonly IConfigHelper _configHelper;
 
     public EvalRunTableService(IConfigHelper configHelper, ILogger<EvalRunTableService> logger)
     {
@@ -55,14 +55,15 @@ public class EvalRunTableService : IEvalRunTableService
     /// <summary>
     /// Create a new evaluation run
     /// </summary>
-    public async Task<EvalRunTableEntity> CreateEvalRunAsync(EvalRunTableEntity entity)
+    public async Task<EvalRunTableEntity> CreateEvalRunAsync(EvalRunTableEntity entity, string? auditUser = null)
     {
         try
         {
             entity.StartedDatetime = DateTime.UtcNow;
+            var user = auditUser ?? "System";
 
             await _tableClient.AddEntityAsync(entity);
-            _logger.LogInformation("Created evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
+            _logger.LogInformation("[AUDIT] Created evaluation run - AgentId: {AgentId}, EvalRunId: {EvalRunId}, User: {AuditUser}", CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()), CommonUtils.SanitizeForLog(user));
             return entity;
         }
         catch (Exception ex)
@@ -93,7 +94,8 @@ public class EvalRunTableService : IEvalRunTableService
             // Update the status and timestamp
             entity.Status = status;
             entity.LastUpdatedOn = DateTime.UtcNow;
-            entity.LastUpdatedBy = lastUpdatedBy ?? "System";
+            var user = lastUpdatedBy ?? "System";
+            entity.LastUpdatedBy = user;
             
             // Set completion datetime if status is Completed or Failed
             if (string.Equals(status, CommonConstants.EvalRunStatus.EvalRunCompleted, StringComparison.OrdinalIgnoreCase) || 
@@ -104,8 +106,8 @@ public class EvalRunTableService : IEvalRunTableService
 
             await _tableClient.UpdateEntityAsync(entity, entity.ETag);
             
-            _logger.LogInformation("Updated evaluation run status to {Status} for ID: {EvalRunId}", 
-                CommonUtils.SanitizeForLog(status), CommonUtils.SanitizeForLog(evalRunId.ToString()));
+            _logger.LogInformation("[AUDIT] Updated evaluation run status - AgentId: {AgentId}, EvalRunId: {EvalRunId}, Status: {Status}, User: {AuditUser}", 
+                CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(evalRunId.ToString()), CommonUtils.SanitizeForLog(status), CommonUtils.SanitizeForLog(user));
             
             return entity;
         }
@@ -249,12 +251,13 @@ public class EvalRunTableService : IEvalRunTableService
     /// <summary>
     /// Update an evaluation run entity
     /// </summary>
-    public async Task<EvalRunTableEntity> UpdateEvalRunAsync(EvalRunTableEntity entity)
+    public async Task<EvalRunTableEntity> UpdateEvalRunAsync(EvalRunTableEntity entity, string? auditUser = null)
     {
         try
         {
+            var user = auditUser ?? "System";
             await _tableClient.UpdateEntityAsync(entity, entity.ETag);
-            _logger.LogInformation("Updated evaluation run with ID: {EvalRunId}", CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()));
+            _logger.LogInformation("[AUDIT] Updated evaluation run - AgentId: {AgentId}, EvalRunId: {EvalRunId}, User: {AuditUser}", CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.EvalRunId.ToString()), CommonUtils.SanitizeForLog(user));
             return entity;
         }
         catch (Exception ex)
@@ -263,4 +266,5 @@ public class EvalRunTableService : IEvalRunTableService
             throw;
         }
     }
+
 }

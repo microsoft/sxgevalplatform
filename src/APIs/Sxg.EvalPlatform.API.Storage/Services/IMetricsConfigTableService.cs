@@ -11,8 +11,9 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// Save or update Metrics configuration in Azure Table
         /// </summary>
         /// <param name="entity">Metrics configuration entity</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>The saved entity</returns>
-        Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity);
+        Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity, string? auditUser = null);
 
         //Task<MetricsConfigurationTableEntity> GetDefaultMetricsConfigurationAsync();
 
@@ -79,8 +80,9 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="configurationId">Configuration ID (UUID)</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>True if deleted, false if not found</returns>
-        Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId);
+        Task<bool> DeleteMetricsConfigurationByIdAsync(string agentId, string configurationId, string? auditUser = null);
 
         /// <summary>
         /// Delete Metrics configuration

@@ -315,7 +315,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 // Delete from storage first
-                bool deleted = await _dataSetTableService.DeleteDataSetAsync(existingDataset.AgentId, datasetId);
+                var auditUser = GetAuditUser();
+                bool deleted = await _dataSetTableService.DeleteDataSetAsync(existingDataset.AgentId, datasetId, auditUser);
 
                 if (deleted)
                 {
@@ -376,7 +377,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, datasetContent);
 
             // Save metadata to table storage
-            var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity);
+            var savedEntity = await _dataSetTableService.SaveDataSetAsync(entity, auditUser);
                        
 
             _logger.LogInformation("Successfully created dataset with ID: {DatasetId} by {AuditUser}", savedEntity.DatasetId, auditUser);
@@ -404,7 +405,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             datasetContent);
 
             // Save updated metadata to table storage
-            var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity);
+            var savedEntity = await _dataSetTableService.SaveDataSetAsync(existingEntity, auditUser);
                         
             _logger.LogInformation("Successfully updated dataset with ID: {DatasetId} by {AuditUser}", savedEntity.DatasetId, auditUser);
 

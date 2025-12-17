@@ -11,8 +11,9 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// Save or update dataset in Azure Table
         /// </summary>
         /// <param name="entity">Dataset entity</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>The saved entity</returns>
-        Task<DataSetTableEntity> SaveDataSetAsync(DataSetTableEntity entity);
+        Task<DataSetTableEntity> SaveDataSetAsync(DataSetTableEntity entity, string? auditUser = null);
 
         /// <summary>
         /// Get dataset by Agent ID and Dataset ID
@@ -74,15 +75,17 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// </summary>
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Dataset ID</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>True if deleted, false if not found</returns>
-        Task<bool> DeleteDataSetAsync(string agentId, string datasetId);
+        Task<bool> DeleteDataSetAsync(string agentId, string datasetId, string? auditUser = null);
 
         /// <summary>
         /// Delete all datasets for an agent
         /// </summary>
         /// <param name="agentId">Agent ID</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>Number of datasets deleted</returns>
-        Task<int> DeleteAllDataSetsByAgentIdAsync(string agentId);
+        Task<int> DeleteAllDataSetsByAgentIdAsync(string agentId, string? auditUser = null);
 
         /// <summary>
         /// Update dataset metadata without changing blob content
@@ -90,7 +93,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         /// <param name="agentId">Agent ID</param>
         /// <param name="datasetId">Dataset ID</param>
         /// <param name="updateAction">Action to perform updates on the entity</param>
+        /// <param name="auditUser">User performing the operation (for audit logging)</param>
         /// <returns>Updated entity or null if not found</returns>
-        Task<DataSetTableEntity?> UpdateDataSetMetadataAsync(string agentId, string datasetId, Action<DataSetTableEntity> updateAction);
+        Task<DataSetTableEntity?> UpdateDataSetMetadataAsync(string agentId, string datasetId, Action<DataSetTableEntity> updateAction, string? auditUser = null);
     }
 }

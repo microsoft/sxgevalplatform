@@ -214,7 +214,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 await _blobStorageService.WriteBlobContentAsync(blobContainer, blobFilePath, JsonSerializer.Serialize(createConfigDto.MetricsConfiguration));
 
-                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity);
+                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(entity, auditUser);
 
                 //await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
 
@@ -264,7 +264,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     existingEntity.BlobFilePath,
  JsonSerializer.Serialize(updateConfigDto.MetricsConfiguration));
 
-                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity);
+                var savedEntity = await _metricsConfigTableService.SaveMetricsConfigurationAsync(existingEntity, auditUser);
 
                 //await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
 
@@ -312,9 +312,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     return false;
                 }
 
+                var auditUser = GetAuditUser();
                 bool deleted = await _metricsConfigTableService.DeleteMetricsConfigurationByIdAsync(
         existingConfig.AgentId,
-                  configurationId);
+                  configurationId, auditUser);
 
                 if (deleted)
                 {
