@@ -127,7 +127,7 @@ namespace Sxg.EvalPlatform.API.PerfTests
         /// <summary>
         /// Test: Single request to validate basic functionality and measure baseline performance
         /// </summary>
-        [Fact]
+        [Fact(Skip = "This is perf test and should be invoked manually.")]
         public async Task Test_SingleRequest_ValidateBasicFunctionality()
         {
             // Arrange
@@ -164,7 +164,7 @@ namespace Sxg.EvalPlatform.API.PerfTests
         /// Test: 50 concurrent requests to measure load handling and identify bottlenecks
         /// This is the main load test with configurable payload
         /// </summary>
-        [Fact]
+        [Fact(Skip = "This is perf test and should be invoked manually.")]
         public async Task Test_50ConcurrentRequests_LoadTest()
         {
             // Arrange
@@ -221,7 +221,7 @@ namespace Sxg.EvalPlatform.API.PerfTests
         /// Test: Sequential requests to establish baseline (no concurrency)
         /// Useful for comparing against concurrent performance
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Run it only when need to do performance testing")]
         public async Task Test_SequentialRequests_Baseline()
         {
             // Arrange
