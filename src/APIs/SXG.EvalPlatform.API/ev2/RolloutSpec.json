@@ -1,0 +1,88 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/RolloutSpec.json",
+  "contentVersion": "1.0.0.0",
+  "rolloutMetadata": {
+    "serviceModelPath": "ServiceModel.json",
+    "name": "SXG-EvalPlatform-API-Production-Rollout",
+    "rolloutType": "Progressive",
+    "buildSource": {
+      "parameters": {
+        "versionFile": "version.txt"
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "PreDeploymentValidation",
+      "targetType": "ServiceResourceGroup",
+      "targetName": "EastUS2ResourceGroup",
+      "actions": [
+        {
+          "actionType": "ArmDeployment",
+          "actionContentType": "ARMTemplate",
+          "actionName": "ValidateEastUS2Environment"
+        }
+      ]
+    },
+    {
+      "name": "DeployEastUS2",
+      "dependsOn": [
+        "PreDeploymentValidation"
+      ],
+      "targetType": "ServiceResourceGroup",
+      "targetName": "EastUS2ResourceGroup",
+      "actions": [
+        {
+          "actionType": "ArmDeployment",
+          "actionContentType": "ARMTemplate",
+          "actionName": "DeployToEastUS2"
+        }
+      ]
+    },
+    {
+      "name": "BakingPeriodEastUS2",
+      "dependsOn": [
+        "DeployEastUS2"
+      ],
+      "targetType": "WaitAction",
+      "waitDurationInMinutes": 30
+    },
+    {
+      "name": "DeployWestUS2",
+      "dependsOn": [
+        "BakingPeriodEastUS2"
+      ],
+      "targetType": "ServiceResourceGroup",
+      "targetName": "WestUS2ResourceGroup",
+      "actions": [
+        {
+          "actionType": "ArmDeployment",
+          "actionContentType": "ARMTemplate",
+          "actionName": "DeployToWestUS2"
+        }
+      ]
+    },
+    {
+      "name": "PostDeploymentValidation",
+      "dependsOn": [
+        "DeployWestUS2"
+      ],
+      "targetType": "ServiceResourceGroup",
+      "targetName": "WestUS2ResourceGroup",
+      "actions": [
+        {
+          "actionType": "ArmDeployment",
+          "actionContentType": "ARMTemplate",
+          "actionName": "ValidateWestUS2Environment"
+        }
+      ]
+    }
+  ],
+  "rolloutInstanceMetadata": {
+    "notificationMetadata": {
+      "emailRecipients": [
+        "sxgevalvteam@microsoft.com"
+      ]
+    }
+  }
+}

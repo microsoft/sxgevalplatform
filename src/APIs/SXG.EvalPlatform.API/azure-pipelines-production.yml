@@ -1,0 +1,411 @@
+# Azure DevOps Pipeline for SXG Evaluation Platform API
+# Production Release Pipeline with EV2 Integration
+
+trigger: none  # Manual trigger only for production
+
+pr: none
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  projectPath: 'SXG.EvalPlatform.API.csproj'
+  solutionPath: 'SXG.EvalPlatform.API.sln'
+  dotnetVersion: '8.0.x'
+  ev2ArtifactName: 'ev2-artifacts'
+  buildArtifactName: 'build-artifacts'
+  
+  # EV2 Configuration
+  ev2ServiceGroupId: '409ab2c3-dafd-4ee4-b158-b405c578bbcd'
+  ev2ServiceId: '409ab2c3-dafd-4ee4-b158-b405c578bbcd'
+  ev2Environment: 'Production'
+  subscriptionName: 'OneVoice-AdminPortal-Dev'
+  
+  # Production Resources
+  eastUS2ResourceGroup: 'EvalApiRg-UsEast2'
+  eastUS2AppService: 'sxgevalapiproduseast2'
+  westUS2ResourceGroup: 'EvalApiRg-UsWest2'
+  westUS2AppService: 'sxgevalapiproduswest2'
+  storageAccount: 'stevalplatformprod'
+  trafficManagerProfile: 'sxgevalapiprod'
+  trafficManagerResourceGroup: 'EvalCommonRg-useast2'
+
+stages:
+- stage: Build
+  displayName: 'Build Application'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and Package'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: $(dotnetVersion)
+        includePreviewVersions: false
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet Packages'
+      inputs:
+        command: 'restore'
+        projects: '$(solutionPath)'
+        feedsToUse: 'select'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        projects: '$(solutionPath)'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: 'test'
+        projects: '**/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
+      continueOnError: true
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish Application'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: '$(projectPath)'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/app --no-build'
+        zipAfterPublish: false
+    
+    - task: CopyFiles@2
+      displayName: 'Copy EV2 Artifacts'
+      inputs:
+        SourceFolder: 'ev2'
+        Contents: |
+          **/*.json
+          **/*.ps1
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/ev2'
+    
+    - task: CopyFiles@2
+      displayName: 'Copy Configuration Files'
+      inputs:
+        SourceFolder: '.'
+        Contents: |
+          appsettings.json
+          appsettings.Production.json
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/app'
+    
+    - task: ArchiveFiles@2
+      displayName: 'Create Application Package'
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/app'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/ev2/app-package.zip'
+        replaceExistingArchive: true
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Build Artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: '$(buildArtifactName)'
+        publishLocation: 'Container'
+    
+    - pwsh: |
+        Write-Host "Build completed successfully"
+        Write-Host "Build Number: $(Build.BuildNumber)"
+        Write-Host "Build ID: $(Build.BuildId)"
+        $version = "$(Build.BuildNumber)"
+        Set-Content -Path "$(Build.ArtifactStagingDirectory)/version.txt" -Value $version
+      displayName: 'Generate Version File'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Version File'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/version.txt'
+        ArtifactName: 'version'
+        publishLocation: 'Container'
+
+- stage: DeployEastUS2
+  displayName: 'Deploy to East US 2'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployEastUS2Job
+    displayName: 'Deploy to East US 2 with Traffic Manager'
+    environment: 'Production-EastUS2'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(buildArtifactName)
+          
+          - task: AzureCLI@2
+            displayName: 'Deploy to East US 2'
+            inputs:
+              azureSubscription: '$(subscriptionName)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Starting deployment to East US 2..."
+                
+                $scriptPath = "$(Pipeline.Workspace)/$(buildArtifactName)/ev2/Deploy-Regional-With-TrafficManager.ps1"
+                $packagePath = "$(Pipeline.Workspace)/$(buildArtifactName)/ev2/app-package.zip"
+                
+                # Execute deployment script
+                & $scriptPath `
+                  -Region "EastUS2" `
+                  -ResourceGroupName "$(eastUS2ResourceGroup)" `
+                  -AppServiceName "$(eastUS2AppService)" `
+                  -StorageAccountName "$(storageAccount)" `
+                  -TrafficManagerProfileName "$(trafficManagerProfile)" `
+                  -TrafficManagerResourceGroup "$(trafficManagerResourceGroup)" `
+                  -TrafficManagerEndpointName "eastus2-endpoint" `
+                  -HealthCheckWaitSeconds 300
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Deployment to East US 2 failed"
+                  exit 1
+                }
+                
+                Write-Host "✓ Deployment to East US 2 completed successfully"
+          
+          - task: AzureCLI@2
+            displayName: 'Verify East US 2 Deployment'
+            inputs:
+              azureSubscription: '$(subscriptionName)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Verifying East US 2 deployment..."
+                
+                $appUrl = "https://$(eastUS2AppService).azurewebsites.net"
+                $healthUrl = "$appUrl/api/v1/health"
+                
+                $maxRetries = 5
+                $retryCount = 0
+                $success = $false
+                
+                while ($retryCount -lt $maxRetries -and -not $success) {
+                  try {
+                    $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 30
+                    Write-Host "Health check response: $($response | ConvertTo-Json -Depth 3)"
+                    $success = $true
+                    Write-Host "✓ East US 2 is healthy"
+                  }
+                  catch {
+                    $retryCount++
+                    Write-Warning "Health check attempt $retryCount failed: $($_.Exception.Message)"
+                    if ($retryCount -lt $maxRetries) {
+                      Start-Sleep -Seconds 30
+                    }
+                  }
+                }
+                
+                if (-not $success) {
+                  Write-Error "East US 2 health check failed after $maxRetries attempts"
+                  exit 1
+                }
+
+- stage: BakingPeriod
+  displayName: 'Baking Period (30 minutes)'
+  dependsOn: DeployEastUS2
+  condition: succeeded()
+  jobs:
+  - job: WaitJob
+    displayName: 'Wait for Baking Period'
+    pool: server
+    steps:
+    - task: Delay@1
+      inputs:
+        delayForMinutes: '30'
+
+- stage: DeployWestUS2
+  displayName: 'Deploy to West US 2'
+  dependsOn: BakingPeriod
+  condition: succeeded()
+  jobs:
+  - deployment: DeployWestUS2Job
+    displayName: 'Deploy to West US 2 with Traffic Manager'
+    environment: 'Production-WestUS2'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(buildArtifactName)
+          
+          - task: AzureCLI@2
+            displayName: 'Deploy to West US 2'
+            inputs:
+              azureSubscription: '$(subscriptionName)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Starting deployment to West US 2..."
+                
+                $scriptPath = "$(Pipeline.Workspace)/$(buildArtifactName)/ev2/Deploy-Regional-With-TrafficManager.ps1"
+                $packagePath = "$(Pipeline.Workspace)/$(buildArtifactName)/ev2/app-package.zip"
+                
+                # Execute deployment script
+                & $scriptPath `
+                  -Region "WestUS2" `
+                  -ResourceGroupName "$(westUS2ResourceGroup)" `
+                  -AppServiceName "$(westUS2AppService)" `
+                  -StorageAccountName "$(storageAccount)" `
+                  -TrafficManagerProfileName "$(trafficManagerProfile)" `
+                  -TrafficManagerResourceGroup "$(trafficManagerResourceGroup)" `
+                  -TrafficManagerEndpointName "westus2-endpoint" `
+                  -HealthCheckWaitSeconds 300
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Deployment to West US 2 failed"
+                  exit 1
+                }
+                
+                Write-Host "✓ Deployment to West US 2 completed successfully"
+          
+          - task: AzureCLI@2
+            displayName: 'Verify West US 2 Deployment'
+            inputs:
+              azureSubscription: '$(subscriptionName)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Verifying West US 2 deployment..."
+                
+                $appUrl = "https://$(westUS2AppService).azurewebsites.net"
+                $healthUrl = "$appUrl/api/v1/health"
+                
+                $maxRetries = 5
+                $retryCount = 0
+                $success = $false
+                
+                while ($retryCount -lt $maxRetries -and -not $success) {
+                  try {
+                    $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 30
+                    Write-Host "Health check response: $($response | ConvertTo-Json -Depth 3)"
+                    $success = $true
+                    Write-Host "✓ West US 2 is healthy"
+                  }
+                  catch {
+                    $retryCount++
+                    Write-Warning "Health check attempt $retryCount failed: $($_.Exception.Message)"
+                    if ($retryCount -lt $maxRetries) {
+                      Start-Sleep -Seconds 30
+                    }
+                  }
+                }
+                
+                if (-not $success) {
+                  Write-Error "West US 2 health check failed after $maxRetries attempts"
+                  exit 1
+                }
+
+- stage: PostDeploymentValidation
+  displayName: 'Post-Deployment Validation'
+  dependsOn: DeployWestUS2
+  condition: succeeded()
+  jobs:
+  - job: ValidationJob
+    displayName: 'Validate Full Deployment'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Traffic Manager'
+      inputs:
+        azureSubscription: '$(subscriptionName)'
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Traffic Manager configuration..."
+          
+          # Get Traffic Manager profile details
+          $profile = az network traffic-manager profile show `
+            --name "$(trafficManagerProfile)" `
+            --resource-group "$(trafficManagerResourceGroup)" `
+            --query "{dnsName:dnsConfig.fqdn, monitorPath:monitorConfig.path}" `
+            -o json | ConvertFrom-Json
+          
+          Write-Host "Traffic Manager FQDN: $($profile.dnsName)"
+          
+          # Check both endpoints
+          $endpoints = @("eastus2-endpoint", "westus2-endpoint")
+          
+          foreach ($endpoint in $endpoints) {
+            Write-Host "`nChecking endpoint: $endpoint"
+            $endpointStatus = az network traffic-manager endpoint show `
+              --name $endpoint `
+              --profile-name "$(trafficManagerProfile)" `
+              --resource-group "$(trafficManagerResourceGroup)" `
+              --type azureEndpoints `
+              --query "{status:endpointStatus, monitorStatus:endpointMonitorStatus}" `
+              -o json | ConvertFrom-Json
+            
+            Write-Host "  Status: $($endpointStatus.status)"
+            Write-Host "  Monitor Status: $($endpointStatus.monitorStatus)"
+            
+            if ($endpointStatus.status -ne "Enabled" -or $endpointStatus.monitorStatus -ne "Online") {
+              Write-Warning "Endpoint $endpoint is not fully healthy"
+            }
+            else {
+              Write-Host "  ✓ Endpoint is healthy" -ForegroundColor Green
+            }
+          }
+          
+          Write-Host "`n✓ Traffic Manager validation completed"
+    
+    - task: AzureCLI@2
+      displayName: 'Final Health Check via Traffic Manager'
+      inputs:
+        azureSubscription: '$(subscriptionName)'
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Performing final health check via Traffic Manager..."
+          
+          # Get Traffic Manager FQDN
+          $tmFqdn = az network traffic-manager profile show `
+            --name "$(trafficManagerProfile)" `
+            --resource-group "$(trafficManagerResourceGroup)" `
+            --query "dnsConfig.fqdn" `
+            -o tsv
+          
+          $healthUrl = "https://$tmFqdn/api/v1/health"
+          
+          Write-Host "Testing Traffic Manager endpoint: $healthUrl"
+          
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 30
+              Write-Host "Health check response: $($response | ConvertTo-Json -Depth 3)"
+              $success = $true
+              Write-Host "✓ Traffic Manager endpoint is healthy"
+            }
+            catch {
+              $retryCount++
+              Write-Warning "Health check attempt $retryCount failed: $($_.Exception.Message)"
+              if ($retryCount -lt $maxRetries) {
+                Start-Sleep -Seconds 30
+              }
+            }
+          }
+          
+          if (-not $success) {
+            Write-Error "Traffic Manager health check failed after $maxRetries attempts"
+            exit 1
+          }
+          
+          Write-Host "`n========================================" -ForegroundColor Cyan
+          Write-Host "✓ PRODUCTION DEPLOYMENT SUCCESSFUL" -ForegroundColor Green
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "🌐 Traffic Manager URL: https://$tmFqdn" -ForegroundColor Cyan
+          Write-Host "📊 Health Endpoint: https://$tmFqdn/api/v1/health" -ForegroundColor Cyan
+          Write-Host "📚 Swagger UI: https://$tmFqdn/swagger" -ForegroundColor Cyan
+          Write-Host "🌍 East US 2: https://$(eastUS2AppService).azurewebsites.net" -ForegroundColor Cyan
+          Write-Host "🌎 West US 2: https://$(westUS2AppService).azurewebsites.net" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "========================================" -ForegroundColor Cyan

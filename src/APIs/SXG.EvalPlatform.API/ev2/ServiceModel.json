@@ -1,0 +1,62 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/ServiceModel.json",
+  "contentVersion": "1.0.0.0",
+  "serviceMetadata": {
+    "serviceGroup": "409ab2c3-dafd-4ee4-b158-b405c578bbcd",
+    "serviceIdentifier": "409ab2c3-dafd-4ee4-b158-b405c578bbcd",
+    "environment": "Production"
+  },
+  "serviceResourceGroupDefinitions": [
+    {
+      "name": "EastUS2ResourceGroup",
+      "azureResourceGroupName": "EvalApiRg-UsEast2",
+      "azureRegion": "EastUS2",
+      "azureSubscriptionId": "{{SubscriptionId}}",
+      "serviceResourceDefinitions": [
+        {
+          "name": "EastUS2AppService",
+          "composedOf": {
+            "arm": {
+              "templatePath": "AppServiceDeployment.json",
+              "parameterFilePath": "Parameters.EastUS2.json"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WestUS2ResourceGroup",
+      "azureResourceGroupName": "EvalApiRg-UsWest2",
+      "azureRegion": "WestUS2",
+      "azureSubscriptionId": "{{SubscriptionId}}",
+      "serviceResourceDefinitions": [
+        {
+          "name": "WestUS2AppService",
+          "composedOf": {
+            "arm": {
+              "templatePath": "AppServiceDeployment.json",
+              "parameterFilePath": "Parameters.WestUS2.json"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CommonResourceGroup",
+      "azureResourceGroupName": "EvalCommonRg-useast2",
+      "azureRegion": "EastUS2",
+      "azureSubscriptionId": "{{SubscriptionId}}",
+      "serviceResourceDefinitions": [
+        {
+          "name": "StorageAccount",
+          "composedOf": {
+            "arm": {
+              "templatePath": "StorageAccount.json",
+              "parameterFilePath": "Parameters.Storage.json"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
