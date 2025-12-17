@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Any;
+using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
@@ -55,10 +54,10 @@ namespace SxgEvalPlatformApi.Controllers
             try
             {
                 // Add telemetry tags
-                activity?.SetTag("agentId", agentId);
+                activity?.SetTag("agentId", CommonUtils.SanitizeForLog(agentId));
                 activity?.SetTag("operation", "GetDatasetsByAgentId");
 
-                _logger.LogInformation("Request to retrieve all datasets for agent: {AgentId}", agentId);
+                _logger.LogInformation("Request to retrieve all datasets for agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
 
                 if (!ModelState.IsValid)
                 {
@@ -70,7 +69,7 @@ namespace SxgEvalPlatformApi.Controllers
                     activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
                     _logger.LogWarning("Invalid or missing agent ID - AgentId: {AgentId}, Duration: {Duration}ms",
-                      agentId, stopwatch.ElapsedMilliseconds);
+                      CommonUtils.SanitizeForLog(agentId), stopwatch.ElapsedMilliseconds);
 
                     return CreateValidationErrorResponse<IList<DatasetMetadataDto>>();
                 }
@@ -86,7 +85,7 @@ namespace SxgEvalPlatformApi.Controllers
                     activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
                     _logger.LogInformation("No datasets found for agent: {AgentId}, Duration: {Duration}ms",
-                       agentId, stopwatch.ElapsedMilliseconds);
+                       CommonUtils.SanitizeForLog(agentId), stopwatch.ElapsedMilliseconds);
 
                     return NotFound($"No datasets found for agent: {agentId}");
                 }
@@ -252,7 +251,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("operation", "SaveDataset");
 
                 _logger.LogInformation("Request to save dataset: {DatasetName} for agent: {AgentId}, type: {DatasetType}",
-      saveDatasetDto.DatasetName, saveDatasetDto.AgentId, saveDatasetDto.DatasetType);
+                    CommonUtils.SanitizeForLog(saveDatasetDto.DatasetName), CommonUtils.SanitizeForLog(saveDatasetDto.AgentId), CommonUtils.SanitizeForLog(saveDatasetDto.DatasetType));
 
                 if (!ModelState.IsValid)
                 {
@@ -264,7 +263,7 @@ namespace SxgEvalPlatformApi.Controllers
                     activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
                     _logger.LogWarning("Invalid model state for dataset save request - Dataset: {DatasetName}, Agent: {AgentId}, Duration: {Duration}ms",
-                          saveDatasetDto.DatasetName, saveDatasetDto.AgentId, stopwatch.ElapsedMilliseconds);
+                          CommonUtils.SanitizeForLog(saveDatasetDto.DatasetName), CommonUtils.SanitizeForLog(saveDatasetDto.AgentId), stopwatch.ElapsedMilliseconds);
 
                     return CreateValidationErrorResponse<DatasetSaveResponseDto>();
                 }

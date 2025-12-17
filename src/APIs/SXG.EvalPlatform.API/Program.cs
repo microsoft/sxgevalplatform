@@ -3,7 +3,8 @@ using SxgEvalPlatformApi.Middleware;
 using SXG.EvalPlatform.API.Middleware;  // ? Added for UserContextMiddleware
 using SxgEvalPlatformApi.Extensions;
 using System.Threading.RateLimiting;
-using Microsoft.Identity.ServiceEssentials;  // Added for UseMise middleware
+using Microsoft.Identity.ServiceEssentials;
+using SXG.EvalPlatform.Common;  // Added for UseMise middleware
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -144,7 +145,7 @@ telemetryService.AddActivityTags(new Dictionary<string, object>
 
 logger.LogInformation(
     "SXG Evaluation Platform API starting up - Environment: {Environment}, Authentication: {AuthStatus}, UserContext: Enabled",
-    app.Environment.EnvironmentName,
+    CommonUtils.SanitizeForLog(app.Environment.EnvironmentName),
     authEnabled 
       ? "ENABLED" + (!string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]) ? " (Configured)" : " (NOT Configured - will fail!)")
         : "DISABLED (Anonymous Access)"

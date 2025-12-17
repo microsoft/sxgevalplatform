@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SxgEvalPlatformApi.Services;
 using System.Security.Claims;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Controllers
 {
@@ -33,10 +34,10 @@ namespace SxgEvalPlatformApi.Controllers
         {
             var claims = User.Claims.Select(c => new
             {
-                Type = c.Type,
-                Value = c.Value,
-                ValueType = c.ValueType,
-                ShortType = GetShortClaimType(c.Type)
+                Type = CommonUtils.SanitizeForLog(c.Type),
+                Value = CommonUtils.SanitizeForLog(c.Value),
+                ValueType = CommonUtils.SanitizeForLog(c.ValueType),
+                ShortType = CommonUtils.SanitizeForLog(GetShortClaimType(c.Type))
             }).ToList();
 
             return Ok(new
@@ -48,13 +49,13 @@ namespace SxgEvalPlatformApi.Controllers
                 Claims = claims,
                 ImportantClaims = new
                 {
-                    PreferredUsername = User.FindFirstValue("preferred_username"),
-                    Email = User.FindFirstValue("email"),
-                    Upn = User.FindFirstValue("upn"),
-                    Oid = User.FindFirstValue("oid"),
-                    AppId = User.FindFirstValue("appid"),
-                    Azp = User.FindFirstValue("azp"),
-                    Name = User.FindFirstValue("name")
+                    PreferredUsername = CommonUtils.SanitizeForLog(User.FindFirstValue("preferred_username")),
+                    Email = CommonUtils.SanitizeForLog(User.FindFirstValue("email")),
+                    Upn = CommonUtils.SanitizeForLog(User.FindFirstValue("upn")),
+                    Oid = CommonUtils.SanitizeForLog(User.FindFirstValue("oid")),
+                    AppId = CommonUtils.SanitizeForLog(User.FindFirstValue("appid")),
+                    Azp = CommonUtils.SanitizeForLog(User.FindFirstValue("azp")),
+                    Name = CommonUtils.SanitizeForLog(User.FindFirstValue("name"))
                 }
             });
         }
@@ -112,24 +113,27 @@ namespace SxgEvalPlatformApi.Controllers
                     Decision = decision,
                     CallerInfo = new
                     {
-                        callerInfo.UserId,
-                        callerInfo.UserEmail,
-                        callerInfo.TenantId,
-                        callerInfo.ApplicationId,
-                        callerInfo.ApplicationName,
+                        UserId = CommonUtils.SanitizeForLog(callerInfo.UserId),
+                        UserEmail = CommonUtils.SanitizeForLog(callerInfo.UserEmail),
+                        TenantId = CommonUtils.SanitizeForLog(callerInfo.TenantId),
+                        ApplicationId = CommonUtils.SanitizeForLog(callerInfo.ApplicationId),
+                        ApplicationName = CommonUtils.SanitizeForLog(callerInfo.ApplicationName),
                         callerInfo.IsServicePrincipal,
                         callerInfo.HasDelegatedUser,
-                        callerInfo.AuthenticationType
+                        AuthenticationType = CommonUtils.SanitizeForLog(callerInfo.AuthenticationType)
                     },
                     RawValues = new
                     {
-                        GetCurrentUserId = _callerService.GetCurrentUserId(),
-                        GetCurrentUserEmail = _callerService.GetCurrentUserEmail(),
-                        GetCallingApplicationName = _callerService.GetCallingApplicationName(),
+                        GetCurrentUserId = CommonUtils.SanitizeForLog(_callerService.GetCurrentUserId()),
+                        GetCurrentUserEmail = CommonUtils.SanitizeForLog(_callerService.GetCurrentUserEmail()),
+                        GetCallingApplicationName = CommonUtils.SanitizeForLog(_callerService.GetCallingApplicationName()),
                         IsServicePrincipalCall = _callerService.IsServicePrincipalCall(),
                         HasDelegatedUserContext = _callerService.HasDelegatedUserContext()
                     },
-                    AllClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
+                    AllClaims = User.Claims.Select(c => new { 
+                        Type = CommonUtils.SanitizeForLog(c.Type), 
+                        Value = CommonUtils.SanitizeForLog(c.Value) 
+                    }).ToList()
                 });
             }
             catch (Exception ex)
@@ -137,8 +141,8 @@ namespace SxgEvalPlatformApi.Controllers
                 _logger.LogError(ex, "Error in GetAuditUser diagnostic endpoint");
                 return StatusCode(500, new
                 {
-                    Error = ex.Message,
-                    StackTrace = ex.StackTrace
+                    Error = CommonUtils.SanitizeForLog(ex.Message),
+                    StackTrace = CommonUtils.SanitizeForLog(ex.StackTrace)
                 });
             }
         }
@@ -153,17 +157,20 @@ namespace SxgEvalPlatformApi.Controllers
             {
                 Request = new
                 {
-                    Scheme = Request.Scheme,
-                    Host = Request.Host.Value,
-                    Path = Request.Path.Value,
-                    QueryString = Request.QueryString.Value,
-                    Headers = Request.Headers.Select(h => new { h.Key, Values = h.Value.ToArray() }).ToList()
+                    Scheme = CommonUtils.SanitizeForLog(Request.Scheme),
+                    Host = CommonUtils.SanitizeForLog(Request.Host.Value),
+                    Path = CommonUtils.SanitizeForLog(Request.Path.Value),
+                    QueryString = CommonUtils.SanitizeForLog(Request.QueryString.Value),
+                    Headers = Request.Headers.Select(h => new { 
+                        h.Key, 
+                        Values = h.Value.Select(v => CommonUtils.SanitizeForLog(v)).ToArray() 
+                    }).ToList()
                 },
                 User = new
                 {
                     IsAuthenticated = User.Identity?.IsAuthenticated,
-                    AuthenticationType = User.Identity?.AuthenticationType,
-                    Name = User.Identity?.Name,
+                    AuthenticationType = CommonUtils.SanitizeForLog(User.Identity?.AuthenticationType),
+                    Name = CommonUtils.SanitizeForLog(User.Identity?.Name),
                     ClaimCount = User.Claims.Count()
                 }
             });

@@ -5,6 +5,7 @@ using SxgEvalPlatformApi.Models.Dtos;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -36,13 +37,13 @@ public partial class EvalRunsController
         try
         {
             // Add telemetry tags for request parameters
-            activity?.SetTag("agentId", createDto.AgentId);
-            activity?.SetTag("dataSetId", createDto.DataSetId.ToString());
-            activity?.SetTag("metricsConfigurationId", createDto.MetricsConfigurationId.ToString());
-            activity?.SetTag("type", createDto.Type);
-            activity?.SetTag("environmentId", createDto.EnvironmentId);
-            activity?.SetTag("agentSchemaName", createDto.AgentSchemaName);
-            activity?.SetTag("EvalRunName", createDto.EvalRunName);
+            activity?.SetTag("agentId", CommonUtils.SanitizeForLog(createDto.AgentId));
+            activity?.SetTag("dataSetId", CommonUtils.SanitizeForLog(createDto.DataSetId.ToString()));
+            activity?.SetTag("metricsConfigurationId", CommonUtils.SanitizeForLog(createDto.MetricsConfigurationId.ToString()));
+            activity?.SetTag("type", CommonUtils.SanitizeForLog(createDto.Type));
+            activity?.SetTag("environmentId", CommonUtils.SanitizeForLog(createDto.EnvironmentId));
+            activity?.SetTag("agentSchemaName", CommonUtils.SanitizeForLog(createDto.AgentSchemaName));
+            activity?.SetTag("EvalRunName", CommonUtils.SanitizeForLog(createDto.EvalRunName));
 
             if (!ModelState.IsValid)
             {
@@ -52,7 +53,12 @@ public partial class EvalRunsController
             }
 
             
-            _logger.LogInformation($"Creating evaluation run for AgentId: {createDto.AgentId}, DataSetId: {createDto.DataSetId}, Type: {createDto.Type}, EnvironmentId: {createDto.EnvironmentId}");
+            
+            _logger.LogInformation("Creating evaluation run for AgentId: {AgentId}, DataSetId: {DataSetId}, Type: {Type}, EnvironmentId: {EnvironmentId}",
+                CommonUtils.SanitizeForLog(createDto.AgentId),
+                CommonUtils.SanitizeForLog(createDto.DataSetId.ToString()),
+                CommonUtils.SanitizeForLog(createDto.Type),
+                CommonUtils.SanitizeForLog(createDto.EnvironmentId));
 
             var evalRun = await _evalRunRequestHandler.CreateEvalRunAsync(createDto);
 
@@ -65,7 +71,7 @@ public partial class EvalRunsController
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
             _logger.LogInformation("Successfully created evaluation run with ID: {EvalRunId} in {Duration}ms",
-                  evalRun.EvalRunId, stopwatch.ElapsedMilliseconds);
+                  CommonUtils.SanitizeForLog(evalRun.EvalRunId.ToString()), stopwatch.ElapsedMilliseconds);
 
             return CreatedAtAction(nameof(GetEvalRun), new { evalRunId = evalRun.EvalRunId }, evalRun);
         }
@@ -74,9 +80,10 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", "ValidationException");
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
-            _logger.LogWarning(ex, $"Validation error occurred while creating evaluation run. Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogWarning(ex, "Validation error occurred while creating evaluation run. Duration: {Duration}ms",
+                stopwatch.ElapsedMilliseconds);
             return CreateErrorResponse<EvalRunDto>(ex.Message, StatusCodes.Status400BadRequest);
         }
         catch (RequestFailedException ex)
@@ -84,12 +91,13 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", "AzureRequestFailed");
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("error.status", ex.Status);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
             activity?.SetTag("http.status_code", ex.Status);
             
-            _logger.LogError(ex, $"Azure error occurred while creating evaluation run. Status: {ex.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogError(ex, "Azure error occurred while creating evaluation run. Status: {Status}, Duration: {Duration}ms",
+                ex.Status, stopwatch.ElapsedMilliseconds);
 
             return HandleAzureException<EvalRunDto>(ex, "Failed to create evaluation run");
         }
@@ -98,7 +106,7 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
@@ -106,7 +114,8 @@ public partial class EvalRunsController
                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);
 
-                _logger.LogWarning(ex, $"Authorization error occurred while creating evaluation run. Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning(ex, "Authorization error occurred while creating evaluation run. Duration: {Duration}ms",
+                    stopwatch.ElapsedMilliseconds);
 
                 return CreateErrorResponse<EvalRunDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
@@ -114,7 +123,8 @@ public partial class EvalRunsController
             activity?.SetTag("error.category", "UnexpectedError");
             activity?.SetTag("http.status_code", 500);
 
-            _logger.LogError(ex, $"Error occurred while creating evaluation run. Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogError(ex, "Error occurred while creating evaluation run. Duration: {Duration}ms",
+                stopwatch.ElapsedMilliseconds);
 
             return CreateErrorResponse<EvalRunDto>("Failed to create evaluation run", StatusCodes.Status500InternalServerError);
         }
@@ -146,7 +156,8 @@ public partial class EvalRunsController
                 return CreateFieldValidationError<EvalRunDto>("evalRunId", "Evaluation run ID is required and must be a valid GUID");
                 }
 
-            _logger.LogInformation("Retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            _logger.LogInformation("Retrieving evaluation run with ID: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
 
@@ -159,18 +170,21 @@ public partial class EvalRunsController
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Azure error occurred while retrieving evaluation run with ID: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return HandleAzureException<EvalRunDto>(ex, "Failed to retrieve evaluation run");
         }
         catch (Exception ex)
         {
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
-                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation run with ID: {EvalRunId}", 
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()));
                 return CreateErrorResponse<EvalRunDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
-            _logger.LogError(ex, "Error occurred while retrieving evaluation run with ID: {EvalRunId}", evalRunId);
+            _logger.LogError(ex, "Error occurred while retrieving evaluation run with ID: {EvalRunId}", 
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
             return CreateErrorResponse<EvalRunDto>("Failed to retrieve evaluation run", StatusCodes.Status500InternalServerError);
         }
     }
@@ -205,7 +219,8 @@ public partial class EvalRunsController
                 return CreateFieldValidationError<List<EvalRunDto>>("dateRange", "StartDateTime cannot be later than EndDateTime");
             }
 
-            _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
+            _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", 
+                CommonUtils.SanitizeForLog(agentId));
 
             var evalRuns = await _evalRunRequestHandler.GetEvalRunsByAgentIdAsync(agentId, startDateTime, endDateTime);
 
@@ -213,18 +228,21 @@ public partial class EvalRunsController
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+            _logger.LogError(ex, "Azure error occurred while retrieving evaluation runs for AgentId: {AgentId}", 
+                CommonUtils.SanitizeForLog(agentId));
             return HandleAzureException<List<EvalRunDto>>(ex, "Failed to retrieve evaluation runs");
         }
         catch (Exception ex)
         {
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
             {
-                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation runs for AgentId: {AgentId}", 
+                    CommonUtils.SanitizeForLog(agentId));
                 return CreateErrorResponse<List<EvalRunDto>>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }
 
-            _logger.LogError(ex, "Error occurred while retrieving evaluation runs for AgentId: {AgentId}", agentId);
+            _logger.LogError(ex, "Error occurred while retrieving evaluation runs for AgentId: {AgentId}", 
+                CommonUtils.SanitizeForLog(agentId));
             return CreateErrorResponse<List<EvalRunDto>>("Failed to retrieve evaluation runs", StatusCodes.Status500InternalServerError);
         }
     }
