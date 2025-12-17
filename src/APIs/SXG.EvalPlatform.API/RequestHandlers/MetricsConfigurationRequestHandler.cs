@@ -8,6 +8,7 @@ using SXG.EvalPlatform.Common.Exceptions;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.Services;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -23,6 +24,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IMapper _mapper;
         private readonly ICacheManager _cacheManager;
         private readonly ICallerIdentificationService _callerService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         // Cache key patterns
         //private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
@@ -42,7 +44,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                                                   IMapper mapper,
                                                   IConfigHelper configHelper,
                                                   ICacheManager cacheManager,
-                                                  ICallerIdentificationService callerService)
+                                                  ICallerIdentificationService callerService,
+                                                  IHttpContextAccessor httpContextAccessor)
         {
             _metricsConfigTableService = metricsConfigTableService;
             _logger = logger;
@@ -51,6 +54,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _configHelper = configHelper;
             _cacheManager = cacheManager;
             _callerService = callerService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>
@@ -407,28 +411,68 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private DefaultMetricsConfiguration DeserializeDefaultMetricsConfiguration(string blobContent)
         {
-            using var document = JsonDocument.Parse(blobContent);
-            var root = document.RootElement;
-
-            // Check if the JSON has a "metricConfiguration" wrapper
-            if (root.TryGetProperty("metricConfiguration", out var metricsElement))
+            try
             {
-                var metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
-                if (metrics == null)
+                using var document = JsonDocument.Parse(blobContent);
+                var root = document.RootElement;
+
+                // Check if the JSON has a "metricConfiguration" wrapper
+                if (root.TryGetProperty("metricConfiguration", out var metricsElement))
                 {
-                    throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
+                    var metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
+                    if (metrics == null)
+                    {
+                        throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
+                    }
+                    return metrics;
                 }
-                return metrics;
-            }
 
-            // Try direct deserialization for backward compatibility
-            var directMetrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
-            if (directMetrics == null)
+                // Try direct deserialization for backward compatibility
+                var directMetrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
+                if (directMetrics == null)
+                {
+                    throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
+                }
+
+                return directMetrics;
+            }
+            catch (JsonException ex)
             {
-                throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
+                // Extract security context
+                var httpContext = _httpContextAccessor.HttpContext;
+                var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+                var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
+                var userId = GetAuditUser();
+                
+                // Analyze content for corruption patterns
+                var contentLength = blobContent?.Length ?? 0;
+                var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
+                
+                // Log with comprehensive security context
+                _logger.LogWarning(
+                    "[SECURITY] Deserialization failure for default metrics configuration | " +
+                    "ContentType: DefaultMetricsConfiguration | ContentLength: {ContentLength} | " +
+                    "ErrorContext: {ErrorContext} | UserId: {UserId} | ClientIP: {ClientIP} | " +
+                    "RequestPath: {RequestPath} | JsonError: {JsonError}",
+                    contentLength,
+                    CommonUtils.SanitizeForLog(errorContext),
+                    CommonUtils.SanitizeForLog(userId),
+                    CommonUtils.SanitizeForLog(clientIp),
+                    CommonUtils.SanitizeForLog(requestPath),
+                    CommonUtils.SanitizeForLog(ex.Message));
+                
+                throw new DeserializationException(
+                    "Failed to deserialize default metrics configuration",
+                    "DefaultMetricsConfiguration",
+                    "DefaultMetricsConfiguration",
+                    ex,
+                    contentLength,
+                    "default",
+                    errorContext,
+                    clientIp,
+                    userId,
+                    requestPath);
             }
-
-            return directMetrics;
         }
 
         /// <summary>
@@ -485,8 +529,41 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
-                throw new Exception("Invalid JSON format in Metrics configuration blob", ex);
+                // Extract security context
+                var httpContext = _httpContextAccessor.HttpContext;
+                var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+                var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
+                var userId = GetAuditUser();
+                
+                // Analyze content for corruption patterns
+                var contentLength = blobContent?.Length ?? 0;
+                var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
+                
+                // Log with comprehensive security context
+                _logger.LogWarning(
+                    "[SECURITY] Deserialization failure for metrics configuration | " +
+                    "ContentType: MetricsConfiguration | ConfigId: {ConfigId} | ContentLength: {ContentLength} | " +
+                    "ErrorContext: {ErrorContext} | UserId: {UserId} | ClientIP: {ClientIP} | " +
+                    "RequestPath: {RequestPath} | JsonError: {JsonError}",
+                    CommonUtils.SanitizeForLog(configurationId),
+                    contentLength,
+                    CommonUtils.SanitizeForLog(errorContext),
+                    CommonUtils.SanitizeForLog(userId),
+                    CommonUtils.SanitizeForLog(clientIp),
+                    CommonUtils.SanitizeForLog(requestPath),
+                    CommonUtils.SanitizeForLog(ex.Message));
+                
+                throw new DeserializationException(
+                    $"Failed to deserialize metrics configuration: {ex.Message}",
+                    configurationId,
+                    "MetricsConfiguration",
+                    ex,
+                    contentLength,
+                    configurationId,
+                    errorContext,
+                    clientIp,
+                    userId,
+                    requestPath);
             }
         }
 
@@ -657,6 +734,59 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private MetricsConfigurationMetadataDto ToMetricsConfigurationMetadataDto(MetricsConfigurationTableEntity entity)
         {
             return _mapper.Map<MetricsConfigurationMetadataDto>(entity);
+        }
+
+        /// <summary>
+        /// Analyze content for corruption patterns (double-encoding, base64, etc.)
+        /// Similar to Python implementation in azure_storage.py
+        /// </summary>
+        private string AnalyzeContentCorruption(string? content, string errorMessage)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return "EmptyContent";
+            }
+
+            var patterns = new List<string>();
+
+            // Check for double-encoded JSON (common corruption pattern)
+            if (content.StartsWith("\"") && content.EndsWith("\""))
+            {
+                patterns.Add("DoubleEncodedJson");
+            }
+
+            // Check for base64 encoding pattern
+            if (content.Length > 0 && content.Length % 4 == 0 &&
+                System.Text.RegularExpressions.Regex.IsMatch(content, @"^[A-Za-z0-9+/]+={0,2}$"))
+            {
+                patterns.Add("PossibleBase64");
+            }
+
+            // Check for XML content in JSON field
+            if (content.TrimStart().StartsWith("<"))
+            {
+                patterns.Add("XmlInsteadOfJson");
+            }
+
+            // Check for common JSON syntax errors
+            if (errorMessage.Contains("'\"' is invalid after a value", StringComparison.OrdinalIgnoreCase))
+            {
+                patterns.Add("TrailingCommaOrQuote");
+            }
+
+            if (errorMessage.Contains("depth", StringComparison.OrdinalIgnoreCase))
+            {
+                patterns.Add("ExcessiveNesting");
+            }
+
+            // Check content preview for control characters
+            var preview = content.Length > 100 ? content.Substring(0, 100) : content;
+            if (preview.Any(c => char.IsControl(c) && c != '\n' && c != '\r' && c != '\t'))
+            {
+                patterns.Add("ControlCharacters");
+            }
+
+            return patterns.Any() ? string.Join(",", patterns) : "UnknownPattern";
         }
 
         #endregion
