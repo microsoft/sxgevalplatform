@@ -66,14 +66,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 string evalDatasetFileName = $"evaluation-results/{evalRunId}_dataset.json";
 
                 _logger.LogInformation("Saving evaluation results for EvalRunId: {EvalRunId}, Caller: {CallerEmail} ({CallerId})", 
-        evalRunId, callerEmail, callerId);
+        evalRunId, CommonUtils.SanitizeForLog(callerEmail), CommonUtils.SanitizeForLog(callerId));
 
                 // First, verify that the EvalRunId exists and get internal details
                 var evalRunEntity = await _evalRunTableService.GetEvalRunByIdAsync(evalRunId);
 
                 if (evalRunEntity == null)
                 {
-                    _logger.LogWarning("EvalRunId not found: {EvalRunId}, Requested by: {CallerEmail}", evalRunId, callerEmail);
+                    _logger.LogWarning("EvalRunId not found: {EvalRunId}, Requested by: {CallerEmail}", evalRunId, CommonUtils.SanitizeForLog(callerEmail));
                     return (null, new APIRequestProcessingResultDto
                     {
                         IsSuccessful = false,
@@ -102,13 +102,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 await _blobService.WriteBlobContentAsync(containerName, evalSummaryFileName, evalResultSummary.ToString());
 
                 _logger.LogInformation("Successfully saved evaluation result summary for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
-                    evalRunId, $"{containerName}/{evalSummaryFileName}", callerEmail);
+                    evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{evalSummaryFileName}", CommonUtils.SanitizeForLog(callerEmail));
 
                 
                 await _blobService.WriteBlobContentAsync(containerName, evalDatasetFileName, evalResultDataset.ToString());
                                 
                 _logger.LogInformation("Successfully saved evaluation result dataset for EvalRunId: {EvalRunId} to {BlobPath}, Saved by: {CallerEmail}",
-                    evalRunId, $"{containerName}/{evalDatasetFileName}", callerEmail);
+                    evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{evalDatasetFileName}", CommonUtils.SanitizeForLog(callerEmail));
 
                 if (_configHelper.GetEnablePublishingEvalResultsToDataPlatform())
                 {
@@ -155,7 +155,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}, Caller: {CallerEmail}", evalRunId, callerEmail);
+                _logger.LogError(ex, "Error saving evaluation results for EvalRunId: {EvalRunId}, Caller: {CallerEmail}", evalRunId, CommonUtils.SanitizeForLog(callerEmail));
                 
                 return (null, new APIRequestProcessingResultDto
                 {
@@ -233,7 +233,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
 
             _logger.LogInformation("Reading evaluation results from container: {ContainerName} for EvalRunId: {EvalRunId}",
-               containerName, evalRunId);
+               CommonUtils.SanitizeForLog(containerName), evalRunId);
 
             // Try to read summary blob first
             string summaryContent = null;
@@ -243,12 +243,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 summaryContent = await _blobService.ReadBlobContentAsync(containerName, evalSummaryBlobPath);
                 _logger.LogInformation("Successfully read summary blob from {ContainerName}/{BlobPath}",
-                         containerName, evalSummaryBlobPath);
+                         CommonUtils.SanitizeForLog(containerName), evalSummaryBlobPath);
             }
             else
             {
                 _logger.LogWarning("Summary blob not found at {ContainerName}/{BlobPath}",
-                containerName, evalSummaryBlobPath);
+                CommonUtils.SanitizeForLog(containerName), evalSummaryBlobPath);
             }
 
             // Try to read dataset results blob
@@ -258,17 +258,19 @@ namespace SxgEvalPlatformApi.RequestHandlers
             {
                 datasetContent = await _blobService.ReadBlobContentAsync(containerName, evalResultDatasetPath);
                 _logger.LogInformation("Successfully read dataset blob from {ContainerName}/{BlobPath}",
-                   containerName, evalResultDatasetPath);
+                   CommonUtils.SanitizeForLog(containerName), evalResultDatasetPath);
             }
             else
             {
-                _logger.LogWarning($"Dataset blob not found at {containerName}/{evalResultDatasetPath}"); 
+                _logger.LogWarning("Dataset blob not found at {ContainerName}/{BlobPath}",
+                    CommonUtils.SanitizeForLog(containerName), evalResultDatasetPath); 
             }
 
             // Check if at least one blob exists
             if (!summaryExists && !datasetExists)
             {
-                _logger.LogInformation($"No evaluation fetchRequestStatus blobs found for EvalRunId: {evalRunId} in container: {containerName}. Tried paths: {evalSummaryBlobPath}, {evalResultDatasetPath}.");
+                _logger.LogInformation("No evaluation fetchRequestStatus blobs found for EvalRunId: {EvalRunId} in container: {ContainerName}. Tried paths: {SummaryPath}, {DatasetPath}.",
+                    evalRunId, CommonUtils.SanitizeForLog(containerName), evalSummaryBlobPath, evalResultDatasetPath);
                 return (null, new APIRequestProcessingResultDto
                 {
                     IsSuccessful = false,
@@ -356,14 +358,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                _logger.LogInformation("Retrieving evaluation runs for AgentId: {AgentId}", CommonUtils.SanitizeForLog(agentId));
                 var result = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
 
                 return _mapper.Map<IList<EvalRunTableEntity>, IList<EvalRunDto>>(result); 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId}", agentId);
+                _logger.LogError(ex, "Error retrieving evaluation runs for AgentId: {AgentId}", CommonUtils.SanitizeForLog(agentId));
                 throw;
             }
         }
@@ -381,7 +383,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var enrichedDatasetPath = $"enriched-datasets/{evalRunId}.json";
 
                 _logger.LogInformation("Attempting to delete enriched dataset for EvalRunId: {EvalRunId} at path: {BlobPath}",
-                 evalRunId, $"{containerName}/{enrichedDatasetPath}");
+                 evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{enrichedDatasetPath}");
 
                 // Check if the enriched dataset blob exists
                 var blobExists = await _blobService.BlobExistsAsync(containerName, enrichedDatasetPath);
@@ -389,7 +391,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (!blobExists)
                 {
                     _logger.LogInformation("Enriched dataset not found for EvalRunId: {EvalRunId} at path: {BlobPath}. Skipping deletion.",
-                 evalRunId, $"{containerName}/{enrichedDatasetPath}");
+                 evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{enrichedDatasetPath}");
                     return;
                 }
 
@@ -399,12 +401,12 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (deleteSuccess)
                 {
                     _logger.LogInformation("Successfully deleted enriched dataset for EvalRunId: {EvalRunId} from {BlobPath}",
-   evalRunId, $"{containerName}/{enrichedDatasetPath}");
+   evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{enrichedDatasetPath}");
                 }
                 else
                 {
                     _logger.LogWarning("Failed to delete enriched dataset for EvalRunId: {EvalRunId} from {BlobPath}",
-          evalRunId, $"{containerName}/{enrichedDatasetPath}");
+          evalRunId, $"{CommonUtils.SanitizeForLog(containerName)}/{enrichedDatasetPath}");
                 }
             }
             catch (Exception ex)
