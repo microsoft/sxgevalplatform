@@ -1,14 +1,14 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
-FROM python:3.11-slim as builder
+FROM mcr.microsoft.com/cbl-mariner/base/python:3.11 as builder
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN tdnf install -y \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && tdnf clean all
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -17,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM python:3.11-slim
+FROM mcr.microsoft.com/cbl-mariner/base/python:3.11
 
 # Set working directory
 WORKDIR /app
