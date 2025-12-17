@@ -1,0 +1,29 @@
+{
+	"$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticRolloutSpecification.json",
+	"ContentVersion": "1.0.0.0",
+	"RolloutMetadata": {
+		"serviceModelPath": "Prod.ServiceModel.json",
+		"scopeBindingsPath": "Prod.ScopeBindings.json",
+		"name": "Eval Services <version>",
+		"rolloutType": "Major",
+		"buildSource": {
+			"Parameters": {
+				"VersionFile": "buildver.txt"
+			}
+		},
+		"Notification": {
+			"Email": {
+				"To": "angaurav@microsoft.com"
+			}
+		}
+	},
+	"OrchestratedSteps": [
+		{
+			"Name": "AppServiceProd-API-Deploy",
+			"TargetType": "ServiceResourceDefinition",
+			"TargetName": "AppServiceServiceDefinitionApi",
+			"Actions": [ "Deploy" ],
+			"DependsOn": []
+		}
+	]
+}

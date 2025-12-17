@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "servicePackageLink"
+  ],
+  "parameters": {
+    "appService_name": {
+      "type": "string"
+    },
+    "appService_location": {
+      "type": "string"
+    },
+    "appServicePlan_name": {
+      "type": "string"
+    },
+    "appService_slot": {
+      "type": "string"
+    },
+    "Sites_buildVersion": {
+      "type": "string"
+    },
+    "servicePackageLink": {
+      "type": "string"
+    },
+    "alwaysOn": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether the web app should remain loaded after 20 minutes of inactivity."
+      }
+    }
+  },
+  "resources": [
+    {
+      "comments": "The staging slot for the web app",
+      "apiVersion": "2022-09-01",
+      "type": "Microsoft.Web/sites/slots",
+      "kind": "app",
+      "name": "[concat(parameters('appService_name'), '/', parameters('appService_slot'))]",
+      "location": "[parameters('appService_location')]",
+      "properties": {
+        "enabled": true,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlan_name'))]",
+        "buildVersion": "[parameters('Sites_buildVersion')]"
+      },
+      "resources": [
+        {
+          "comments": "Deploys the build artificats in the specified .zip file to the Web App.",
+          "apiVersion": "2022-09-01",
+          "name": "MSDeploy",
+          "type": "Extensions",
+          "location": "[parameters('appService_location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
+          ],
+          "properties": {
+            "packageUri": "[parameters('servicePackageLink')]"
+          }
+        },
+        {
+          "comments": "-----Staging Slot: App Settings-----",
+          "apiVersion": "2022-09-01",
+          "name": "appsettings",
+          "type": "config",
+          "location": "[parameters('appService_location')]",
+          "dependsOn": [
+            "MSDeploy",
+            "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
+          ],
+          "properties": {
+            "Sites_buildVersion": "[parameters('Sites_buildVersion')]"
+          }
+        }
+      ]
+    }
+  ]
+}

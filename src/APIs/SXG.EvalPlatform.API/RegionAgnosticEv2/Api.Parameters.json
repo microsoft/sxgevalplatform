@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "servicePackageLink"
+  ],
+  "parameters": {
+    "appService_name": {
+      "value": "sxgevalapi__Environment____Region__"
+    },
+    "appService_location": {
+      "value": "__Location__"
+    },
+    "appServicePlan_name": {
+      "value": "sxgevalapi__Environment____Region__-plan"
+    },
+    "appService_slot": {
+      "value": "Staging"
+    },
+    "servicePackageLink": {
+      "value": "EvalApiBuild.zip"
+    },
+    "Sites_buildVersion": {
+      "value": "EV2Build_Version"
+    }
+  }
+}

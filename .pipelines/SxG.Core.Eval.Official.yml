@@ -1,0 +1,225 @@
+#################################################################################
+#                         OneBranch Pipelines - Official                        #
+# This pipeline was created by EasyStart from a sample located at:              #
+#   https://aka.ms/obpipelines/easystart/samples                                #
+# Documentation:  https://aka.ms/obpipelines                                    #
+# Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
+# Retail Tasks:   https://aka.ms/obpipelines/tasks                              #
+# Support:        https://aka.ms/onebranchsup                                   #
+#################################################################################
+
+trigger: # https://aka.ms/obpipelines/triggers
+- none
+
+parameters: # parameters are shown up in ADO UI in a build queue time
+- name: 'debug'
+  displayName: 'Enable debug output'
+  type: boolean
+  default: false
+
+- name: 'rolloutType'
+  displayName: 'SDP rollout type'
+  type: string
+  default: 'normal'
+  values:
+  - normal
+  - emergency
+  - globaloutage
+
+- name: 'overrideManagedValidationDuration'
+  displayName: 'Override standard SDP duration?'
+  type: boolean
+  default: false 
+
+- name: 'managedValidationDurationInHours'
+  displayName: 'Override standard SDP duration (in hours)'
+  type: number
+  default: 0
+
+- name: 'icmIncidentId'
+  displayName: 'IcM Incident Id'
+  type: number
+  default: 0
+
+variables:
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  system.debug: ${{ parameters.debug }}
+  ENABLE_PRS_DELAYSIGN: 1
+  ROOT: $(Build.SourcesDirectory)
+  REPOROOT: $(Build.SourcesDirectory)
+  OUTPUTROOT: $(REPOROOT)\out
+  NUGET_XMLDOC_MODE: none
+  VSROOT: 'C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\'
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest' # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+
+resources:
+  repositories: 
+    - repository: templates
+      type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    cloudvault: # https://aka.ms/obpipelines/cloudvault
+      enabled: false
+    globalSdl: # https://aka.ms/obpipelines/sdl
+      tsa:
+        enabled: false # onebranch publish all sdl results to TSA. If TSA is disabled all SDL tools will forced into 'break' build mode.
+      # credscan:
+      #   suppressionsFile: $(Build.SourcesDirectory)\.config\CredScanSuppressions.json
+      binskim:
+        break: false # always break the build on binskim issues in addition to TSA upload
+      policheck:
+        break: true # always break the build on policheck issues. You can disable it by setting to 'false'
+      # suppression:
+      #   suppressionFile: $(Build.SourcesDirectory)\.gdn\global.gdnsuppress
+    featureFlags:
+      WindowsHostVersion: 1ESWindows2022
+
+    ev2ManagedSdpRolloutConfig:
+      rolloutType: ${{parameters.rolloutType}}
+      overrideManagedValidationDuration: ${{parameters.overrideManagedValidationDuration}} 
+      managedValidationOverrideDurationInHours: ${{parameters.managedValidationDurationInHours}} 
+      icmIncidentId: ${{parameters.icmIncidentId}}
+
+    stages:
+    - stage: build
+      jobs:
+      - job: main
+        pool:
+          type: windows  # read more about custom job pool types at https://aka.ms/obpipelines/yaml/jobs
+        
+        variables:
+          ob_outputDirectory: '$(REPOROOT)\out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+          ob_sdl_binskim_break: false # https://aka.ms/obpipelines/sdl
+          ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}: # conditionally enable symbolsPublishing for master branch only
+            ob_symbolsPublishing_enabled: true # https://aka.ms/obpipelines/symbols
+
+        steps:
+
+          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
+            displayName: 'Setup BuildNumber'
+            inputs:
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '0'
+              exclude_commit: true
+
+          - task: UseDotNet@2
+            displayName: 'Use .NET Core sdk 8.0.x'
+            inputs:
+              version: 8.0.x
+              includePreviewVersions: true
+
+          - task: CSRF@1
+            displayName: 'Run CSRF scan'
+            inputs:
+              Path: '$(Build.SourcesDirectory)'
+              ToolVersion: Latest
+
+          - task: CmdLine@2
+            displayName: 'Restore Package'
+            inputs:
+              script: 'dotnet restore "$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj"'
+              workingDirectory: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API'
+
+          - task: MSBuild@1
+            displayName: "Build Eval API"
+            inputs:
+                solution: '$(Build.SourcesDirectory)\src\APIs\Sxg.Eval.Platform.Api.sln'
+                configuration: "Release"
+                msbuildArguments: '/t:rebuild /p:CreatePackage="true"'
+                clean: true
+            env:
+                DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+                DOTNET_CLI_TELEMETRY_OPTOUT: true
+                DOTNET_CORE_SDK_VERSION: 8.0.x
+
+          - task: CopyFiles@2
+            displayName: "Package Eval API"
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\bin\Release\net8.0'
+              Contents: "**"
+              TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
+
+          - task: ArchiveFiles@2
+            displayName: "Package WebAPI Web App to zip"
+            inputs:
+              rootFolderOrFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApiBuild.zip'
+
+          - task: CopyFiles@2
+            displayName: 'Copy RegionAgnosticEv2'
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\RegionAgnosticEv2'
+              Contents: '**/*'
+              TargetFolder: '$(REPOROOT)\out\Eval\EV2\RegionAgnosticEv2'
+
+          - task: PowerShell@2
+            displayName: 'Inject version'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $parameterFiles = Get-ChildItem -Recurse -Include *.json, BuildVer.txt -File -Path $(Build.SourcesDirectory)\out\Eval\EV2\RegionAgnosticEv2
+                foreach ($file in $parameterFiles) {
+                    Write-Host "Replacing contents in file " $file.PSPath
+                    (Get-Content $file.PSPath) |
+                    Foreach-Object { $_ -replace "EV2Build_Version", "$(Build.BuildNumber)" } |
+                    Set-Content $file.PSPath
+                }
+
+          - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
+            displayName: 'Sign output'
+            inputs:
+              command: 'sign'
+              signing_environment: 'azure-ado'
+              files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1;**/*.js'
+              search_root: '$(Build.SourcesDirectory)\out'
+
+          
+
+    - stage: 'Prod_AzureResource_Release'
+      trigger: manual
+      displayName: 'Region Agnostic Code Deployment'
+      variables:
+        ob_release_environment: Production
+        ob_release_stagetype: deployment
+        ArtifactToDeploy: drop_build_main
+        CvrpManifestRelativePath: \build.manifest
+      jobs:
+      - job: Deploy
+        displayName: 'Deploy Code'
+        pool:
+          type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
+        steps:
+
+          - download: current
+            artifact: drop_build_main
+
+          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
+            displayName: 'Setup BuildNumber'
+            inputs:
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '0'
+              exclude_commit: true
+
+          - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+            displayName: 'Ev2 Resource Rollout'
+            inputs:
+              UseServerMonitorTask: false
+              EndpointProviderType: ApprovalService
+              ApprovalServiceEnvironment: Production
+              artifactsVersionOverride: $(Build.BuildNumber)
+              TaskAction: RegisterAndRollout
+              forceRegistration: True
+              SkipRegistrationIfExists: true
+              ServiceRootLocation: 'LinkedArtifact'
+              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
+              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Prod.RolloutSpec.json
+              StageMapName: 'Microsoft.Azure.SDP.Standard'
+              Select: regions(*)
