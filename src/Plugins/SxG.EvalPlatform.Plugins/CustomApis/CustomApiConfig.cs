@@ -179,5 +179,39 @@ namespace SxG.EvalPlatform.Plugins.CustomApis
                 public const string Timestamp = "timestamp";
             }
         }
+
+        /// <summary>
+        /// UpdateEnrichedDatasetFile Custom API configuration - Stores enriched dataset as file in Dataverse file column
+        /// </summary>
+        public static class UpdateEnrichedDatasetFile
+        {
+            public const string ApiName = "cr890_UpdateEnrichedDatasetFile";
+            public const string DisplayName = "Update Enriched Dataset File";
+            public const string Description = "Updates enriched dataset and stores as file in Dataverse file column (DLP-compliant)";
+            public const string PluginTypeName = "SxG.EvalPlatform.Plugins.Plugins.UpdateEnrichedDatasetFile";
+            public const string ExecutePrivilegeName = "cr890_UpdateEnrichedDatasetFile";
+            public const bool AllowedCustomProcessing = true;
+            public const bool IsFunction = false; // POST operation
+            public const bool IsPrivate = false;
+
+            /// <summary>
+            /// Request parameters for UpdateEnrichedDatasetFile API
+            /// </summary>
+            public static class RequestParameters
+            {
+                public const string EvalRunId = "evalRunId";
+                public const string EnrichedDatasetJson = "enrichedDatasetJson";
+            }
+
+            /// <summary>
+            /// Response properties for UpdateEnrichedDatasetFile API (standardized format)
+            /// </summary>
+            public static class ResponseProperties
+            {
+                public const string Success = "success";
+                public const string Message = "message";
+                public const string Timestamp = "timestamp";
+            }
+        }
     }
 }

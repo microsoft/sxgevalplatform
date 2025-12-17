@@ -79,4 +79,29 @@ namespace SxG.EvalPlatform.Plugins.Models.Requests
     {
         // Only requires EvalRunId from base class
     }
+
+    /// <summary>
+    /// Request model for UpdateEnrichedDatasetFile Custom API
+    /// </summary>
+    public class UpdateEnrichedDatasetFileRequest : EvalRunRequest
+    {
+        public string EnrichedDatasetJson { get; set; }
+
+        public override bool IsValid()
+        {
+            return base.IsValid() && !string.IsNullOrWhiteSpace(EnrichedDatasetJson);
+        }
+
+        public override string GetValidationError()
+        {
+            string baseError = base.GetValidationError();
+            if (!string.IsNullOrWhiteSpace(baseError))
+                return baseError;
+
+            if (string.IsNullOrWhiteSpace(EnrichedDatasetJson))
+                return "EnrichedDatasetJson is required";
+
+            return null;
+        }
+    }
 }
