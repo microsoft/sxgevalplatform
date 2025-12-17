@@ -144,6 +144,14 @@ extends:
               Contents: "**"
               TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
 
+          - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
+            displayName: 'Sign output'
+            inputs:
+              command: 'sign'
+              signing_environment: 'azure-ado'
+              files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1;**/*.js'
+              search_root: '$(Build.SourcesDirectory)\out'
+
           - task: ArchiveFiles@2
             displayName: "Package WebAPI Web App to zip"
             inputs:
@@ -171,16 +179,6 @@ extends:
                     Foreach-Object { $_ -replace "EV2Build_Version", "$(Build.BuildNumber)" } |
                     Set-Content $file.PSPath
                 }
-
-          - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
-            displayName: 'Sign output'
-            inputs:
-              command: 'sign'
-              signing_environment: 'azure-ado'
-              files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1;**/*.js'
-              search_root: '$(Build.SourcesDirectory)\out'
-
-          
 
     - stage: 'Prod_AzureResource_Release'
       trigger: manual
