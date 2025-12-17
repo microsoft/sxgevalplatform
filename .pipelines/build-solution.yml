@@ -71,7 +71,7 @@ variables:
     value: 'Any CPU'
   # ESRP Signing variables
   - name: EsrpCodeSigningServiceConnection
-    value: 'ESRP CodeSigning'
+    value: 'ESRPCodeSigningConnection'
   - name: SigningCertName
     value: 'Microsoft400'
 
