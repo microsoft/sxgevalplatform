@@ -43,7 +43,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             // Initialize lazy TableClient
             _tableClient = new Lazy<TableClient>(InitializeTableClient);
 
-            _logger.LogInformation($"DataSetTableService initialized (lazy) for table: {_tableName}, account: {_accountName}");
+            _logger.LogInformation("DataSetTableService initialized (lazy) for table: {TableName}, account: {AccountName}",
+                CommonUtils.SanitizeForLog(_tableName), CommonUtils.SanitizeForLog(_accountName));
         }
 
         /// <summary>
@@ -67,13 +68,15 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Ensure table exists
                 tableClient.CreateIfNotExists();
 
-                _logger.LogInformation($"TableClient successfully initialized for table: {_tableName}" );
+                _logger.LogInformation("TableClient successfully initialized for table: {TableName}",
+                    CommonUtils.SanitizeForLog(_tableName));
 
                 return tableClient;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to initialize TableClient for table: {_tableName}, account: {_accountName}");
+                _logger.LogError(ex, "Failed to initialize TableClient for table: {TableName}, account: {AccountName}",
+                    CommonUtils.SanitizeForLog(_tableName), CommonUtils.SanitizeForLog(_accountName));
                 throw;
             }
         }
@@ -116,13 +119,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await Task.WhenAll(invalidationTasks);
 
                 _logger.LogDebug("Invalidated cache for dataset - Agent: {AgentId}, DatasetId: {DatasetId}",
-            agentId, datasetId);
+            CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
             }
             catch (Exception ex)
             {
                 // Log but don't throw - cache invalidation failure shouldn't break the operation
                 _logger.LogWarning(ex, "Failed to invalidate cache for dataset - Agent: {AgentId}, DatasetId: {DatasetId}",
-                agentId, datasetId);
+                CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
             }
         }
 
@@ -137,11 +140,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // So we invalidate the most common cache keys
                 await _cacheManager.RemoveAsync(string.Format(GET_ALL_DATASETS_BY_AGENT_CACHE_KEY, agentId));
 
-                _logger.LogDebug("Invalidated agent-level cache for Agent: {AgentId}", agentId);
+                _logger.LogDebug("Invalidated agent-level cache for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to invalidate agent cache for Agent: {AgentId}", agentId);
+                _logger.LogWarning(ex, "Failed to invalidate agent cache for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
             }
         }
 
@@ -158,14 +161,15 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Invalidate related caches
                 await InvalidateDataSetCacheAsync(entity.AgentId, entity.DatasetId, entity);
 
-                _logger.LogInformation($"Successfully saved dataset for Agent: {entity.AgentId}, DatasetId: {entity.DatasetId}");
+                _logger.LogInformation("Successfully saved dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
+                    CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.DatasetId));
 
                 return entity;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-                 entity.AgentId, entity.DatasetId);
+                 CommonUtils.SanitizeForLog(entity.AgentId), CommonUtils.SanitizeForLog(entity.DatasetId));
                 throw;
             }
         }
@@ -184,7 +188,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     return cachedEntity;
                 }
 
-                _logger.LogInformation($"Retrieving dataset for Agent: {agentId}, DatasetId: {datasetId}");
+                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
 
                 var response = await TableClient.GetEntityAsync<DataSetTableEntity>(agentId, datasetId);
                 var entity = response.Value;
@@ -193,18 +198,20 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Found dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
-               agentId, datasetId);
+               CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
 
                 return entity;
             }
             catch (Azure.RequestFailedException ex) when (ex.Status == 404)
             {
-                _logger.LogInformation($"Dataset not found for Agent: {agentId}, DatasetId: {datasetId}");
+                _logger.LogInformation("Dataset not found for Agent: {AgentId}, DatasetId: {DatasetId}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve dataset for Agent: {agentId}, DatasetId: {datasetId}");
+                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, DatasetId: {DatasetId}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
                 throw;
             }
         }
@@ -230,7 +237,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await foreach (var entity in TableClient.QueryAsync<DataSetTableEntity>(filter))
                 {
                     _logger.LogInformation("Found dataset by ID: {DatasetId} for Agent: {AgentId}",
-                               datasetId, entity.AgentId);
+                               CommonUtils.SanitizeForLog(datasetId), CommonUtils.SanitizeForLog(entity.AgentId));
 
                     // Cache the result
                     await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
@@ -275,13 +282,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Cache the result
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
-                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}");
+                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}",
+                    entities.Count, CommonUtils.SanitizeForLog(agentId));
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve datasets for Agent: {AgentId}", agentId);
+                _logger.LogError(ex, "Failed to retrieve datasets for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
                 throw;
             }
         }
@@ -295,11 +303,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 if (cachedEntities != null)
                 {
-                    _logger.LogDebug($"Cache hit for datasets by Agent: {agentId}, Type: {datasetType}, Count: {cachedEntities.Count}");
+                    _logger.LogDebug("Cache hit for datasets by Agent: {AgentId}, Type: {DatasetType}, Count: {Count}",
+                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType), cachedEntities.Count);
                     return cachedEntities;
                 }
 
-                _logger.LogInformation($"Retrieving all datasets for Agent: {agentId}, Type: {datasetType}");
+                _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}, Type: {DatasetType}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetType eq '{datasetType}'";
@@ -312,13 +322,15 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Cache the result
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
-                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}, Type: {datasetType}");
+                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, Type: {DatasetType}",
+                    entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve datasets for Agent: {agentId}, Type: {datasetType}");
+                _logger.LogError(ex, "Failed to retrieve datasets for Agent: {AgentId}, Type: {DatasetType}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
                 throw;
             }
         }
@@ -332,11 +344,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 if (cachedEntities != null)
                 {
-                    _logger.LogDebug($"Cache hit for datasets by Agent: {agentId}, DatasetName: {datasetName}, Count: {cachedEntities.Count}");
+                    _logger.LogDebug("Cache hit for datasets by Agent: {AgentId}, DatasetName: {DatasetName}, Count: {Count}",
+                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), cachedEntities.Count);
                     return cachedEntities;
                 }
 
-                _logger.LogInformation($"Retrieving datasets by dataset name for Agent: {agentId}, DatasetName: {datasetName}");
+                _logger.LogInformation("Retrieving datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}'";
@@ -349,13 +363,15 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Cache the result
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
-                _logger.LogInformation($"Retrieved {entities.Count} datasets for Agent: {agentId}, DatasetName: {datasetName}");
+                _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
 
                 return entities;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve datasets by dataset name for Agent: {agentId}, DatasetName: {datasetName}");
+                _logger.LogError(ex, "Failed to retrieve datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
                 throw;
             }
         }
@@ -375,11 +391,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 if (cachedEntity != null)
                 {
-                    _logger.LogDebug($"Cache hit for dataset by Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                    _logger.LogDebug("Cache hit for dataset by Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), CommonUtils.SanitizeForLog(datasetType));
                     return cachedEntity;
                 }
 
-                _logger.LogInformation($"Retrieving dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                _logger.LogInformation("Retrieving dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), CommonUtils.SanitizeForLog(datasetType));
 
                 var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}' and DatasetType eq '{datasetType}'";
 
@@ -388,17 +406,20 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     // Cache the result
                     await _cacheManager.SetAsync(cacheKey, entity, _configHelper.GetDefaultCacheExpiration());
 
-                    _logger.LogInformation($"Found dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                    _logger.LogInformation("Found dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), CommonUtils.SanitizeForLog(datasetType));
 
                     return entity;
                 }
 
-                _logger.LogInformation($"Dataset not found for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                _logger.LogInformation("Dataset not found for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), CommonUtils.SanitizeForLog(datasetType));
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve dataset for Agent: {agentId}, DatasetName: {datasetName}, Type: {datasetType}");
+                _logger.LogError(ex, "Failed to retrieve dataset for Agent: {AgentId}, DatasetName: {DatasetName}, Type: {DatasetType}",
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), CommonUtils.SanitizeForLog(datasetType));
                 throw;
             }
         }
@@ -456,7 +477,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                     catch (Azure.RequestFailedException ex) when (ex.Status == 404)
                     {
                         // Entity already deleted, continue
-                        _logger.LogWarning("Dataset {DatasetId} was already deleted", dataset.DatasetId);
+                        _logger.LogWarning("Dataset {DatasetId} was already deleted", CommonUtils.SanitizeForLog(dataset.DatasetId));
                     }
                 }
 
@@ -470,13 +491,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 }
 
                 _logger.LogInformation("Successfully deleted {DeletedCount} datasets for Agent: {AgentId}",
-                 deletedCount, agentId);
+                 deletedCount, CommonUtils.SanitizeForLog(agentId));
 
                 return deletedCount;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete all datasets for Agent: {AgentId}", agentId);
+                _logger.LogError(ex, "Failed to delete all datasets for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
                 throw;
             }
         }
@@ -493,7 +514,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (existingEntity == null)
                 {
                     _logger.LogInformation("Dataset not found for update - Agent: {AgentId}, DatasetId: {DatasetId}",
-                          agentId, datasetId);
+                          CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
                     return null;
                 }
 
@@ -507,14 +528,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await InvalidateDataSetCacheAsync(agentId, datasetId, existingEntity);
 
                 _logger.LogInformation("Successfully updated dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-          agentId, datasetId);
+          CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
 
                 return existingEntity;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update dataset metadata for Agent: {AgentId}, DatasetId: {DatasetId}",
-                    agentId, datasetId);
+                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetId));
                 throw;
             }
         }

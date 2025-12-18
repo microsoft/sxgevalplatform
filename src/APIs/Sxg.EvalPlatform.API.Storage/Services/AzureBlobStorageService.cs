@@ -1,10 +1,12 @@
-﻿using Azure.Core;
+﻿using Azure;
+using Azure.Core;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using SXG.EvalPlatform.Common;
+using SXG.EvalPlatform.Common.Exceptions;
 
 namespace Sxg.EvalPlatform.API.Storage.Services
 {
@@ -52,24 +54,24 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogDebug("Reading blob content from container: {ContainerName}, blob: {BlobName}",
-                   containerName, blobName);
+                   CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 // Try to get from cache first
                 var cachedContent = await _cacheManager.GetAsync<BlobContentCache>(cacheKey);
                 if (cachedContent != null)
                 {
-                    _logger.LogDebug("Cache HIT for blob {ContainerName}/{BlobName}", containerName, blobName);
+                    _logger.LogDebug("Cache HIT for blob {ContainerName}/{BlobName}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
                     return cachedContent.Content;
                 }
 
-                _logger.LogDebug("Cache MISS for blob {ContainerName}/{BlobName}", containerName, blobName);
+                _logger.LogDebug("Cache MISS for blob {ContainerName}/{BlobName}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
 
                 if (!await blobClient.ExistsAsync())
                 {
-                    _logger.LogWarning("Blob not found: {ContainerName}/{BlobName}", containerName, blobName);
+                    _logger.LogWarning("Blob not found: {ContainerName}/{BlobName}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
                     return null;
                 }
 
@@ -80,14 +82,51 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, new BlobContentCache { Content = content }, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Successfully read and cached blob content from {ContainerName}/{BlobName}",
-                  containerName, blobName);
+                  CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 return content;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob read | " +
+                    "Operation: ReadBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob read operation: {ex.Message}",
+                    "ReadBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob read | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to read blob content from {ContainerName}/{BlobName}",
-                  containerName, blobName);
+                  CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 // Invalidate cache on error
                 await _cacheManager.RemoveAsync(cacheKey);
@@ -104,7 +143,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Writing blob content to container: {ContainerName}, blob: {BlobName}",
-                       containerName, blobName);
+                       CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
 
@@ -123,14 +162,53 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await InvalidateListCache(containerName, blobName);
 
                 _logger.LogInformation("Successfully wrote and cached blob content to {ContainerName}/{BlobName}",
-                  containerName, blobName);
+                  CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 return true;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob write | " +
+                    "Operation: WriteBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await InvalidateListCache(containerName, blobName);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob write operation: {ex.Message}",
+                    "WriteBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob write | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await InvalidateListCache(containerName, blobName);
+                throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to write blob content to {ContainerName}/{BlobName}",
-                            containerName, blobName);
+                            CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 // Invalidate cache on error
                 await _cacheManager.RemoveAsync(cacheKey);
@@ -150,11 +228,11 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 var cachedExists = await _cacheManager.GetAsync<BlobExistsCache>(cacheKey);
                 if (cachedExists != null)
                 {
-                    _logger.LogDebug("Cache HIT for blob exists check {ContainerName}/{BlobName}", containerName, blobName);
+                    _logger.LogDebug("Cache HIT for blob exists check {ContainerName}/{BlobName}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
                     return cachedExists.Exists;
                 }
 
-                _logger.LogDebug("Cache MISS for blob exists check {ContainerName}/{BlobName}", containerName, blobName);
+                _logger.LogDebug("Cache MISS for blob exists check {ContainerName}/{BlobName}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
@@ -166,14 +244,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, new BlobExistsCache { Exists = exists }, TimeSpan.FromMinutes(5));
 
                 _logger.LogDebug("Blob exists check cached for {ContainerName}/{BlobName}: {Exists}",
-                   containerName, blobName, exists);
+                   CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName), exists);
 
                 return exists;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to check blob existence for {ContainerName}/{BlobName}",
-        containerName, blobName);
+        CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 // Invalidate cache on error
                 await _cacheManager.RemoveAsync(cacheKey);
@@ -190,7 +268,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Deleting blob from container: {ContainerName}, blob: {BlobName}",
-                     containerName, blobName);
+                     CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobClient = containerClient.GetBlobClient(blobName);
@@ -203,14 +281,55 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await InvalidateListCache(containerName, blobName);
 
                 _logger.LogInformation("Successfully deleted blob and invalidated cache for {ContainerName}/{BlobName}",
-       containerName, blobName);
+       CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 return response.Value;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 401 || ex.Status == 403)
+            {
+                // Log authentication/authorization failures as security events
+                _logger.LogWarning(
+                    "[SECURITY] Cryptographic/Authentication failure during blob delete | " +
+                    "Operation: DeleteBlob | Container: {ContainerName} | Blob: {BlobName} | " +
+                    "StatusCode: {StatusCode} | ErrorCode: {ErrorCode} | Message: {Message}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"),
+                    CommonUtils.SanitizeForLog(ex.Message));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await _cacheManager.RemoveAsync(existsCacheKey);
+                await InvalidateListCache(containerName, blobName);
+                
+                throw new CryptographicOperationException(
+                    $"Authentication or authorization failed for blob delete operation: {ex.Message}",
+                    "DeleteBlob",
+                    $"{containerName}/{blobName}",
+                    ex,
+                    ex.ErrorCode,
+                    ex.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                // Log other Azure Storage failures with details
+                _logger.LogError(ex,
+                    "Azure Storage request failed during blob delete | " +
+                    "Container: {ContainerName} | Blob: {BlobName} | StatusCode: {StatusCode} | ErrorCode: {ErrorCode}",
+                    CommonUtils.SanitizeForLog(containerName),
+                    CommonUtils.SanitizeForLog(blobName),
+                    ex.Status,
+                    CommonUtils.SanitizeForLog(ex.ErrorCode ?? "unknown"));
+
+                await _cacheManager.RemoveAsync(cacheKey);
+                await _cacheManager.RemoveAsync(existsCacheKey);
+                await InvalidateListCache(containerName, blobName);
+                return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete blob {ContainerName}/{BlobName}",
-                    containerName, blobName);
+                    CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
 
                 // Ensure cache is invalidated even on error
                 await _cacheManager.RemoveAsync(cacheKey);
@@ -228,25 +347,25 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogDebug("Listing blobs in container: {ContainerName} with prefix: {Prefix}",
-                     containerName, prefix);
+                     CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(prefix));
 
                 // Try to get from cache first
                 var cachedList = await _cacheManager.GetAsync<BlobListCache>(cacheKey);
                 if (cachedList != null)
                 {
                     _logger.LogDebug("Cache HIT for blob list {ContainerName}/{Prefix}, Count: {Count}",
-                     containerName, prefix, cachedList.BlobNames.Count);
+                     CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(prefix), cachedList.BlobNames.Count);
                     return cachedList.BlobNames;
                 }
 
-                _logger.LogDebug("Cache MISS for blob list {ContainerName}/{Prefix}", containerName, prefix);
+                _logger.LogDebug("Cache MISS for blob list {ContainerName}/{Prefix}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(prefix));
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName.ToLower());
                 var blobNames = new List<string>();
 
                 if (!await containerClient.ExistsAsync())
                 {
-                    _logger.LogWarning("Container does not exist: {ContainerName}", containerName);
+                    _logger.LogWarning("Container does not exist: {ContainerName}", CommonUtils.SanitizeForLog(containerName));
                     return blobNames;
                 }
 
@@ -259,14 +378,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, new BlobListCache { BlobNames = blobNames }, TimeSpan.FromMinutes(10));
 
                 _logger.LogInformation("Found and cached {Count} blobs with prefix {Prefix} in container {ContainerName}",
-                        blobNames.Count, prefix, containerName);
+                        blobNames.Count, CommonUtils.SanitizeForLog(prefix), CommonUtils.SanitizeForLog(containerName));
 
                 return blobNames;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list blobs in container {ContainerName} with prefix {Prefix}",
-             containerName, prefix);
+             CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(prefix));
 
                 // Invalidate cache on error
                 await _cacheManager.RemoveAsync(cacheKey);
@@ -332,12 +451,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.RemoveAsync(allBlobsKey);
 
                 _logger.LogDebug("Invalidated list cache for container {ContainerName}, prefix: {Prefix}",
-               containerName, prefix);
+               CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(prefix));
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to invalidate list cache for {ContainerName}/{BlobName}",
-             containerName, blobName);
+             CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobName));
                 // Don't throw - cache invalidation failure shouldn't break the operation
             }
         }

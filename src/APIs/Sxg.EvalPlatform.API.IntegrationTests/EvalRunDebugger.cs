@@ -9,7 +9,7 @@ namespace Sxg.EvalPlatform.API.IntegrationTests
 {
     public class EvalRunDebugger
     {
-        [Fact] 
+        [Fact(Skip = "This is not a test. This is for debugging.")] 
         public async Task ReTriggerEvalRunAsync()
         {
             await SendEvalProcessingRequestAsync(new Guid("f16e0d4d-74d3-49b6-afcb-86bea32995b8"), "d47b89bc-024d-42e2-9b84-7db4fc225e64"); 

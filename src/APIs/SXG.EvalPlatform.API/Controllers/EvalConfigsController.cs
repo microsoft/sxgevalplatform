@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sxg.EvalPlatform.API.Storage.Entities;
+using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
@@ -100,7 +101,7 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (configurations == null || !configurations.Any())
                 {
-                    _logger.LogInformation($"No configurations found for ConfigurationId: {configurationId}");
+                    _logger.LogInformation("No configurations found for ConfigurationId: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                     activity?.SetTag("found", false);
                     return NotFound($"No configurations found for ConfigurationId: {configurationId}");
                 }
@@ -110,7 +111,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("found", true);
                 activity?.SetTag("configuration_count", configurations.Count());
 
-                _logger.LogInformation($"Retrieved configurations for ConfigurationId: {configurationId}");
+                _logger.LogInformation("Retrieved configurations for ConfigurationId: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
 
                 return Ok(configurations);
             }
@@ -120,7 +121,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("error.message", ex.Message);
                 activity?.SetTag("error.type", ex.GetType().Name);
 
-                _logger.LogError(ex, $"Error occurred while retrieving configurations for ConfigurationId: {configurationId}");
+                _logger.LogError(ex, "Error occurred while retrieving configurations for ConfigurationId: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
 
                 return CreateErrorResponse<IList<SelectedMetricsConfiguration>>(
             $"Failed to retrieve configurations for ConfigurationId: {configurationId}", 500);
@@ -239,7 +240,7 @@ namespace SxgEvalPlatformApi.Controllers
                 }
 
                 _logger.LogInformation("Request to create configuration: {ConfigName} for agent: {AgentId}, environment: {Environment}",
-     createConfigDto.ConfigurationName, createConfigDto.AgentId, createConfigDto.EnvironmentName);
+     CommonUtils.SanitizeForLog(createConfigDto.ConfigurationName), CommonUtils.SanitizeForLog(createConfigDto.AgentId), CommonUtils.SanitizeForLog(createConfigDto.EnvironmentName));
 
                 activity?.SetTag("operation", "CreateConfiguration");
                 activity?.SetTag("agent_id", createConfigDto.AgentId);
@@ -271,7 +272,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", vex.Message);
                 activity?.SetTag("error.type", vex.GetType().Name);
-                _logger.LogWarning(vex, "Validation error while creating configuration for agent: {AgentId}", createConfigDto?.AgentId);
+                _logger.LogWarning(vex, "Validation error while creating configuration for agent: {AgentId}", CommonUtils.SanitizeForLog(createConfigDto?.AgentId));
                 return BadRequest(new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = string.Empty,
@@ -331,7 +332,7 @@ namespace SxgEvalPlatformApi.Controllers
                     return CreateValidationErrorResponse<ConfigurationSaveResponseDto>();
                 }
 
-                _logger.LogInformation("Request to update configuration: {ConfigId}", configurationId);
+                _logger.LogInformation("Request to update configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
 
                 activity?.SetTag("operation", "UpdateConfiguration");
                 activity?.SetTag("configuration_id", configurationId.ToString());
@@ -344,7 +345,7 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (result.Status == "not_found")
                 {
-                    _logger.LogWarning("Configuration not found for update: {ConfigId}", configurationId);
+                    _logger.LogWarning("Configuration not found for update: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                     activity?.SetTag("success", false);
                     activity?.SetTag("found", false);
                     return NotFound(new ErrorResponseDto
@@ -367,7 +368,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", true);
                 activity?.SetTag("configuration_id", result.ConfigurationId);
 
-                _logger.LogInformation("Configuration updated successfully: {ConfigId}", result.ConfigurationId);
+                _logger.LogInformation("Configuration updated successfully: {ConfigId}", CommonUtils.SanitizeForLog(result.ConfigurationId));
 
                 return Ok(result);
             }
@@ -376,7 +377,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", vex.Message);
                 activity?.SetTag("error.type", vex.GetType().Name);
-                _logger.LogWarning(vex, "Validation error while updating configuration: {ConfigId}", configurationId);
+                _logger.LogWarning(vex, "Validation error while updating configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                 return BadRequest(new ConfigurationSaveResponseDto
                 {
                     ConfigurationId = configurationId.ToString(),
@@ -389,7 +390,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.message", ex.Message);
                 activity?.SetTag("error.type", ex.GetType().Name);
-                _logger.LogError(ex, "Error updating configuration: {ConfigId}", configurationId);
+                _logger.LogError(ex, "Error updating configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                 return CreateErrorResponse<ConfigurationSaveResponseDto>("Failed to update configuration", 500);
             }
             finally
@@ -424,7 +425,7 @@ namespace SxgEvalPlatformApi.Controllers
 
             try
             {
-                _logger.LogInformation("Request to delete configuration: {ConfigId}", configurationId);
+                _logger.LogInformation("Request to delete configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
 
                 activity?.SetTag("operation", "DeleteConfiguration");
                 activity?.SetTag("configuration_id", configurationId.ToString());
@@ -433,7 +434,7 @@ namespace SxgEvalPlatformApi.Controllers
 
                 if (!deleted)
                 {
-                    _logger.LogWarning("Configuration not found for deletion: {ConfigId}", configurationId);
+                    _logger.LogWarning("Configuration not found for deletion: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                     activity?.SetTag("success", false);
                     activity?.SetTag("found", false);
                     return NotFound($"Configuration with ID '{configurationId}' not found");
@@ -443,7 +444,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("success", true);
                 activity?.SetTag("deleted", true);
 
-                _logger.LogInformation("Configuration deleted successfully: {ConfigId}", configurationId);
+                _logger.LogInformation("Configuration deleted successfully: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                 return Ok(new { message = $"Configuration '{configurationId}' deleted successfully" });
             }
             catch (Exception ex)
@@ -452,7 +453,7 @@ namespace SxgEvalPlatformApi.Controllers
                 activity?.SetTag("error.message", ex.Message);
                 activity?.SetTag("error.type", ex.GetType().Name);
 
-                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigId}", configurationId);
+                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigId}", CommonUtils.SanitizeForLog(configurationId.ToString()));
                 return StatusCode(500, new { message = "Failed to delete evaluation configuration", error = ex.Message });
             }
             finally

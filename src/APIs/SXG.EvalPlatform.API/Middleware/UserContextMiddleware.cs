@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using SXG.EvalPlatform.Common;
 
 namespace SXG.EvalPlatform.API.Middleware;
 
@@ -26,16 +27,16 @@ public class UserContextMiddleware
  if (!string.IsNullOrEmpty(appId))
         {
  // This is a service principal call - extract user context from custom headers
-            var userId = context.Request.Headers["X-User-Id"].FirstOrDefault();
-   var userEmail = context.Request.Headers["X-User-Email"].FirstOrDefault();
-            var userTenant = context.Request.Headers["X-User-Tenant"].FirstOrDefault();
+            var userId = CommonUtils.SanitizeForLog(context.Request.Headers["X-User-Id"].FirstOrDefault());
+   var userEmail = CommonUtils.SanitizeForLog(context.Request.Headers["X-User-Email"].FirstOrDefault());
+            var userTenant = CommonUtils.SanitizeForLog(context.Request.Headers["X-User-Tenant"].FirstOrDefault());
 
         if (!string.IsNullOrEmpty(userId))
       {
     // Add user context to claims for downstream use in controllers
           var identity = (ClaimsIdentity)context.User.Identity!;
                 
-   identity.AddClaim(new Claim("delegated_user_id", userId));
+   identity.AddClaim(new Claim("delegated_user_id", userId ?? string.Empty));
 
  if (!string.IsNullOrEmpty(userEmail))
    {
@@ -49,14 +50,14 @@ public class UserContextMiddleware
 
         _logger.LogInformation(
       "Service Principal {AppId} acting on behalf of user {UserId} ({UserEmail})",
-    appId, userId, userEmail ?? "unknown");
+    CommonUtils.SanitizeForLog(appId), CommonUtils.SanitizeForLog(userId), CommonUtils.SanitizeForLog(userEmail ?? "unknown"));
             }
             else
      {
          // Service principal call without user context
       _logger.LogDebug(
          "Service Principal {AppId} making request without user context (app-to-app only)",
-  appId);
+  CommonUtils.SanitizeForLog(appId));
             }
         }
   else
@@ -70,7 +71,7 @@ public class UserContextMiddleware
             {
           _logger.LogDebug(
      "Direct user authentication: {UserId} ({UserName})",
-          userObjectId, userPrincipalName ?? "unknown");
+          CommonUtils.SanitizeForLog(userObjectId), CommonUtils.SanitizeForLog(userPrincipalName ?? "unknown"));
             }
         }
 

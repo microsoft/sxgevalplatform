@@ -182,6 +182,19 @@ public static class ServiceCollectionExtensions
            }
        });
 
+       // Add server URLs
+       c.AddServer(new OpenApiServer
+       {
+           Url = "https://sxgevalapidev.azurewebsites.net/",
+           Description = "Development Environment"
+       });
+
+       c.AddServer(new OpenApiServer
+       {
+           Url = "https://sxgevalapippe.azurewebsites.net/",
+           Description = "Pre-Production Environment"
+       });
+
        // Add JWT Bearer authentication to Swagger
        // Use Implicit Flow (simpler for Swagger UI, no client secret needed)
        c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme

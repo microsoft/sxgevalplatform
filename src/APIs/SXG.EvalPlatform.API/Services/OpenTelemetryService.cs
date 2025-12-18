@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Collections.Concurrent;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Services
 {
@@ -126,7 +127,7 @@ namespace SxgEvalPlatformApi.Services
                 _operationDurationHistogram.Record(duration.TotalSeconds, tags);
 
                 _logger.LogDebug("Tracked evaluation run operation: {Operation}, EvalRunId={EvalRunId}, Success={Success}, Duration={Duration}ms",
-                   operation, evalRunId, success, duration.TotalMilliseconds);
+                   CommonUtils.SanitizeForLog(operation), CommonUtils.SanitizeForLog(evalRunId), success, duration.TotalMilliseconds);
             }
             catch (Exception ex)
             {
@@ -149,7 +150,7 @@ namespace SxgEvalPlatformApi.Services
                 _operationDurationHistogram.Record(duration.TotalSeconds, tags);
 
                 _logger.LogDebug("Tracked dataset operation: {Operation}, DatasetId={DatasetId}, Success={Success}, Duration={Duration}ms",
-         operation, datasetId, success, duration.TotalMilliseconds);
+         CommonUtils.SanitizeForLog(operation), CommonUtils.SanitizeForLog(datasetId), success, duration.TotalMilliseconds);
             }
             catch (Exception ex)
             {
@@ -171,7 +172,7 @@ namespace SxgEvalPlatformApi.Services
                 _operationDurationHistogram.Record(duration.TotalSeconds, tags);
 
                 _logger.LogDebug("Tracked Metrics config operation: {Operation}, ConfigId={ConfigId}, Success={Success}, Duration={Duration}ms",
-                         operation, configId, success, duration.TotalMilliseconds);
+                         CommonUtils.SanitizeForLog(operation), CommonUtils.SanitizeForLog(configId), success, duration.TotalMilliseconds);
             }
             catch (Exception ex)
             {
@@ -193,7 +194,7 @@ namespace SxgEvalPlatformApi.Services
                 _operationDurationHistogram.Record(duration.TotalSeconds, tags);
 
                 _logger.LogDebug("Tracked evaluation result operation: {Operation}, EvalRunId={EvalRunId}, Success={Success}, Duration={Duration}ms",
-                     operation, evalRunId, success, duration.TotalMilliseconds);
+                     CommonUtils.SanitizeForLog(operation), CommonUtils.SanitizeForLog(evalRunId), success, duration.TotalMilliseconds);
             }
             catch (Exception ex)
             {
@@ -216,7 +217,7 @@ namespace SxgEvalPlatformApi.Services
                 _operationDurationHistogram.Record(duration.TotalSeconds, tags);
 
                 _logger.LogDebug("Tracked DataVerse API call: EvalRunId={EvalRunId}, Success={Success}, StatusCode={StatusCode}, Duration={Duration}ms",
-            evalRunId, success, statusCode, duration.TotalMilliseconds);
+            CommonUtils.SanitizeForLog(evalRunId), success, statusCode, duration.TotalMilliseconds);
             }
             catch (Exception ex)
             {
@@ -257,11 +258,11 @@ namespace SxgEvalPlatformApi.Services
                 var tagList = CreateTagListFromDictionary(tags);
                 histogram.Record(value, tagList);
 
-                _logger.LogDebug("Recorded custom metric: {MetricName}={Value}", metricName, value);
+                _logger.LogDebug("Recorded custom metric: {MetricName}={Value}", CommonUtils.SanitizeForLog(metricName), value);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to record custom metric: {MetricName}", metricName);
+                _logger.LogError(ex, "Failed to record custom metric: {MetricName}", CommonUtils.SanitizeForLog(metricName));
             }
         }
 

@@ -80,6 +80,12 @@ namespace SXG.EvalPlatform.Common
             return result;
         }
 
+        public static string SanitizeForLog(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+            return input.Replace("\r", "").Replace("\n", "");
+        }
 
     }
 }

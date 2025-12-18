@@ -40,8 +40,8 @@ public partial class EvalRunsController
         try
         {
             // Add telemetry tags for request parameters
-            activity?.SetTag("evalRunId", evalRunId.ToString());
-            activity?.SetTag("newStatus", updateDto.Status);
+            activity?.SetTag("evalRunId", CommonUtils.SanitizeForLog(evalRunId.ToString()));
+            activity?.SetTag("newStatus", CommonUtils.SanitizeForLog(updateDto.Status));
             activity?.SetTag("operation", "UpdateEvalRunStatus");
 
             if (!ModelState.IsValid)
@@ -62,7 +62,8 @@ public partial class EvalRunsController
                 activity?.SetTag("http.status_code", 404);
                 activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogWarning($"Evaluation run not found for status update - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning("Evaluation run not found for status update - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()), stopwatch.ElapsedMilliseconds);
 
                 return NotFound(new UpdateResponseDto
                 {
@@ -72,8 +73,8 @@ public partial class EvalRunsController
             }
 
             // Add current status to telemetry
-            activity?.SetTag("currentStatus", currentEvalRun.Status);
-            activity?.SetTag("agentId", currentEvalRun.AgentId);
+            activity?.SetTag("currentStatus", CommonUtils.SanitizeForLog(currentEvalRun.Status));
+            activity?.SetTag("agentId", CommonUtils.SanitizeForLog(currentEvalRun.AgentId));
 
             // Check if the current status is already in a terminal state
             var terminalStatuses = new[] { CommonConstants.EvalRunStatus.EvalRunCompleted };
@@ -83,11 +84,14 @@ public partial class EvalRunsController
                 activity?.SetTag("success", false);
                 activity?.SetTag("error.type", "TerminalStateViolation");
                 activity?.SetTag("error.message", "Cannot update terminal state");
-                activity?.SetTag("terminalState", currentEvalRun.Status);
+                activity?.SetTag("terminalState", CommonUtils.SanitizeForLog(currentEvalRun.Status));
                 activity?.SetTag("http.status_code", 400);
                 activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogWarning($"Attempted to update terminal state - EvalRunId: {evalRunId}, CurrentStatus: {currentEvalRun.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning("Attempted to update terminal state - EvalRunId: {EvalRunId}, CurrentStatus: {CurrentStatus}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()), 
+                    CommonUtils.SanitizeForLog(currentEvalRun.Status), 
+                    stopwatch.ElapsedMilliseconds);
 
                 return BadRequest(new UpdateResponseDto
                 {
@@ -117,12 +121,17 @@ public partial class EvalRunsController
                 activity?.SetTag("http.status_code", 400);
                 activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogWarning($"Invalid status value - EvalRunId: {evalRunId}, InvalidStatus: {updateDto.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning("Invalid status value - EvalRunId: {EvalRunId}, InvalidStatus: {InvalidStatus}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                    CommonUtils.SanitizeForLog(updateDto.Status),
+                    stopwatch.ElapsedMilliseconds);
 
                 return CreateFieldValidationError<UpdateResponseDto>("Status", $"Invalid status. Valid values are: {string.Join(", ", validStatuses)}");
             }
 
-            _logger.LogInformation($"Updating evaluation run status to {updateDto.Status} for ID: {evalRunId}");
+            _logger.LogInformation("Updating evaluation run status to {Status} for ID: {EvalRunId}",
+                CommonUtils.SanitizeForLog(updateDto.Status),
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             // Create the service DTO with the information we have
             var serviceUpdateDto = new UpdateEvalRunStatusDto
@@ -145,7 +154,9 @@ public partial class EvalRunsController
                 activity?.SetTag("http.status_code", 500);
                 activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogError($"Unexpected null result from UpdateEvalRunStatusAsync for EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogError("Unexpected null result from UpdateEvalRunStatusAsync for EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                    stopwatch.ElapsedMilliseconds);
 
                 return StatusCode(StatusCodes.Status500InternalServerError, new UpdateResponseDto
                 {
@@ -158,10 +169,13 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", true);
             activity?.SetTag("http.status_code", 200);
-            activity?.SetTag("statusTransition", $"{currentEvalRun.Status} → {updateDto.Status}");
+            activity?.SetTag("statusTransition", CommonUtils.SanitizeForLog($"{currentEvalRun.Status} → {updateDto.Status}"));
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            _logger.LogInformation($"Successfully updated evaluation run status - EvalRunId: {evalRunId}, Transition: {currentEvalRun.Status} → {updateDto.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogInformation("Successfully updated evaluation run status - EvalRunId: {EvalRunId}, Transition: {Transition}, Duration: {Duration}ms",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                CommonUtils.SanitizeForLog($"{currentEvalRun.Status} → {updateDto.Status}"),
+                stopwatch.ElapsedMilliseconds);
 
             return Ok(new UpdateResponseDto
             {
@@ -174,12 +188,15 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", "AzureRequestFailed");
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("error.status", ex.Status);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
             activity?.SetTag("http.status_code", ex.Status);
 
-            _logger.LogError(ex, $"Azure error occurred while updating evaluation run status - EvalRunId: {evalRunId}, Status: {ex.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogError(ex, "Azure error occurred while updating evaluation run status - EvalRunId: {EvalRunId}, Status: {Status}, Duration: {Duration}ms",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                ex.Status,
+                stopwatch.ElapsedMilliseconds);
 
             return HandleAzureException<UpdateResponseDto>(ex, "Failed to update evaluation run status");
         }
@@ -188,7 +205,7 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
@@ -196,7 +213,9 @@ public partial class EvalRunsController
                 activity?.SetTag("error.category", "Authorization");
       activity?.SetTag("http.status_code", 403);
 
-                _logger.LogWarning(ex, $"Authorization error occurred while updating evaluation run status - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning(ex, "Authorization error occurred while updating evaluation run status - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                    stopwatch.ElapsedMilliseconds);
 
                 return CreateErrorResponse<UpdateResponseDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
    }
@@ -204,7 +223,9 @@ public partial class EvalRunsController
             activity?.SetTag("error.category", "UnexpectedError");
             activity?.SetTag("http.status_code", 500);
 
-            _logger.LogError(ex, $"Error occurred while updating evaluation run status - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogError(ex, "Error occurred while updating evaluation run status - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                stopwatch.ElapsedMilliseconds);
 
             return CreateErrorResponse<UpdateResponseDto>("Failed to update evaluation run status", StatusCodes.Status500InternalServerError);
         }
@@ -230,10 +251,11 @@ public partial class EvalRunsController
         try
         {
             // Add telemetry tags for request parameters
-            activity?.SetTag("evalRunId", evalRunId.ToString());
+            activity?.SetTag("evalRunId", CommonUtils.SanitizeForLog(evalRunId.ToString()));
             activity?.SetTag("operation", "GetEvalRunStatus");
 
-            _logger.LogInformation($"Retrieving evaluation run status for ID: {evalRunId}");
+            _logger.LogInformation("Retrieving evaluation run status for ID: {EvalRunId}",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()));
 
             var evalRun = await _evalRunRequestHandler.GetEvalRunByIdAsync(evalRunId);
 
@@ -245,7 +267,9 @@ public partial class EvalRunsController
                 activity?.SetTag("http.status_code", 404);
                 activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-                _logger.LogInformation($"Evaluation run status not found - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogInformation("Evaluation run status not found - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                    stopwatch.ElapsedMilliseconds);
 
                 return NotFound($"Evaluation run with ID {evalRunId} not found");
             }
@@ -263,13 +287,16 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", true);
             activity?.SetTag("http.status_code", 200);
-            activity?.SetTag("status", evalRun.Status);
-            activity?.SetTag("agentId", evalRun.AgentId);
+            activity?.SetTag("status", CommonUtils.SanitizeForLog(evalRun.Status));
+            activity?.SetTag("agentId", CommonUtils.SanitizeForLog(evalRun.AgentId));
             activity?.SetTag("hasStartedDatetime", evalRun.StartedDatetime.HasValue);
             activity?.SetTag("hasCompletedDatetime", evalRun.CompletedDatetime.HasValue);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
-            _logger.LogInformation($"Successfully retrieved evaluation run status - EvalRunId: {evalRunId}, Status: {evalRun.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogInformation("Successfully retrieved evaluation run status - EvalRunId: {EvalRunId}, Status: {Status}, Duration: {Duration}ms",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                CommonUtils.SanitizeForLog(evalRun.Status),
+                stopwatch.ElapsedMilliseconds);
 
             return Ok(statusDto);
         }
@@ -278,12 +305,15 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", "AzureRequestFailed");
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("error.status", ex.Status);
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
             activity?.SetTag("http.status_code", ex.Status);
 
-            _logger.LogError(ex, $"Azure error occurred while retrieving evaluation run status - EvalRunId: {evalRunId}, Status: {ex.Status}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogError(ex, "Azure error occurred while retrieving evaluation run status - EvalRunId: {EvalRunId}, Status: {Status}, Duration: {Duration}ms",
+                CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                ex.Status,
+                stopwatch.ElapsedMilliseconds);
 
             return HandleAzureException<EvalRunStatusDto>(ex, "Failed to retrieve evaluation run status");
         }
@@ -292,7 +322,7 @@ public partial class EvalRunsController
             stopwatch.Stop();
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
+            activity?.SetTag("error.message", CommonUtils.SanitizeForLog(ex.Message));
             activity?.SetTag("duration_ms", stopwatch.ElapsedMilliseconds);
 
             if (ex is RequestFailedException azEx && (azEx.Status == 401 || azEx.Status == 403))
@@ -300,7 +330,9 @@ public partial class EvalRunsController
                 activity?.SetTag("error.category", "Authorization");
                 activity?.SetTag("http.status_code", 403);
 
-                _logger.LogWarning(ex, $"Authorization error occurred while retrieving evaluation run status - EvalRunId: {evalRunId}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                _logger.LogWarning(ex, "Authorization error occurred while retrieving evaluation run status - EvalRunId: {EvalRunId}, Duration: {Duration}ms",
+                    CommonUtils.SanitizeForLog(evalRunId.ToString()),
+                    stopwatch.ElapsedMilliseconds);
 
                 return CreateErrorResponse<EvalRunStatusDto>("Access denied. Authorization failed.", StatusCodes.Status403Forbidden);
             }

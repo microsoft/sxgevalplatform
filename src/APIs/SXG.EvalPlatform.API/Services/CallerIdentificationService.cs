@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using SxgEvalPlatformApi.Controllers;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Services;
 
@@ -87,7 +88,7 @@ public class CallerIdentificationService : ICallerIdentificationService
         var delegatedUserId = User.FindFirst("delegated_user_id")?.Value;
         if (!string.IsNullOrEmpty(delegatedUserId) && delegatedUserId != "0" && delegatedUserId != "unknown")
         {
-            _logger.LogDebug("Using delegated user ID: {UserId}", delegatedUserId);
+            _logger.LogDebug("Using delegated user ID: {UserId}", CommonUtils.SanitizeForLog(delegatedUserId));
             return delegatedUserId;
         }
 
@@ -95,7 +96,7 @@ public class CallerIdentificationService : ICallerIdentificationService
         var directUserId = User.FindFirst("oid")?.Value;
         if (!string.IsNullOrEmpty(directUserId) && directUserId != "0" && directUserId != "unknown")
         {
-            _logger.LogDebug("Using direct user ID (oid): {UserId}", directUserId);
+            _logger.LogDebug("Using direct user ID (oid): {UserId}", CommonUtils.SanitizeForLog(directUserId));
             return directUserId;
         }
 
@@ -103,7 +104,7 @@ public class CallerIdentificationService : ICallerIdentificationService
         var sub = User.FindFirst("sub")?.Value;
         if (!string.IsNullOrEmpty(sub) && sub != "0" && sub != "unknown")
         {
-            _logger.LogDebug("Using sub claim: {UserId}", sub);
+            _logger.LogDebug("Using sub claim: {UserId}", CommonUtils.SanitizeForLog(sub));
             return sub;
         }
 
@@ -129,21 +130,21 @@ public class CallerIdentificationService : ICallerIdentificationService
         var preferredUsername = User.FindFirst("preferred_username")?.Value;
         if (!string.IsNullOrEmpty(preferredUsername) && preferredUsername != "0" && preferredUsername != "unknown")
         {
-            _logger.LogDebug("Using preferred_username: {Email}", preferredUsername);
+            _logger.LogDebug("Using preferred_username: {Email}", CommonUtils.SanitizeForLog(preferredUsername));
             return preferredUsername;
         }
 
         var email = User.FindFirst("email")?.Value;
         if (!string.IsNullOrEmpty(email) && email != "0" && email != "unknown")
         {
-            _logger.LogDebug("Using email: {Email}", email);
+            _logger.LogDebug("Using email: {Email}", CommonUtils.SanitizeForLog(email));
             return email;
         }
 
         var upn = User.FindFirst("upn")?.Value;
         if (!string.IsNullOrEmpty(upn) && upn != "0" && upn != "unknown")
         {
-            _logger.LogDebug("Using upn: {Email}", upn);
+            _logger.LogDebug("Using upn: {Email}", CommonUtils.SanitizeForLog(upn));
             return upn;
         }
 
@@ -151,21 +152,21 @@ public class CallerIdentificationService : ICallerIdentificationService
         var emailClaim = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
         if (!string.IsNullOrEmpty(emailClaim) && emailClaim != "0" && emailClaim != "unknown")
         {
-            _logger.LogDebug("Using emailaddress claim: {Email}", emailClaim);
+            _logger.LogDebug("Using emailaddress claim: {Email}", CommonUtils.SanitizeForLog(emailClaim));
             return emailClaim;
         }
 
         var upnClaim = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn")?.Value;
         if (!string.IsNullOrEmpty(upnClaim) && upnClaim != "0" && upnClaim != "unknown")
         {
-            _logger.LogDebug("Using upn claim: {Email}", upnClaim);
+            _logger.LogDebug("Using upn claim: {Email}", CommonUtils.SanitizeForLog(upnClaim));
             return upnClaim;
         }
 
         var nameClaim = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")?.Value;
         if (!string.IsNullOrEmpty(nameClaim) && nameClaim != "0" && nameClaim != "unknown")
         {
-            _logger.LogDebug("Using name claim: {Email}", nameClaim);
+            _logger.LogDebug("Using name claim: {Email}", CommonUtils.SanitizeForLog(nameClaim));
             return nameClaim;
         }
 
@@ -273,7 +274,9 @@ public class CallerIdentificationService : ICallerIdentificationService
             _logger.LogWarning("=== ALL TOKEN CLAIMS ===");
             foreach (var claim in User.Claims)
             {
-                _logger.LogWarning("Claim: {Type} = '{Value}'", claim.Type, claim.Value);
+                _logger.LogWarning("Claim: {Type} = '{Value}'", 
+                    CommonUtils.SanitizeForLog(claim.Type), 
+                    CommonUtils.SanitizeForLog(claim.Value));
             }
             _logger.LogWarning("=== END TOKEN CLAIMS ===");
         }

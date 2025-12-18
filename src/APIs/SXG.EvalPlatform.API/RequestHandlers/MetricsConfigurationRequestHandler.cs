@@ -8,6 +8,7 @@ using SXG.EvalPlatform.Common.Exceptions;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.Services;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -23,6 +24,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private readonly IMapper _mapper;
         private readonly ICacheManager _cacheManager;
         private readonly ICallerIdentificationService _callerService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         // Cache key patterns
         //private const string METRICS_CONFIG_BY_ID_CACHE_KEY = "metrics_config:{0}";
@@ -42,7 +44,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                                                   IMapper mapper,
                                                   IConfigHelper configHelper,
                                                   ICacheManager cacheManager,
-                                                  ICallerIdentificationService callerService)
+                                                  ICallerIdentificationService callerService,
+                                                  IHttpContextAccessor httpContextAccessor)
         {
             _metricsConfigTableService = metricsConfigTableService;
             _logger = logger;
@@ -51,6 +54,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             _configHelper = configHelper;
             _cacheManager = cacheManager;
             _callerService = callerService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>
@@ -65,14 +69,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var callerInfo = _callerService.GetCallerInfo();
                 
                 _logger.LogDebug("GetAuditUser - IsServicePrincipal: {IsServicePrincipal}, HasDelegatedUser: {HasDelegatedUser}, UserEmail: {UserEmail}, AppName: {AppName}",
-                    callerInfo.IsServicePrincipal, callerInfo.HasDelegatedUser, callerInfo.UserEmail, callerInfo.ApplicationName);
+                    callerInfo.IsServicePrincipal, callerInfo.HasDelegatedUser, CommonUtils.SanitizeForLog(callerInfo.UserEmail), CommonUtils.SanitizeForLog(callerInfo.ApplicationName));
 
                 if (_callerService.IsServicePrincipalCall() && !_callerService.HasDelegatedUserContext())
                 {
                     // AppToApp flow - use application name
                     var appName = _callerService.GetCallingApplicationName();
                     var auditUser = !string.IsNullOrWhiteSpace(appName) && appName != "unknown" ? appName : "System";
-                    _logger.LogInformation("Audit user (AppToApp): {AuditUser}", auditUser);
+                    _logger.LogInformation("Audit user (AppToApp): {AuditUser}", CommonUtils.SanitizeForLog(auditUser));
                     return auditUser;
                 }
                 else
@@ -83,7 +87,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     // Check if we got a meaningful value
                     if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown")
                     {
-                        _logger.LogInformation("Audit user (User): {AuditUser}", userEmail);
+                        _logger.LogInformation("Audit user (User): {AuditUser}", CommonUtils.SanitizeForLog(userEmail));
                         return userEmail;
                     }
                     
@@ -91,11 +95,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     var userId = _callerService.GetCurrentUserId();
                     if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown")
                     {
-                        _logger.LogInformation("Audit user (User ID fallback): {AuditUser}", userId);
+                        _logger.LogInformation("Audit user (User ID fallback): {AuditUser}", CommonUtils.SanitizeForLog(userId));
                         return userId;
                     }
                     
-                    _logger.LogWarning("Could not determine audit user, using 'System'. UserEmail: {UserEmail}, UserId: {UserId}", userEmail, userId);
+                    _logger.LogWarning("Could not determine audit user, using 'System'. UserEmail: {UserEmail}, UserId: {UserId}", CommonUtils.SanitizeForLog(userEmail), CommonUtils.SanitizeForLog(userId));
                     return "System";
                 }
             }
@@ -134,7 +138,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Retrieving all configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
-                       agentId, environmentName);
+                       CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
 
                 var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
                 IList<MetricsConfigurationMetadataDto>  configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
@@ -142,13 +146,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var filteredConfigurations = FilterByEnvironment(configurations, environmentName);
 
                 _logger.LogInformation("Retrieved {Count} configurations for Agent: {AgentId} and Environment: {EnvironmentName}",
-                filteredConfigurations.Count, agentId, environmentName);
+                filteredConfigurations.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
 
                 return filteredConfigurations;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve configurations for Agent: {AgentId}", agentId);
+                _logger.LogError(ex, "Failed to retrieve configurations for Agent: {AgentId}", CommonUtils.SanitizeForLog(agentId));
                 throw;
             }
         }
@@ -160,26 +164,26 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}", configurationId);
+                _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
                                 
 
                 var entity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
 
                 if (entity == null)
                 {
-                    _logger.LogInformation("Configuration not found for ConfigId: {ConfigId}", configurationId);
+                    _logger.LogInformation("Configuration not found for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
                     return null;
                 }
 
                 var metrics = await FetchMetricsFromBlobAsync(entity.ContainerName, entity.BlobFilePath, configurationId);
                                 
-                _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", configurationId);
+                _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
 
                 return metrics;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve configuration for ConfigId: {ConfigId}", configurationId);
+                _logger.LogError(ex, "Failed to retrieve configuration for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
                 throw;
             }
         }
@@ -192,7 +196,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Creating configuration for Agent: {AgentId}, Config: {ConfigName}, Environment: {Environment}",
-                        createConfigDto.AgentId, createConfigDto.ConfigurationName, createConfigDto.EnvironmentName);
+                        CommonUtils.SanitizeForLog(createConfigDto.AgentId), CommonUtils.SanitizeForLog(createConfigDto.ConfigurationName), CommonUtils.SanitizeForLog(createConfigDto.EnvironmentName));
 
                 ValidateConfigurationAsync(createConfigDto);
 
@@ -219,13 +223,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 //await UpdateCachesAfterSave(savedEntity, createConfigDto.MetricsConfiguration);
 
                 _logger.LogInformation("Successfully {Action} configuration with ID: {ConfigId} by {AuditUser}",
-                   isExistingConfig ? "updated" : "created", savedEntity.ConfigurationId, auditUser);
+                   isExistingConfig ? "updated" : "created", CommonUtils.SanitizeForLog(savedEntity.ConfigurationId), CommonUtils.SanitizeForLog(auditUser));
 
                 return CreateSuccessResponse(savedEntity, isExistingConfig);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create configuration for Agent: {AgentId}", createConfigDto.AgentId);
+                _logger.LogError(ex, "Failed to create configuration for Agent: {AgentId}", CommonUtils.SanitizeForLog(createConfigDto.AgentId));
                 return CreateErrorResponse(ex);
             }
         }
@@ -237,7 +241,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation("Updating configuration with ID: {ConfigId}", configurationId);
+                _logger.LogInformation("Updating configuration with ID: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
 
                 ValidateConfigurationAsync(updateConfigDto);
 
@@ -268,13 +272,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
 
                 //await UpdateCachesAfterSave(savedEntity, updateConfigDto.MetricsConfiguration);
 
-                _logger.LogInformation("Successfully updated configuration with ID: {ConfigId} by {AuditUser}", savedEntity.ConfigurationId, auditUser);
+                _logger.LogInformation("Successfully updated configuration with ID: {ConfigId} by {AuditUser}", CommonUtils.SanitizeForLog(savedEntity.ConfigurationId), CommonUtils.SanitizeForLog(auditUser));
 
                 return CreateSuccessResponse(savedEntity, true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update configuration with ID: {ConfigId}", configurationId);
+                _logger.LogError(ex, "Failed to update configuration with ID: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
                 return CreateErrorResponse(ex);
             }
         }
@@ -302,13 +306,13 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogInformation("Deleting configuration with ID: {ConfigurationId}", configurationId);
+                _logger.LogInformation("Deleting configuration with ID: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
 
                 var existingConfig = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
 
                 if (existingConfig == null)
                 {
-                    _logger.LogWarning("Configuration with ID: {ConfigurationId} not found", configurationId);
+                    _logger.LogWarning("Configuration with ID: {ConfigurationId} not found", CommonUtils.SanitizeForLog(configurationId));
                     return false;
                 }
 
@@ -321,18 +325,18 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     //await RemoveConfigurationFromCacheAsync(configurationId, existingConfig.AgentId);
                     await TryDeleteBlobAsync(existingConfig.ContainerName, existingConfig.BlobFilePath, configurationId);
 
-                    _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", configurationId);
+                    _logger.LogInformation("Configuration with ID: {ConfigurationId} deleted successfully", CommonUtils.SanitizeForLog(configurationId));
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to delete configuration with ID: {ConfigurationId}", configurationId);
+                    _logger.LogWarning("Failed to delete configuration with ID: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
                 }
 
                 return deleted;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigurationId}", configurationId);
+                _logger.LogError(ex, "Error occurred while deleting configuration: {ConfigurationId}", CommonUtils.SanitizeForLog(configurationId));
                 return false;
             }
         }
@@ -346,17 +350,17 @@ namespace SxgEvalPlatformApi.RequestHandlers
         {
             try
             {
-                _logger.LogDebug("Checking cache for key: {CacheKey}", cacheKey);
+                _logger.LogDebug("Checking cache for key: {CacheKey}", CommonUtils.SanitizeForLog(cacheKey));
                 return await _cacheManager.GetAsync<T>(cacheKey);
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("Cache timeout for key: {CacheKey} - proceeding without cache", cacheKey);
+                _logger.LogWarning("Cache timeout for key: {CacheKey} - proceeding without cache", CommonUtils.SanitizeForLog(cacheKey));
                 return null;
             }
             catch (Exception cacheEx)
             {
-                _logger.LogWarning(cacheEx, "Cache error for key: {CacheKey} - proceeding without cache", cacheKey);
+                _logger.LogWarning(cacheEx, "Cache error for key: {CacheKey} - proceeding without cache", CommonUtils.SanitizeForLog(cacheKey));
                 return null;
             }
         }
@@ -407,28 +411,68 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private DefaultMetricsConfiguration DeserializeDefaultMetricsConfiguration(string blobContent)
         {
-            using var document = JsonDocument.Parse(blobContent);
-            var root = document.RootElement;
-
-            // Check if the JSON has a "metricConfiguration" wrapper
-            if (root.TryGetProperty("metricConfiguration", out var metricsElement))
+            try
             {
-                var metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
-                if (metrics == null)
+                using var document = JsonDocument.Parse(blobContent);
+                var root = document.RootElement;
+
+                // Check if the JSON has a "metricConfiguration" wrapper
+                if (root.TryGetProperty("metricConfiguration", out var metricsElement))
                 {
-                    throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
+                    var metrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(metricsElement.GetRawText());
+                    if (metrics == null)
+                    {
+                        throw new Exception("Failed to deserialize default Metrics configuration from wrapped JSON structure.");
+                    }
+                    return metrics;
                 }
-                return metrics;
-            }
 
-            // Try direct deserialization for backward compatibility
-            var directMetrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
-            if (directMetrics == null)
+                // Try direct deserialization for backward compatibility
+                var directMetrics = JsonSerializer.Deserialize<DefaultMetricsConfiguration>(blobContent);
+                if (directMetrics == null)
+                {
+                    throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
+                }
+
+                return directMetrics;
+            }
+            catch (JsonException ex)
             {
-                throw new Exception("Failed to deserialize default Metrics configuration from blob content.");
+                // Extract security context
+                var httpContext = _httpContextAccessor.HttpContext;
+                var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+                var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
+                var userId = GetAuditUser();
+                
+                // Analyze content for corruption patterns
+                var contentLength = blobContent?.Length ?? 0;
+                var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
+                
+                // Log with comprehensive security context
+                _logger.LogWarning(
+                    "[SECURITY] Deserialization failure for default metrics configuration | " +
+                    "ContentType: DefaultMetricsConfiguration | ContentLength: {ContentLength} | " +
+                    "ErrorContext: {ErrorContext} | UserId: {UserId} | ClientIP: {ClientIP} | " +
+                    "RequestPath: {RequestPath} | JsonError: {JsonError}",
+                    contentLength,
+                    CommonUtils.SanitizeForLog(errorContext),
+                    CommonUtils.SanitizeForLog(userId),
+                    CommonUtils.SanitizeForLog(clientIp),
+                    CommonUtils.SanitizeForLog(requestPath),
+                    CommonUtils.SanitizeForLog(ex.Message));
+                
+                throw new DeserializationException(
+                    "Failed to deserialize default metrics configuration",
+                    "DefaultMetricsConfiguration",
+                    "DefaultMetricsConfiguration",
+                    ex,
+                    contentLength,
+                    "default",
+                    errorContext,
+                    clientIp,
+                    userId,
+                    requestPath);
             }
-
-            return directMetrics;
         }
 
         /// <summary>
@@ -485,8 +529,41 @@ namespace SxgEvalPlatformApi.RequestHandlers
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Failed to parse JSON from blob content for ConfigId: {ConfigId}", configurationId);
-                throw new Exception("Invalid JSON format in Metrics configuration blob", ex);
+                // Extract security context
+                var httpContext = _httpContextAccessor.HttpContext;
+                var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+                var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
+                var userId = GetAuditUser();
+                
+                // Analyze content for corruption patterns
+                var contentLength = blobContent?.Length ?? 0;
+                var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
+                
+                // Log with comprehensive security context
+                _logger.LogWarning(
+                    "[SECURITY] Deserialization failure for metrics configuration | " +
+                    "ContentType: MetricsConfiguration | ConfigId: {ConfigId} | ContentLength: {ContentLength} | " +
+                    "ErrorContext: {ErrorContext} | UserId: {UserId} | ClientIP: {ClientIP} | " +
+                    "RequestPath: {RequestPath} | JsonError: {JsonError}",
+                    CommonUtils.SanitizeForLog(configurationId),
+                    contentLength,
+                    CommonUtils.SanitizeForLog(errorContext),
+                    CommonUtils.SanitizeForLog(userId),
+                    CommonUtils.SanitizeForLog(clientIp),
+                    CommonUtils.SanitizeForLog(requestPath),
+                    CommonUtils.SanitizeForLog(ex.Message));
+                
+                throw new DeserializationException(
+                    $"Failed to deserialize metrics configuration: {ex.Message}",
+                    configurationId,
+                    "MetricsConfiguration",
+                    ex,
+                    contentLength,
+                    configurationId,
+                    errorContext,
+                    clientIp,
+                    userId,
+                    requestPath);
             }
         }
 
@@ -611,14 +688,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 if (blobExists)
                 {
                     await _blobStorageService.DeleteBlobAsync(containerName, blobPath);
-                    _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", containerName, blobPath);
+                    _logger.LogInformation("Configuration blob file deleted: {ContainerName}/{BlobPath}", CommonUtils.SanitizeForLog(containerName), CommonUtils.SanitizeForLog(blobPath));
                 }
             }
             catch (Exception blobEx)
             {
                 _logger.LogWarning(blobEx,
                     "Failed to delete blob file for configuration ID: {ConfigurationId}, but table record was deleted",
-                configurationId);
+                CommonUtils.SanitizeForLog(configurationId));
                 // Continue - table deletion was successful, blob deletion failure is not critical
             }
         }
@@ -657,6 +734,59 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private MetricsConfigurationMetadataDto ToMetricsConfigurationMetadataDto(MetricsConfigurationTableEntity entity)
         {
             return _mapper.Map<MetricsConfigurationMetadataDto>(entity);
+        }
+
+        /// <summary>
+        /// Analyze content for corruption patterns (double-encoding, base64, etc.)
+        /// Similar to Python implementation in azure_storage.py
+        /// </summary>
+        private string AnalyzeContentCorruption(string? content, string errorMessage)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return "EmptyContent";
+            }
+
+            var patterns = new List<string>();
+
+            // Check for double-encoded JSON (common corruption pattern)
+            if (content.StartsWith("\"") && content.EndsWith("\""))
+            {
+                patterns.Add("DoubleEncodedJson");
+            }
+
+            // Check for base64 encoding pattern
+            if (content.Length > 0 && content.Length % 4 == 0 &&
+                System.Text.RegularExpressions.Regex.IsMatch(content, @"^[A-Za-z0-9+/]+={0,2}$"))
+            {
+                patterns.Add("PossibleBase64");
+            }
+
+            // Check for XML content in JSON field
+            if (content.TrimStart().StartsWith("<"))
+            {
+                patterns.Add("XmlInsteadOfJson");
+            }
+
+            // Check for common JSON syntax errors
+            if (errorMessage.Contains("'\"' is invalid after a value", StringComparison.OrdinalIgnoreCase))
+            {
+                patterns.Add("TrailingCommaOrQuote");
+            }
+
+            if (errorMessage.Contains("depth", StringComparison.OrdinalIgnoreCase))
+            {
+                patterns.Add("ExcessiveNesting");
+            }
+
+            // Check content preview for control characters
+            var preview = content.Length > 100 ? content.Substring(0, 100) : content;
+            if (preview.Any(c => char.IsControl(c) && c != '\n' && c != '\r' && c != '\t'))
+            {
+                patterns.Add("ControlCharacters");
+            }
+
+            return patterns.Any() ? string.Join(",", patterns) : "UnknownPattern";
         }
 
         #endregion

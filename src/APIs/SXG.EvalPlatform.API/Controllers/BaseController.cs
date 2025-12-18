@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using SxgEvalPlatformApi.Common;
 using SxgEvalPlatformApi.Services;
 using System.Diagnostics;
+using SXG.EvalPlatform.Common;
 
 namespace SxgEvalPlatformApi.Controllers;
 
@@ -120,7 +121,7 @@ public abstract class BaseController : ControllerBase
             activity?.SetTag("error.message", ex.Message);
             activity?.SetTag("error.type", ex.GetType().Name);
 
-            _logger.LogError(ex, "Operation {OperationName} failed", operationName);
+            _logger.LogError(ex, "Operation {OperationName} failed", CommonUtils.SanitizeForLog(operationName));
             return Result<T>.Failure(ex.Message);
         }
         finally
@@ -435,7 +436,7 @@ public abstract class BaseController : ControllerBase
     {
         var (statusCode, userMessage) = MapAzureException(ex);
 
-        _logger.LogError(ex, "Azure operation failed: {Context}", context);
+        _logger.LogError(ex, "Azure operation failed: {Context}", CommonUtils.SanitizeForLog(context));
 
         return CreateErrorResponse<T>($"{context}: {userMessage}", statusCode);
     }
@@ -447,7 +448,7 @@ public abstract class BaseController : ControllerBase
     {
         var (statusCode, userMessage) = MapAzureException(ex);
 
-        _logger.LogError(ex, "Azure operation failed: {Context}", context);
+        _logger.LogError(ex, "Azure operation failed: {Context}", CommonUtils.SanitizeForLog(context));
 
         return (ActionResult)CreateErrorResponse($"{context}: {userMessage}", statusCode);
     }
