@@ -2,13 +2,13 @@
 	"$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticRolloutSpecification.json",
 	"ContentVersion": "1.0.0.0",
 	"RolloutMetadata": {
-		"serviceModelPath": "Prod.ServiceModel.json",
-		"scopeBindingsPath": "Prod.ScopeBindings.json",
+		"serviceModelPath": "RegionAgnosticEv2/Prod.ServiceModel.json",
+		"scopeBindingsPath": "RegionAgnosticEv2/Prod.ScopeBindings.json",
 		"name": "Eval Services <version>",
 		"rolloutType": "Major",
 		"buildSource": {
 			"Parameters": {
-				"VersionFile": "buildver.txt"
+				"VersionFile": "RegionAgnosticEv2/buildver.txt"
 			}
 		},
 		"Notification": {
