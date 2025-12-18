@@ -2,6 +2,7 @@
 bin/
 obj/
 out/
+merged/
 
 # MSBuild Binary and Structured Log
 *.binlog

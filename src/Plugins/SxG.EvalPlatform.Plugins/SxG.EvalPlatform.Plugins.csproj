@@ -1,56 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <ProjectGuid>{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>SxG.EvalPlatform.Plugins</RootNamespace>
-    <AssemblyName>SxG.EvalPlatform.Plugins</AssemblyName>
-    <TargetFrameworks>net462</TargetFrameworks>
-    <FileAlignment>512</FileAlignment>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);GetTfmPublishedFiles</TargetsForTfmSpecificBuildOutput>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PackageId>Sxg.EvalPlatform.Plugins</PackageId>
-    <IsPackable>True</IsPackable>
-    <PackageVersion>1.0.0</PackageVersion>
-    <PackageOutputPath>bin\outputPackages</PackageOutputPath>
-    <PackageTags>plugin</PackageTags>
-    <Authors>Placeholder</Authors>
-    <Description>Placeholder</Description>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>gerdgeg.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="NuGet.Build.Tasks.Pack" Version="5.2.0" />
-    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.*" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include=".gitignore" />
-    <Content Include="ILRepack.Exclude.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="README.md" />
-  </ItemGroup>
-  <Target Name="GetTfmPublishedFiles">
-    <Message Text="GetTfmPublishedFiles from: $(OutputPath)" />
+    <PropertyGroup>
+        <ProjectGuid>{63F5B2D4-6695-40ED-9B97-3AC3DE20FA9C}</ProjectGuid>
+        <OutputType>Library</OutputType>
+        <RootNamespace>SxG.EvalPlatform.Plugins</RootNamespace>
+        <AssemblyName>SxG.EvalPlatform.Plugins</AssemblyName>
+        <TargetFrameworks>net462</TargetFrameworks>
+        <FileAlignment>512</FileAlignment>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);GetTfmPublishedFiles</TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>full</DebugType>
+        <Optimize>false</Optimize>
+        <DefineConstants>DEBUG;TRACE</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <DefineConstants>TRACE</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup>
+        <PackageId>Sxg.EvalPlatform.Plugins</PackageId>
+        <IsPackable>True</IsPackable>
+        <PackageVersion>1.0.0</PackageVersion>
+        <PackageOutputPath>bin\outputPackages</PackageOutputPath>
+        <PackageTags>plugin</PackageTags>
+        <Authors>Placeholder</Authors>
+        <Description>Placeholder</Description>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>gerdgeg.snk</AssemblyOriginatorKeyFile>
+    </PropertyGroup>
+    <Import Project="ILRepack.targets" />
     <ItemGroup>
-      <BuildOutputInPackage Include="$(OutputPath)\*.*" Exclude="$(OutputPath)\microsoft.*rm.sdk*" />
+        <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="NuGet.Build.Tasks.Pack" Version="5.2.0" />
+        <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.*" />
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" />
+        <PackageReference Include="ILRepack" Version="2.0.34" PrivateAssets="All" />
     </ItemGroup>
-  </Target>
+    <ItemGroup>
+        <Content Include=".gitignore" />
+        <Content Include="ILRepack.Exclude.txt" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="README.md" />
+    </ItemGroup>
+    <Target Name="GetTfmPublishedFiles">
+        <Message Text="GetTfmPublishedFiles from: $(OutputPath)" />
+        <ItemGroup>
+            <BuildOutputInPackage Include="$(OutputPath)\*.*" Exclude="$(OutputPath)\microsoft.*rm.sdk*" />
+        </ItemGroup>
+    </Target>
 </Project>
