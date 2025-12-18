@@ -12,6 +12,10 @@
         {
           "find": "__Environment__",
           "replaceWith": "prod"
+        },
+        {
+          "find": "__Location__",
+          "replaceWith": "$location()"
         }
       ]
     }
