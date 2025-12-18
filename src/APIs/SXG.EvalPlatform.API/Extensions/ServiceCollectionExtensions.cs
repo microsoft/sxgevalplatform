@@ -182,7 +182,14 @@ public static class ServiceCollectionExtensions
            }
        });
 
-       // Add server URLs
+       // Add current server (empty URL = uses the URL where Swagger is accessed)
+       c.AddServer(new OpenApiServer
+       {
+           Url = "",
+           Description = "Current Server"
+       });
+
+       // Add server URLs for pre-production environments
        c.AddServer(new OpenApiServer
        {
            Url = "https://sxgevalapidev.azurewebsites.net/",
