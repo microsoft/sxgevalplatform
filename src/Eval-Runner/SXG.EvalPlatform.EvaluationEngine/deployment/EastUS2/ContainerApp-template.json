@@ -1,0 +1,147 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subscriptionId": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        },
+        "environmentId": {
+            "type": "string"
+        },
+        "containers": {
+            "type": "array"
+        },
+        "registries": {
+            "type": "array"
+        },
+        "ingress": {
+            "type": "object"
+        },
+        "environmentName": {
+            "type": "string"
+        },
+        "workspaceId": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2024-08-02-preview",
+            "name": "[parameters('name')]",
+            "type": "Microsoft.App/containerapps",
+            "kind": "containerapps",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', 'AcrPullRoleAssignmentDeployment')]",
+                "[concat('Microsoft.App/managedEnvironments/', parameters('environmentName'))]"
+            ],
+            "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                    "registries": "[parameters('registries')]",
+                    "activeRevisionsMode": "Single",
+                    "ingress": "[parameters('ingress')]"
+                },
+                "template": {
+                    "containers": "[parameters('containers')]",
+                    "scale": {
+                        "minReplicas": 1,
+                        "maxReplicas": 12,
+                        "cooldownPeriod": 300,
+                        "pollingInterval": 30,
+                        "rules": [
+                            {
+                                "name": "queue-scaling-rule",
+                                "azureQueue": {
+                                    "accountName": "sxgagentevalprod",
+                                    "queueName": "eval-processing-requests",
+                                    "queueLength": 2,
+                                    "auth": [
+                                        {
+                                            "secretRef": "system",
+                                            "triggerParameter": "identity"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "workloadProfileName": "Consumption"
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "AcrPullRoleAssignmentDeployment",
+            "resourceGroup": "EvalCommonRg-UsEast2",
+            "subscriptionId": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f",
+            "dependsOn": [
+                "[concat('Microsoft.App/managedEnvironments/', parameters('environmentName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "resources": [
+                        {
+                            "name": "[guid(deployment().name, 'AcrPullRoleAssignment')]",
+                            "type": "Microsoft.Authorization/roleAssignments",
+                            "apiVersion": "2022-04-01",
+                            "scope": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/EvalCommonRg-UsEast2/providers/Microsoft.ContainerRegistry/registries/evalplatformregistryprod",
+                            "properties": {
+                                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+                                "principalId": "[reference(resourceId('Microsoft.App/managedEnvironments', 'eval-runner-env-prod-eus2'), '2024-08-02-preview', 'full').identity.principalId]",
+                                "principalType": "ServicePrincipal",
+                                "scope": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/EvalCommonRg-UsEast2/providers/Microsoft.ContainerRegistry/registries/evalplatformregistryprod"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2024-08-02-preview",
+            "name": "[parameters('environmentName')]",
+            "type": "Microsoft.App/managedEnvironments",
+            "location": "[parameters('location')]",
+            "tags": {
+                "ComponentId": "409ab2c3-dafd-4ee4-b158-b405c578bbcd",
+                "Env": "Production"
+            },
+            "properties": {
+                "appLogsConfiguration": {
+                    "destination": "log-analytics",
+                    "logAnalyticsConfiguration": {
+                        "customerId": "[reference(parameters('workspaceId'), '2020-08-01').customerId]",
+                        "sharedKey": "[listKeys(parameters('workspaceId'), '2020-08-01').primarySharedKey]"
+                    }
+                },
+                "publicNetworkAccess": "Disabled",
+                "workloadProfiles": [
+                    {
+                        "name": "Consumption",
+                        "workloadProfileType": "Consumption"
+                    }
+                ],
+                "vnetConfiguration": {
+                    "infrastructureSubnetId": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/EvalCommonRg-UsEast2/providers/Microsoft.Network/virtualNetworks/sxgevalppe-vnet/subnets/container-app-env",
+                    "internal": false
+                },
+                "zoneRedundant": true,
+                "infrastructureResourceGroup": "EvalCommonRg-UsEast2-container"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            }
+        }
+    ]
+}

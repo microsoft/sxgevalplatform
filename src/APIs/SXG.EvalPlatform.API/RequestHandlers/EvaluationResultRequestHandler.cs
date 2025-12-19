@@ -131,9 +131,17 @@ namespace SxgEvalPlatformApi.RequestHandlers
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         WriteIndented = true
                     });
-                    await _messagePublisher.SendMessageAsync("evalresults", evalResultDataJson);
-                    _logger.LogInformation("Successfully pushed eval results to Data Platform for EvalRunId: {EvalRunId}.",
-                    evalRunId);
+                    try
+                    {
+                        await _messagePublisher.SendMessageAsync("evalresults", evalResultDataJson);
+                        _logger.LogInformation("Successfully pushed eval results to Data Platform for EvalRunId: {EvalRunId}.",
+                        evalRunId);
+                    }
+                    catch(Exception ex)
+                    {
+                        //DO not fail the entire operation if message publishing fails
+                        _logger.LogError(ex, "Error pushing eval results to Data Platform for EvalRunId: {EvalRunId}.", evalRunId);
+                    }
                 }
 
                 

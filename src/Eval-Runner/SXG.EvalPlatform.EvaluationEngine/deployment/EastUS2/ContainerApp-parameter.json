@@ -1,0 +1,278 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subscriptionId": {
+            "value": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f"
+        },
+        "name": {
+            "value": "eval-runner-prod-eus2"
+        },
+        "location": {
+            "value": "East US 2"
+        },
+        "environmentId": {
+            "value": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/EvalRunnerRG-EastUS2/providers/Microsoft.App/managedEnvironments/eval-runner-env-prod-eus2"
+        },
+        "containers": {
+            "value": [
+                {
+                    "name": "eval-runner-prod-eus2",
+                    "image": "evalplatformregistry.azurecr.io/eval-runner-app:prod-eastus2-20251219-110713",
+                    "imageType": "ContainerImage",
+                    "env": [
+                        {
+                            "name": "RUNTIME_ENVIRONMENT",
+                            "value": "Production"
+                        },
+                        {
+                            "name": "AzureStorage__AccountName",
+                            "value": "sxgagentevalprod"
+                        },
+                        {
+                            "name": "AzureStorage__QueueName",
+                            "value": "eval-processing-requests"
+                        },
+                        {
+                            "name": "AzureOpenAI__ResourceName",
+                            "value": "evalplatformfoundryeus2"
+                        },
+                        {
+                            "name": "AzureOpenAI__Endpoint",
+                            "value": "https://evalplatformfoundryeus2.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
+                        },
+                        {
+                            "name": "AzureAI__ProjectName",
+                            "value": "evalplatformfoundryprojecteus2"
+                        },
+                        {
+                            "name": "AzureAI__ResourceName",
+                            "value": "evalplatformfoundryeus2"
+                        },
+                        {
+                            "name": "Evaluation__TimeoutSeconds",
+                            "value": "300"
+                        },
+                        {
+                            "name": "Logging__LogLevel__Default",
+                            "value": "Information"
+                        },
+                        {
+                            "name": "ApplicationInsights__ConnectionString",
+                            "value": "InstrumentationKey=d64b9892-a0ad-49fa-ac85-7e89ad18deed;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=b583fa1d-de33-4113-9209-1a74d5c1277f"
+                        },
+                        {
+                            "name": "ApiEndpoints__BaseUrl",
+                            "value": "https://sxgevalapi-bsdhaxe9faghc8ep.b01.azurefd.net"
+                        },
+                        {
+                            "name": "AzureStorage__UseManagedIdentity",
+                            "value": "True"
+                        },
+                        {
+                            "name": "ApiEndpoints__PostResultsEndpoint",
+                            "value": "/api/v1/eval/runs/{evalRunId}/results"
+                        },
+                        {
+                            "name": "ApplicationInsights__EnableTelemetry",
+                            "value": "True"
+                        },
+                        {
+                            "name": "AzureOpenAI__DeploymentName",
+                            "value": "gpt-4.1"
+                        },
+                        {
+                            "name": "Evaluation__RetryAttempts",
+                            "value": "3"
+                        },
+                        {
+                            "name": "AzureOpenAI__UseManagedIdentity",
+                            "value": "True"
+                        },
+                        {
+                            "name": "Evaluation__QueuePollingIntervalSeconds",
+                            "value": "30"
+                        },
+                        {
+                            "name": "AzureOpenAI__ResourceGroupName",
+                            "value": "rg-sxg-agent-evaluation-platform"
+                        },
+                        {
+                            "name": "AzureOpenAI__TenantId",
+                            "value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+                        },
+                        {
+                            "name": "Evaluation__QueueVisibilityTimeoutSeconds",
+                            "value": "300"
+                        },
+                        {
+                            "name": "AzureOpenAI__ApiVersion",
+                            "value": "2025-01-01-preview"
+                        },
+                        {
+                            "name": "AzureAI__ResourceGroupName",
+                            "value": "rg-sxg-agent-evaluation-platform"
+                        },
+                        {
+                            "name": "ApiEndpoints__EnrichedDatasetEndpoint",
+                            "value": "/api/v1/eval/runs/{EvalRunId}/enriched-dataset"
+                        },
+                        {
+                            "name": "AzureOpenAI__UseDefaultAzureCredential",
+                            "value": "True"
+                        },
+                        {
+                            "name": "Logging__LogLevel__eval_runner",
+                            "value": "Information"
+                        },
+                        {
+                            "name": "AzureOpenAI__SubscriptionId",
+                            "value": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f"
+                        },
+                        {
+                            "name": "Evaluation__MaxParallelPrompts",
+                            "value": "2"
+                        },
+                        {
+                            "name": "AzureAI__UseDefaultAzureCredential",
+                            "value": "True"
+                        },
+                        {
+                            "name": "Evaluation__MaxParallelMetrics",
+                            "value": "2"
+                        },
+                        {
+                            "name": "ApplicationInsights__LogLevel__Microsoft",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiEndpoints__UpdateStatus",
+                            "value": "/api/v1/eval/runs/{evalRunId}/status"
+                        },
+                        {
+                            "name": "ApplicationInsights__UseDefaultAzureCredential",
+                            "value": "True"
+                        },
+                        {
+                            "name": "AzureAI__SubscriptionId",
+                            "value": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f"
+                        },
+                        {
+                            "name": "ApplicationInsights__LogLevel__System",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "AzureStorage__UseDefaultAzureCredential",
+                            "value": "True"
+                        },
+                        {
+                            "name": "AzureAI__TenantId",
+                            "value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+                        },
+                        {
+                            "name": "ApplicationInsights__EnableConsoleLogging",
+                            "value": "True"
+                        },
+                        {
+                            "name": "AzureAI__ProjectId",
+                            "value": "[concat(parameters('accounts_evalplatform_externalid'), '/projects/evalplatformfoundryprojecteus2')]"
+                        },
+                        {
+                            "name": "Logging__LogLevel__System",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiEndpoints__MetricsConfigurationEndpoint",
+                            "value": "/api/v1/eval/configurations/{MetricsConfigurationId}"
+                        },
+                        {
+                            "name": "ApplicationInsights__LogLevel__Default",
+                            "value": "Information"
+                        },
+                        {
+                            "name": "Logging__LogLevel__Microsoft",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiEndpoints__UpdateStatusEndpoint",
+                            "value": "/api/v1/eval/runs/{evalRunId}/status"
+                        },
+                        {
+                            "name": "Logging__LogLevel__azure.core.pipeline.policies.http_logging_policy",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiAuthentication__UseManagedIdentity",
+                            "value": "True"
+                        },
+                        {
+                            "name": "Logging__LogLevel__azure.identity",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiAuthentication__ClientId",
+                            "value": "5ab8b0f2-f000-4b86-ac8d-46fa6e58b197"
+                        },
+                        {
+                            "name": "Logging__LogLevel__azure.monitor.opentelemetry.exporter",
+                            "value": "Warning"
+                        },
+                        {
+                            "name": "ApiAuthentication__Scope",
+                            "value": "api://dafa5810-9bba-4c5b-b443-abe1a40aa240/.default"
+                        },
+                        {
+                            "name": "ApiAuthentication__TenantId",
+                            "value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+                        },
+                        {
+                            "name": "ApiAuthentication__TokenRefreshBufferSeconds",
+                            "value": "300"
+                        },
+                        {
+                            "name": "ApiAuthentication__EnableTokenCaching",
+                            "value": "True"
+                        },
+                        {
+                            "name": "ApiAuthentication__ResourceAppId",
+                            "value": "dafa5810-9bba-4c5b-b443-abe1a40aa240"
+                        },
+                        {
+                            "name": "ApiAuthentication__EnableAuthentication",
+                            "value": "True"
+                        }
+                    ],                    
+                    "resources": {
+                        "cpu": "1",
+                        "memory": "2Gi"
+                    }
+                }
+            ]
+        },
+        "registries": {
+            "value": [
+                {
+                    "server": "evalplatformregistryprod.azurecr.io",
+                    "identity": "system-environment"
+                }
+            ]
+        },
+        "ingress": {
+            "value": {
+                "external": false,
+                "transport": "Auto",
+                "allowInsecure": false,
+                "stickySessions": {
+                    "affinity": "none"
+                },
+                "additionalPortMappings": []
+            }
+        },
+        "environmentName": {
+            "value": "eval-framework-ppe"
+        },
+        "workspaceId": {
+            "value": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/rg-sxg-agent-evaluation-platform/providers/Microsoft.OperationalInsights/workspaces/eval-platform-logs-ppe"
+        }
+    }
+}

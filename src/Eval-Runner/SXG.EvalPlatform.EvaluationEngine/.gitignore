@@ -121,8 +121,7 @@ deployment-*.log
 .azure/
 
 # Application specific
-appsettings.local.json
-appsettings.development.json
+
 
 # Docker
 .dockerignore
