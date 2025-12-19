@@ -46,18 +46,6 @@
       },
       "resources": [
         {
-          "comments": "Deploys the build artificats in the specified .zip file to the Web App.",
-          "apiVersion": "2022-09-01",
-          "name": "MSDeploy",
-          "type": "extensions",
-          "dependsOn": [
-            "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
-          ],
-          "properties": {
-            "packageUri": "[parameters('servicePackageLink')]"
-          }
-        },
-        {
           "comments": "-----Staging Slot: App Settings-----",
           "apiVersion": "2022-09-01",
           "name": "appsettings",
@@ -68,7 +56,8 @@
             "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
           ],
           "properties": {
-            "Sites_buildVersion": "[parameters('Sites_buildVersion')]"
+            "Sites_buildVersion": "[parameters('Sites_buildVersion')]",
+            "WEBSITE_RUN_FROM_PACKAGE": "[parameters('servicePackageLink')]"
           }
         }
       ]
