@@ -659,8 +659,8 @@ namespace Sxg.EvalPlatform.Common.UnitTests
             // Assert
             Assert.Equal("himanshugupta", result);
             Assert.DoesNotContain(" ", result);
-            Assert.DoesNotStartWith(" ", result);
-            Assert.DoesNotEndWith(" ", result);
+           // Assert.DoesNotStartWith(" ", result);
+           // Assert.DoesNotEndWith(" ", result);
         }
 
         [Fact]

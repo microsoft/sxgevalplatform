@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using Sxg.EvalPlatform.API.Storage.Services;
@@ -7,8 +8,8 @@ using SXG.EvalPlatform.Common;
 using SXG.EvalPlatform.Common.Exceptions;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.Services;
+using System.ComponentModel;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -67,7 +68,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 var callerInfo = _callerService.GetCallerInfo();
-                
+
                 _logger.LogDebug("GetAuditUser - IsServicePrincipal: {IsServicePrincipal}, HasDelegatedUser: {HasDelegatedUser}, UserEmail: {UserEmail}, AppName: {AppName}",
                     callerInfo.IsServicePrincipal, callerInfo.HasDelegatedUser, CommonUtils.SanitizeForLog(callerInfo.UserEmail), CommonUtils.SanitizeForLog(callerInfo.ApplicationName));
 
@@ -83,14 +84,14 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 {
                     // DirectUser or DelegatedAppToApp - use UPN/email
                     var userEmail = _callerService.GetCurrentUserEmail();
-                    
+
                     // Check if we got a meaningful value
                     if (!string.IsNullOrWhiteSpace(userEmail) && userEmail != "unknown")
                     {
                         _logger.LogInformation("Audit user (User): {AuditUser}", CommonUtils.SanitizeForLog(userEmail));
                         return userEmail;
                     }
-                    
+
                     // Try to get user ID as fallback
                     var userId = _callerService.GetCurrentUserId();
                     if (!string.IsNullOrWhiteSpace(userId) && userId != "unknown")
@@ -98,7 +99,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                         _logger.LogInformation("Audit user (User ID fallback): {AuditUser}", CommonUtils.SanitizeForLog(userId));
                         return userId;
                     }
-                    
+
                     _logger.LogWarning("Could not determine audit user, using 'System'. UserEmail: {UserEmail}, UserId: {UserId}", CommonUtils.SanitizeForLog(userEmail), CommonUtils.SanitizeForLog(userId));
                     return "System";
                 }
@@ -120,7 +121,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogDebug("Retrieving default Metrics configuration");
 
                 var metrics = await FetchDefaultMetricsFromStorageAsync();
-                
+
                 return metrics;
             }
             catch (Exception ex)
@@ -141,7 +142,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(environmentName));
 
                 var entities = await _metricsConfigTableService.GetAllMetricsConfigurations(agentId);
-                IList<MetricsConfigurationMetadataDto>  configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
+                IList<MetricsConfigurationMetadataDto> configurations = entities.Select(ToMetricsConfigurationMetadataDto).ToList();
 
                 var filteredConfigurations = FilterByEnvironment(configurations, environmentName);
 
@@ -165,7 +166,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 _logger.LogInformation("Retrieving configuration for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
-                                
+
 
                 var entity = await _metricsConfigTableService.GetMetricsConfigurationByConfigurationIdAsync(configurationId);
 
@@ -176,7 +177,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 }
 
                 var metrics = await FetchMetricsFromBlobAsync(entity.ContainerName, entity.BlobFilePath, configurationId);
-                                
+
                 _logger.LogInformation("Retrieved configuration for ConfigId: {ConfigId}", CommonUtils.SanitizeForLog(configurationId));
 
                 return metrics;
@@ -443,11 +444,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
                 var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
                 var userId = GetAuditUser();
-                
+
                 // Analyze content for corruption patterns
                 var contentLength = blobContent?.Length ?? 0;
                 var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
-                
+
                 // Log with comprehensive security context
                 _logger.LogWarning(
                     "[SECURITY] Deserialization failure for default metrics configuration | " +
@@ -460,7 +461,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     CommonUtils.SanitizeForLog(clientIp),
                     CommonUtils.SanitizeForLog(requestPath),
                     CommonUtils.SanitizeForLog(ex.Message));
-                
+
                 throw new DeserializationException(
                     "Failed to deserialize default metrics configuration",
                     "DefaultMetricsConfiguration",
@@ -479,7 +480,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// Fetch metrics configuration from blob storage
         /// </summary>
         private async Task<IList<SelectedMetricsConfiguration>> FetchMetricsFromBlobAsync(string blobContainer,
-                                                                                          string blobPath,  
+                                                                                          string blobPath,
                                                                                           string configurationId)
         {
             var blobContent = await _blobStorageService.ReadBlobContentAsync(blobContainer, blobPath);
@@ -534,11 +535,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 var clientIp = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
                 var requestPath = httpContext?.Request?.Path.Value ?? "unknown";
                 var userId = GetAuditUser();
-                
+
                 // Analyze content for corruption patterns
                 var contentLength = blobContent?.Length ?? 0;
                 var errorContext = AnalyzeContentCorruption(blobContent, ex.Message);
-                
+
                 // Log with comprehensive security context
                 _logger.LogWarning(
                     "[SECURITY] Deserialization failure for metrics configuration | " +
@@ -552,7 +553,7 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     CommonUtils.SanitizeForLog(clientIp),
                     CommonUtils.SanitizeForLog(requestPath),
                     CommonUtils.SanitizeForLog(ex.Message));
-                
+
                 throw new DeserializationException(
                     $"Failed to deserialize metrics configuration: {ex.Message}",
                     configurationId,
@@ -628,16 +629,39 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private (string container, string filePath) GetOrCreateBlobPaths(MetricsConfigurationTableEntity entity, CreateConfigurationRequestDto createConfigDto, string configurationId, bool isExisting)
         {
-            if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath))
+            var blobPath = "";
+            var containerName = "";
+
+            if (string.IsNullOrEmpty(entity.BlobFilePath))
             {
-                return (entity.ContainerName, entity.BlobFilePath);
+                var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
+                var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+                blobPath = filePath;
+            }
+            else
+            {
+                blobPath = entity.BlobFilePath;
             }
 
-            var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
-            var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
-            var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+            if (string.IsNullOrEmpty(entity.ContainerName))
+            {
+                containerName = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
+            }
+            else
+            {
+                containerName = entity.ContainerName;
+            }
+            return (containerName, blobPath);
+            //if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath) && !string.IsNullOrEmpty(entity.ContainerName))
+            //{
+            //    return (entity.ContainerName, entity.BlobFilePath);
+            //}
 
-            return (container, filePath);
+            //var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
+            //var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
+            //var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+
+            //return (container, filePath);
         }
 
         /// <summary>
