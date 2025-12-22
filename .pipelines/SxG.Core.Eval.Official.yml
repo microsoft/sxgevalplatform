@@ -153,7 +153,7 @@ extends:
               Contents: |
                 appsettings.json
                 appsettings.*.json
-              TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
+              TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi\SXG.EvalPlatform.API'
               OverWrite: true
 
           - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
@@ -167,7 +167,7 @@ extends:
           - task: ArchiveFiles@2
             displayName: "Package WebAPI Web App to zip"
             inputs:
-              rootFolderOrFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
+              rootFolderOrFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi\SXG.EvalPlatform.API'
               includeRootFolder: false
               archiveType: 'zip'
               archiveFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApiBuild.zip'
