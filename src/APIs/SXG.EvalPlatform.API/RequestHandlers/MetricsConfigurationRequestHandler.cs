@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Entities;
 using Sxg.EvalPlatform.API.Storage.Services;
@@ -7,8 +8,8 @@ using SXG.EvalPlatform.Common;
 using SXG.EvalPlatform.Common.Exceptions;
 using SxgEvalPlatformApi.Models.Dtos;
 using SxgEvalPlatformApi.Services;
+using System.ComponentModel;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 
 namespace SxgEvalPlatformApi.RequestHandlers
 {
@@ -628,16 +629,39 @@ namespace SxgEvalPlatformApi.RequestHandlers
         /// </summary>
         private (string container, string filePath) GetOrCreateBlobPaths(MetricsConfigurationTableEntity entity, CreateConfigurationRequestDto createConfigDto, string configurationId, bool isExisting)
         {
-            if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath))
+            var blobPath = "";
+            var containerName = ""; 
+
+            if (string.IsNullOrEmpty(entity.BlobFilePath))
             {
-                return (entity.ContainerName, entity.BlobFilePath);
+                var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
+                var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+                blobPath = filePath; 
+            }
+            else
+            {
+                blobPath = entity.BlobFilePath; 
             }
 
-            var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
-            var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
-            var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+            if (string.IsNullOrEmpty(entity.ContainerName))
+            {
+                containerName = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
+            }
+            else
+            {
+                containerName = entity.ContainerName;
+            }
+            return (containerName, blobPath);
+            //if (isExisting && !string.IsNullOrEmpty(entity.BlobFilePath) && !string.IsNullOrEmpty(entity.ContainerName))
+            //{
+            //    return (entity.ContainerName, entity.BlobFilePath);
+            //}
 
-            return (container, filePath);
+            //var container = CommonUtils.TrimAndRemoveSpaces(createConfigDto.AgentId);
+            //var fileName = $"{createConfigDto.ConfigurationName}_{createConfigDto.EnvironmentName}_{configurationId}.json";
+            //var filePath = $"{_configHelper.GetMetricsConfigurationsFolderName()}/{fileName}";
+
+            //return (container, filePath);
         }
 
         /// <summary>
