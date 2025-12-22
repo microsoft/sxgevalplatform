@@ -130,19 +130,31 @@ extends:
             inputs:
                 solution: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj'
                 configuration: "Release"
-                msbuildArguments: '/t:rebuild /p:CreatePackage="true"'
+                msbuildArguments: '/t:rebuild'
                 clean: true
             env:
                 DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
                 DOTNET_CLI_TELEMETRY_OPTOUT: true
                 DOTNET_CORE_SDK_VERSION: 8.0.x
 
-          - task: CopyFiles@2
-            displayName: "Package Eval API"
+          - task: DotNetCoreCLI@2
+            displayName: "Publish Eval API"
             inputs:
-              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\bin\Release\net8.0'
-              Contents: "**"
+              command: 'publish'
+              projects: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj'
+              arguments: '--configuration Release --output $(Build.SourcesDirectory)\out\Eval\EV2\EvalApi --no-build --verbosity normal'
+              publishWebProjects: false
+              zipAfterPublish: false
+
+          - task: CopyFiles@2
+            displayName: "Copy appsettings files to published output"
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API'
+              Contents: |
+                appsettings.json
+                appsettings.*.json
               TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi'
+              OverWrite: true
 
           - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
             displayName: 'Sign output'
