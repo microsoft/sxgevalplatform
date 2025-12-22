@@ -52,7 +52,6 @@
           "type": "config",
           "location": "[parameters('appService_location')]",
           "dependsOn": [
-            "MSDeploy",
             "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
           ],
           "properties": {
