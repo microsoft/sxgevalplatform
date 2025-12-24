@@ -133,8 +133,8 @@ extends:
                 $registry = "evalplatformregistrytest"
                 $imageRepo = "eval-runner-app"
                 $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
-                $dockerfile = "$(Build.SourcesDirectory)\src\EvalRunner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
-                $context    = "$(Build.SourcesDirectory)\src\EvalRunner\SxG.EvalPlatform.EvaluationEngine"
+                $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
+                $context    = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine"
 
                 az acr build --registry $registry --image "${imageRepo}:${tag}" --image "${imageRepo}:latest" --file $dockerfile $context
 
