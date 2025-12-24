@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.11 as builder
+FROM mcr.microsoft.com/cbl-mariner/base/python:3.9 as builder
 
 # Set working directory
 WORKDIR /app
