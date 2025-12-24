@@ -12,13 +12,14 @@ RUN tdnf install -y \
     && localedef -i en_US -f UTF-8 en_US.UTF-8 \
     && tdnf clean all
 
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONIOENCODING=UTF-8
+
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-
-# Set environment variables
-ENV PYTHONIOENCODING=UTF-8
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt
