@@ -3,7 +3,7 @@
   "contentVersion": "0.0.0.1",
   "scopeBindings": [
     {
-      "scopeTagName": "AppServiceTag",
+      "scopeTagName": "ContainerAppTag",
       "bindings": [
         {
           "find": "__Region__",
@@ -11,11 +11,19 @@
         },
         {
           "find": "__Environment__",
-          "replaceWith": "prod"
+          "replaceWith": "test"
         },
         {
           "find": "__Location__",
           "replaceWith": "$location()"
+        },
+        {
+          "find": "__SubscriptionId__",
+          "replaceWith": "$azureSubscriptionId()"
+        },
+        {
+          "find": "__RegistryUrl__",
+          "replaceWith": "evalplatformregistrytest.azurecr.io"
         }
       ]
     }

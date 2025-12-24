@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "containerImage"
+  ],
+  "parameters": {
+    "containerAppName": {
+      "value": "eval-framework-app-__Environment____Region__"
+    },
+    "containerAppLocation": {
+      "value": "__Location__"
+    },
+    "containerEnvironmentId": {
+      "value": "/subscriptions/__SubscriptionId__/resourceGroups/RunRg-__Region__Delete/providers/Microsoft.App/managedEnvironments/eval-framework-env-__Environment____Region__"
+    },
+    "managedIdentityId": {
+      "value": "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-__Region__Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id"
+    },
+    "acrLoginServer": {
+      "value": "__RegistryUrl__"
+    },
+    "containerImage": {
+      "value": "__RegistryUrl__/eval-runner-app:EV2Build_Version"
+    },
+    "buildVersion": {
+      "value": "EV2Build_Version"
+    },
+    "storageAccountName": {
+      "value": "sxgevalstore__Environment____Region__"
+    },
+    "serviceBusNamespace": {
+      "value": "sxgevalplatformsb__Environment__"
+    },
+    "minReplicas": {
+      "value": 0
+    },
+    "maxReplicas": {
+      "value": 10
+    }
+  }
+}
