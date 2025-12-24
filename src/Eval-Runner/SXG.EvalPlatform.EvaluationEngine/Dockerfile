@@ -13,11 +13,16 @@ RUN tdnf install -y \
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
+# Set environment variables
+ENV PYTHONIOENCODING=UTF-8
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
 # Install Python dependencies
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.11
+FROM mcr.microsoft.com/cbl-mariner/base/python:3.9
 
 # Set working directory
 WORKDIR /app
