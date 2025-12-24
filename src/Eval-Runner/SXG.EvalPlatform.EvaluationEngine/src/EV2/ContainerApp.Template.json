@@ -1,0 +1,174 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "containerImage"
+  ],
+  "parameters": {
+    "containerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Container App"
+      }
+    },
+    "containerAppLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Location for the Container App"
+      }
+    },
+    "containerEnvironmentId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the existing Container App Environment"
+      }
+    },
+    "managedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the existing managed identity"
+      }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "defaultValue": "evalplatformregistryprod.azurecr.io",
+      "metadata": {
+        "description": "Login server of the Azure Container Registry"
+      }
+    },
+    "containerImage": {
+      "type": "string",
+      "metadata": {
+        "description": "Container image to deploy"
+      }
+    },
+    "buildVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Build version for tracking"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account for queue processing"
+      }
+    },
+    "serviceBusNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Service Bus namespace for message processing"
+      }
+    },
+    "minReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Minimum number of replicas"
+      }
+    },
+    "maxReplicas": {
+      "type": "int",
+      "defaultValue": 10,
+      "metadata": {
+        "description": "Maximum number of replicas"
+      }
+    },
+    "cpuLimit": {
+      "type": "string",
+      "defaultValue": "1.0",
+      "metadata": {
+        "description": "CPU limit for the container"
+      }
+    },
+    "memoryLimit": {
+      "type": "string",
+      "defaultValue": "2Gi",
+      "metadata": {
+        "description": "Memory limit for the container"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('containerAppLocation')]",
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "[parameters('managedIdentityId')]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[parameters('containerEnvironmentId')]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "secrets": [],
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "eval-runner",
+              "image": "[parameters('containerImage')]",
+              "env": [
+                {
+                  "name": "STORAGE_ACCOUNT_NAME",
+                  "value": "[parameters('storageAccountName')]"
+                },
+                {
+                  "name": "SERVICE_BUS_NAMESPACE",
+                  "value": "[parameters('serviceBusNamespace')]"
+                },
+                {
+                  "name": "AZURE_CLIENT_ID",
+                  "value": "[reference(parameters('managedIdentityId'), '2023-01-31').clientId]"
+                },
+                {
+                  "name": "BUILD_VERSION",
+                  "value": "[parameters('buildVersion')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('minReplicas')]",
+            "maxReplicas": "[parameters('maxReplicas')]",
+            "rules": [
+              {
+                "name": "queue-scaling",
+                "azureQueue": {
+                  "queueName": "eval-requests",
+                  "queueLength": 5,
+                  "auth": [
+                    {
+                      "secretRef": "storage-connection",
+                      "triggerParameter": "connection"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "containerAppName": {
+      "type": "string",
+      "value": "[parameters('containerAppName')]"
+    },
+    "containerAppFQDN": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName'))).configuration.ingress.fqdn]"
+    }
+  }
+}

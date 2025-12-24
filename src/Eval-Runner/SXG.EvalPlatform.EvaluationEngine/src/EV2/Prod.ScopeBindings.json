@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",
+  "contentVersion": "0.0.0.1",
+  "scopeBindings": [
+    {
+      "scopeTagName": "ContainerAppTag",
+      "bindings": [
+        {
+          "find": "__Region__",
+          "replaceWith": "$config(dcmtRegionId)"
+        },
+        {
+          "find": "__Environment__",
+          "replaceWith": "test"
+        },
+        {
+          "find": "__Location__",
+          "replaceWith": "$location()"
+        },
+        {
+          "find": "__SubscriptionId__",
+          "replaceWith": "$azureSubscriptionId()"
+        },
+        {
+          "find": "__RegistryUrl__",
+          "replaceWith": "evalplatformregistrytest.azurecr.io"
+        }
+      ]
+    }
+  ]
+}
