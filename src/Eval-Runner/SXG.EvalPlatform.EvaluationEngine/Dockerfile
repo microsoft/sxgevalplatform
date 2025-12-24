@@ -8,8 +8,6 @@ WORKDIR /app
 RUN tdnf install -y \
     gcc \
     g++ \
-    glibc-lang \
-    && localedef -i en_US -f UTF-8 en_US.UTF-8 \
     && tdnf clean all
 
 
