@@ -1,27 +1,23 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
 FROM mcr.microsoft.com/cbl-mariner/base/python:3.9 as builder
 
-# Set locale and encoding environment variables at the very beginning
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8 \
+# Set locale and encoding environment variables using C.UTF-8 (always available)
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
     PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONWARNINGS=ignore
 
 # Set working directory
 WORKDIR /app
 
-# Install locale support and system dependencies
+# Install system dependencies (removing unavailable locale packages)
 RUN tdnf update -y && \
     tdnf install -y \
-    glibc-locale \
-    glibc-langpack-en \
     gcc \
     g++ \
     python3-pip \
     && tdnf clean all
-
-# Generate and configure UTF-8 locale
-RUN localedef -c -f UTF-8 -i en_US en_US.UTF-8 || true
 
 # Upgrade pip to latest version
 RUN python -m pip install --upgrade pip
@@ -30,27 +26,18 @@ RUN python -m pip install --upgrade pip
 COPY requirements.txt .
 
 # Install Python dependencies with explicit UTF-8 encoding
-RUN PYTHONIOENCODING=utf-8 LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+RUN PYTHONIOENCODING=utf-8 LC_ALL=C.UTF-8 LANG=C.UTF-8 \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
 FROM mcr.microsoft.com/cbl-mariner/base/python:3.9
 
-# Set locale and encoding environment variables
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8 \
+# Set locale and encoding environment variables using C.UTF-8
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
     PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1
-
-# Install minimal locale support in production image
-RUN tdnf update -y && \
-    tdnf install -y \
-    glibc-locale \
-    glibc-langpack-en \
-    && tdnf clean all
-
-# Generate UTF-8 locale in production stage
-RUN localedef -c -f UTF-8 -i en_US en_US.UTF-8 || true
+    PYTHONUNBUFFERED=1 \
+    PYTHONWARNINGS=ignore
 
 # Set working directory
 WORKDIR /app
