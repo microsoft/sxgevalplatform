@@ -1,11 +1,18 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
 FROM python:3.11-slim as builder
 
+# Accept build arguments for encoding (can be overridden at build time)
+ARG LANG=C.UTF-8
+ARG LC_ALL=C.UTF-8
+ARG PYTHONIOENCODING=utf-8
+
 # Set UTF-8 locale and encoding environment variables
-ENV LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
-    PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1
+ENV LANG=${LANG} \
+    LC_ALL=${LC_ALL} \
+    PYTHONIOENCODING=${PYTHONIOENCODING} \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Set working directory
 WORKDIR /app
@@ -14,17 +21,23 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    locales \
+    && rm -rf /var/lib/apt/lists/* \
+    && locale-gen C.UTF-8 \
+    && /usr/sbin/update-locale LANG=C.UTF-8
 
 # Upgrade pip to latest version
-RUN python -m pip install --upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies with explicit UTF-8 encoding
-RUN PYTHONIOENCODING=utf-8 LC_ALL=C.UTF-8 LANG=C.UTF-8 \
-    pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies with explicit UTF-8 encoding and verbose output
+RUN export PYTHONIOENCODING=utf-8 && \
+    export LC_ALL=C.UTF-8 && \
+    export LANG=C.UTF-8 && \
+    pip install --no-cache-dir --user --verbose -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
+    (echo "Pip install failed. Log contents:" && cat /tmp/pip-install.log && exit 1)
 
 # Production stage
 FROM python:3.11-slim
