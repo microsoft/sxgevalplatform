@@ -1,23 +1,21 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.9 as builder
+FROM python:3.9-slim as builder
 
-# Set locale and encoding environment variables using C.UTF-8 (always available)
+# Set locale and encoding environment variables
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONWARNINGS=ignore
+    PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (removing unavailable locale packages)
-RUN tdnf update -y && \
-    tdnf install -y \
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     gcc \
     g++ \
-    python3-pip \
-    && tdnf clean all
+    && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip to latest version
 RUN python -m pip install --upgrade pip
@@ -25,25 +23,24 @@ RUN python -m pip install --upgrade pip
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies with explicit UTF-8 encoding
-RUN PYTHONIOENCODING=utf-8 LC_ALL=C.UTF-8 LANG=C.UTF-8 \
-    pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies
+RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.9
+FROM python:3.9-slim
 
-# Set locale and encoding environment variables using C.UTF-8
+# Set locale and encoding environment variables
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONWARNINGS=ignore
+    PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd -r evaluser && useradd -r -g evaluser evaluser
+RUN groupadd --gid 1000 evaluser && \
+    useradd --uid 1000 --gid evaluser --shell /bin/bash --create-home evaluser
 
 # Copy installed packages from builder stage
 COPY --from=builder /root/.local /home/evaluser/.local
