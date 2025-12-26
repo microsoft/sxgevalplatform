@@ -1,23 +1,39 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
 FROM python:3.11-slim as builder
 
+# Set UTF-8 locale and encoding environment variables
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONUNBUFFERED=1
+
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-gcc \
-g++ \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip to latest version
+RUN python -m pip install --upgrade pip
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies with explicit UTF-8 encoding
+RUN PYTHONIOENCODING=utf-8 LC_ALL=C.UTF-8 LANG=C.UTF-8 \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
 FROM python:3.11-slim
+
+# Set UTF-8 locale and encoding environment variables
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
@@ -33,9 +49,8 @@ COPY src/ ./src/
 COPY appsettings*.json ./
 
 # Set environment variables
-ENV PATH=/home/evaluser/.local/bin:$PATH
-ENV PYTHONPATH=/app/src
-ENV PYTHONUNBUFFERED=1
+ENV PATH=/home/evaluser/.local/bin:$PATH \
+    PYTHONPATH=/app/src
 
 # Set ownership
 RUN chown -R evaluser:evaluser /app
@@ -45,7 +60,7 @@ USER evaluser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Expose port (if needed for health checks)
 EXPOSE 8080
