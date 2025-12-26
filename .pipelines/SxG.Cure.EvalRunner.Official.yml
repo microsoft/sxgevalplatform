@@ -121,23 +121,6 @@ extends:
               files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1;**/*.js'
               search_root: '$(Build.SourcesDirectory)\out'
 
-          # Sanitize requirements.txt before Docker build to prevent encoding issues
-          - task: PowerShell@2
-            displayName: 'Sanitize requirements.txt'
-            inputs:
-              targetType: 'inline'
-              script: |
-                $requirementsPath = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\requirements.txt"
-                Write-Host "Sanitizing requirements.txt for Docker build..."
-                $content = Get-Content -Path $requirementsPath -Raw
-                $content = $content -replace "^\xEF\xBB\xBF", ""
-                $content = $content -replace "`r`n", "`n"
-                $content = $content -replace " +`n", "`n"
-                $content = $content.TrimEnd() + "`n"
-                $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-                [System.IO.File]::WriteAllText($requirementsPath, $content, $utf8NoBom)
-                Write-Host "? requirements.txt sanitized successfully"
-
           # Alternative to Docker@2 - Use buildah for container builds
           
           - task: AzureCLI@2

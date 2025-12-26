@@ -26,17 +26,17 @@ RUN apt-get update && apt-get install -y \
     && locale-gen C.UTF-8 \
     && /usr/sbin/update-locale LANG=C.UTF-8
 
-# Upgrade pip to latest version
-RUN python -m pip install --upgrade pip setuptools wheel
+# Upgrade pip to latest version (with quiet output to avoid encoding issues)
+RUN python -m pip install --upgrade --quiet pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies with explicit UTF-8 encoding and verbose output
+# Install Python dependencies with explicit UTF-8 encoding and quiet output to avoid encoding issues
 RUN export PYTHONIOENCODING=utf-8 && \
     export LC_ALL=C.UTF-8 && \
     export LANG=C.UTF-8 && \
-    pip install --no-cache-dir --user --verbose -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
+    pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
     (echo "Pip install failed. Log contents:" && cat /tmp/pip-install.log && exit 1)
 
 # Production stage
