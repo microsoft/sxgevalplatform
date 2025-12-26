@@ -1,14 +1,14 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.11 as builder
+FROM python:3.11-slim as builder
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN tdnf install -y \
-    gcc \
-    g++ \
-    && tdnf clean all
+RUN apt-get update && apt-get install -y \
+gcc \
+g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -17,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM mcr.microsoft.com/cbl-mariner/base/python:3.11
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -45,7 +45,7 @@ USER evaluser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Expose port (if needed for health checks)
 EXPOSE 8080
