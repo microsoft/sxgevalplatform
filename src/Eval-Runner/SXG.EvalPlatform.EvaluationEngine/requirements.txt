@@ -1,7 +1,7 @@
 # Production dependencies for SXG Evaluation Platform
 # Azure SDK packages - core dependencies
 azure-storage-queue
-azure-storage-blob  
+azure-storage-blob
 azure-identity
 
 # Azure AI Evaluation package
