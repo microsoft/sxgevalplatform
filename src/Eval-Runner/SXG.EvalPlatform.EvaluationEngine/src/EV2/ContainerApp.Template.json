@@ -1,9 +1,6 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
-  "paths": [
-    "containerImage"
-  ],
   "parameters": {
     "containerAppName": {
       "type": "string",
@@ -103,20 +100,11 @@
       },
       "properties": {
         "managedEnvironmentId": "[parameters('containerEnvironmentId')]",
-        "configuration": {
-          "activeRevisionsMode": "Single",
-          "secrets": [],
-          "registries": [
-            {
-              "server": "[parameters('acrLoginServer')]",
-              "identity": "[parameters('managedIdentityId')]"
-            }
-          ]
-        },
         "template": {
           "containers": [
             {
               "name": "eval-runner",
+              "imageType": "ContainerImage",
               "image": "[parameters('containerImage')]",
               "env": [
                 {
@@ -137,26 +125,7 @@
                 }
               ]
             }
-          ],
-          "scale": {
-            "minReplicas": "[parameters('minReplicas')]",
-            "maxReplicas": "[parameters('maxReplicas')]",
-            "rules": [
-              {
-                "name": "queue-scaling",
-                "azureQueue": {
-                  "queueName": "eval-requests",
-                  "queueLength": 5,
-                  "auth": [
-                    {
-                      "secretRef": "storage-connection",
-                      "triggerParameter": "connection"
-                    }
-                  ]
-                }
-              }
-            ]
-          }
+          ]
         }
       }
     }
