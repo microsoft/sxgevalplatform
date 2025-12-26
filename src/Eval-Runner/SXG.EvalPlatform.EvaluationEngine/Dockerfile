@@ -1,12 +1,6 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
 FROM python:3.11-slim as builder
 
-# Set locale and encoding environment variables
-ENV LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
-    PYTHONIOENCODING=utf-8 \
-    PYTHONUNBUFFERED=1
-
 # Set working directory
 WORKDIR /app
 
@@ -15,9 +9,6 @@ RUN apt-get update && apt-get install -y \
 gcc \
 g++ \
     && rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip to latest version
-RUN python -m pip install --upgrade pip
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -32,8 +23,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd --gid 1000 evaluser && \
-    useradd --uid 1000 --gid evaluser --shell /bin/bash --create-home evaluser
+RUN groupadd -r evaluser && useradd -r -g evaluser evaluser
 
 # Copy installed packages from builder stage
 COPY --from=builder /root/.local /home/evaluser/.local
@@ -43,8 +33,9 @@ COPY src/ ./src/
 COPY appsettings*.json ./
 
 # Set environment variables
-ENV PATH=/home/evaluser/.local/bin:$PATH \
-    PYTHONPATH=/app/src
+ENV PATH=/home/evaluser/.local/bin:$PATH
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
 
 # Set ownership
 RUN chown -R evaluser:evaluser /app
