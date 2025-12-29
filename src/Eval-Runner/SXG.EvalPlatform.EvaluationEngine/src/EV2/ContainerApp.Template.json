@@ -3,7 +3,11 @@
   "contentVersion": "1.0.0.0",
   "resources": [
     {
-      "identity": "[if(empty(parameters('Identity')), json('null'), json(concat('{\"type\":\"', parameters('Identity').type, '\",', if(contains(parameters('Identity'), 'userAssignedIdentities'), concat('\"userAssignedIdentities\":', parameters('Identity').userAssignedIdentities, ','), ''), '}')))]",
+      "identity":
+      {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": "[parameters('Identity')]"
+      },
       "location": "[parameters('LocationProp')]",
       "name": "[parameters('Name')]",
       "properties": {
