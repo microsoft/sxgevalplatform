@@ -520,7 +520,7 @@
     },
     "Identity": {
       "value": {
-        "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-__Region__Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id": {}
+        "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-UsEast2Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id": {}
       }
     },
     "LocationProp": {
