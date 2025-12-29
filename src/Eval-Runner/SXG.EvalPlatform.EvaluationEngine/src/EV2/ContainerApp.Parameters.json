@@ -521,7 +521,7 @@
     "Identity": {
       "value": {
         "type": "SystemAssigned, UserAssigned",
-	"userAssignedIdentities" {
+	"userAssignedIdentities" : {
 	  "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-__Region__Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id": {}
 	}
       }
