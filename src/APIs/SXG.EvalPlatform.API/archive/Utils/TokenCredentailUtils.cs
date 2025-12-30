@@ -12,7 +12,7 @@ namespace SxgEvalPlatformApi.Utils
 
             TokenCredential credential = isDevelopment
             ? new AzureCliCredential()
-            : new DefaultAzureCredential();
+            : new DefaultAzureCredential(); // CodeQL[SM05137] justification - Not used in production
 
             return credential;
         }

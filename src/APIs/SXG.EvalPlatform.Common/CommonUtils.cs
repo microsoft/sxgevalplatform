@@ -14,8 +14,14 @@ namespace SXG.EvalPlatform.Common
             {
                 return new AzureCliCredential();
             }
-                       
-            return new DefaultAzureCredential();
+
+            #if DEBUG
+            // For local development, use DefaultAzureCredential
+            return new DefaultAzureCredential(); // CodeQL [SM05137] justification - Not used in production
+            #else
+            // For non-debug local builds, use Managed Identity                                    
+            return new ManagedIdentityCredential();
+            #endif
         }
 
         public static string TrimAndRemoveSpaces(string input)

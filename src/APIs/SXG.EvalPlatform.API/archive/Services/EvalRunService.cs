@@ -31,7 +31,7 @@ public class EvalRunService : IEvalRunService
         if (environment == "Development")
         {
             // Use default Azure credentials for development
-            var serviceClient = new TableServiceClient(new Uri(tableUri), new DefaultAzureCredential());
+            var serviceClient = new TableServiceClient(new Uri(tableUri), new DefaultAzureCredential()); // CodeQL [SM05137] justification - Not used in production
             _tableClient = serviceClient.GetTableClient(TableName);
         }
         else
