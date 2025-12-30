@@ -306,7 +306,8 @@ class AppSettings:
             tenant_id=ai_config.get('TenantId', openai_config.get('TenantId')),
             
             # Authentication (check both sections, prefer AzureAI)
-            use_managed_identity=ai_config.get('UseDefaultAzureCredential', openai_config.get('UseManagedIdentity', True)),
+            use_managed_identity=ai_config.get('UseManagedIdentity', openai_config.get('UseManagedIdentity', True)),
+            use_default_credentials=ai_config.get('UseDefaultCredentials', openai_config.get('UseDefaultCredentials', False)),
             api_key=openai_config.get('ApiKey')  # Only from OpenAI config
         )
     

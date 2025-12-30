@@ -383,8 +383,12 @@
                 "Value": "sxgagenteval__Environment__"
               },
               {
-                "Name": "AzureAI__UseDefaultAzureCredential",
-                "Value": "True"
+                "name": "AzureAI__UseManagedIdentity",
+                "value": "True"
+              },
+              {
+                "name": "AzureAI__UseDefaultAzureCredential",
+                "value": "False"
               },
               {
                 "Name": "Logging__LogLevel__System",
