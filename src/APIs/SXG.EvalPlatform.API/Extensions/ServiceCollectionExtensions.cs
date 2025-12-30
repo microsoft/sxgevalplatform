@@ -11,6 +11,7 @@ using Sxg.EvalPlatform.API.Storage;
 using Sxg.EvalPlatform.API.Storage.Extensions;
 using Sxg.EvalPlatform.API.Storage.Services;
 using Sxg.EvalPlatform.API.Storage.Validators;
+using SXG.EvalPlatform.API.SwaggerFilters;
 using SXG.EvalPlatform.Common;
 using SxgEvalPlatformApi.RequestHandlers;
 using SxgEvalPlatformApi.Services;
@@ -182,25 +183,8 @@ public static class ServiceCollectionExtensions
            }
        });
 
-       // Add current server (empty URL = uses the URL where Swagger is accessed)
-       c.AddServer(new OpenApiServer
-       {
-           Url = "",
-           Description = "Current Server"
-       });
-
-       // Add server URLs for pre-production environments
-       c.AddServer(new OpenApiServer
-       {
-           Url = "https://sxgevalapidev.azurewebsites.net/",
-           Description = "Development Environment"
-       });
-
-       c.AddServer(new OpenApiServer
-       {
-           Url = "https://sxgevalapippe.azurewebsites.net/",
-           Description = "Pre-Production Environment"
-       });
+       // Add conditional server filter - only shows servers when accessed from Azure domains
+       c.DocumentFilter<ConditionalServerDocumentFilter>();
 
        // Add JWT Bearer authentication to Swagger
        // Use Implicit Flow (simpler for Swagger UI, no client secret needed)
