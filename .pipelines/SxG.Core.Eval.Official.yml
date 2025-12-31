@@ -193,7 +193,7 @@ extends:
                 }
     - stage: 'Test_AzureResource_Release'
       trigger: manual
-      displayName: 'Region Agnostic Code Deployment'
+      displayName: 'Dev Region Agnostic Code Deployment'
       variables:
         ob_release_environment: Test
         ob_release_stagetype: deployment
@@ -235,7 +235,7 @@ extends:
 
     - stage: 'Prod_AzureResource_Release'
       trigger: manual
-      displayName: 'Region Agnostic Code Deployment'
+      displayName: 'Prod Region Agnostic Code Deployment'
       variables:
         ob_release_environment: Production
         ob_release_stagetype: deployment
