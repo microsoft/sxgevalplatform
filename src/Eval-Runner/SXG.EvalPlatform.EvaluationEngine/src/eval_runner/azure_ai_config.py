@@ -3,7 +3,7 @@ Azure AI Evaluation configuration and adapter layer for the evaluation system.
 """
 
 from typing import Optional, Dict, Any, Final
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 
 from .config.settings import app_settings
 from .exceptions import ConfigurationError
@@ -42,17 +42,18 @@ class AzureAIEvaluatorConfig:
         """Initialize the configuration."""
         self._model_config: Optional[Dict[str, Any]] = None
         self._azure_ai_project: Optional[Dict[str, Any]] = None
-        self._credential: Optional[DefaultAzureCredential] = None
+        self._credential: Optional[Any] = None
     
     @property 
-    def credential(self) -> DefaultAzureCredential:
+    def credential(self):
         """Get Azure credential for managed identity authentication."""
         if self._credential is None:
             ai_config = app_settings.azure_ai
             
-            # DefaultAzureCredential will automatically use the correct tenant
-            # when running in Azure with managed identity
-            self._credential = DefaultAzureCredential()
+            if ai_config.use_default_credentials:
+                self._credential = DefaultAzureCredential() # CodeQL [SM05137] justification - Not used in production
+            else:
+                self._credential = ManagedIdentityCredential()
             
             if ai_config.tenant_id:
                 print(f"[SUCCESS] Configured Azure credential for tenant: {ai_config.tenant_id}")
