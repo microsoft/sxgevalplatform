@@ -231,6 +231,48 @@ extends:
               ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
               RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Dev.RolloutSpec.json
               StageMapName: 'Microsoft.Azure.SDP.Standard'
+              Select: regions(eastus)
+
+    - stage: 'PPE_AzureResource_Release'
+      trigger: manual
+      displayName: 'Dev Region Agnostic Code Deployment'
+      variables:
+        ob_release_environment: PPE
+        ob_release_stagetype: deployment
+        ArtifactToDeploy: drop_build_main
+        CvrpManifestRelativePath: \build.manifest
+      jobs:
+      - job: Deploy
+        displayName: 'Deploy Code'
+        pool:
+          type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
+        steps:
+
+          - download: current
+            artifact: drop_build_main
+
+          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
+            displayName: 'Setup BuildNumber'
+            inputs:
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '0'
+              exclude_commit: true
+
+          - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+            displayName: 'Ev2 Resource Rollout'
+            inputs:
+              UseServerMonitorTask: false
+              EndpointProviderType: Ev2Endpoint
+              ConnectedServiceName: Eval-Ev2Deploy-Connection
+              artifactsVersionOverride: $(Build.BuildNumber)
+              TaskAction: RegisterAndRollout
+              forceRegistration: True
+              SkipRegistrationIfExists: true
+              ServiceRootLocation: 'LinkedArtifact'
+              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
+              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Ppe.RolloutSpec.json
+              StageMapName: 'Microsoft.Azure.SDP.Standard'
               Select: regions(*)
 
     - stage: 'Prod_AzureResource_Release'
@@ -273,4 +315,4 @@ extends:
               ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
               RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Prod.RolloutSpec.json
               StageMapName: 'Microsoft.Azure.SDP.Standard'
-              Select: regions(eastus)
+              Select: regions(*)

@@ -11,6 +11,10 @@
         },
         {
           "find": "__Environment__",
+          "replaceWith": "test"
+        },
+        {
+          "find": "__EnvironmentName__",
           "replaceWith": "PPE"
         },
         {
@@ -19,23 +23,23 @@
         },
         {
           "find": "__AppInsightsInstrumentationKey__",
-          "replaceWith": "5632387c-6748-4260-b92a-93e829ba6d98"
+          "replaceWith": "210e93f2-b190-4b0f-8811-629e0f207cba"
         },
         {
           "find": "__AppInsightsConnectionString__",
-          "replaceWith": "InstrumentationKey=5632387c-6748-4260-b92a-93e829ba6d98;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=a1a5a468-0871-43e3-8c00-3d6fac0d9aca"
+          "replaceWith": "InstrumentationKey=210e93f2-b190-4b0f-8811-629e0f207cba;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=39b4b217-9b83-4b54-91f3-b0ccb8c3b4aa"
         },
         {
           "find": "__CacheRedisEndpoint__",
-          "replaceWith": "evalplatformcacheppe.redis.cache.windows.net:6380"
+          "replaceWith": "evalplatformcachetest.redis.cache.windows.net:6380"
         },
         {
           "find": "__CacheRedisInstanceName__",
-          "replaceWith": "evalplatformcacheppe"
+          "replaceWith": "evalplatformcachetest"
         },
         {
           "find": "__ServiceBusConnection__",
-          "replaceWith": "sxgevalplatformsbppe.servicebus.windows.net"
+          "replaceWith": "sxgevalplatformsbtest.servicebus.windows.net"
         }
       ]
     }
