@@ -235,7 +235,7 @@ extends:
 
     - stage: 'PPE_AzureResource_Release'
       trigger: manual
-      displayName: 'Dev Region Agnostic Code Deployment'
+      displayName: 'PPE Region Agnostic Code Deployment'
       variables:
         ob_release_environment: PPE
         ob_release_stagetype: deployment

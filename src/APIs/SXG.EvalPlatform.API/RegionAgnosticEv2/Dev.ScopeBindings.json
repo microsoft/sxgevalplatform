@@ -11,11 +11,11 @@
         },
         {
           "find": "__AppServiceName__",
-          "replaceWith": "EVAL-API"
+          "replaceWith": "sxgevalapidev"
         },
         {
           "find": "__AppServicePlanName__",
-          "replaceWith": "agent-eval-platform-appservice-plan"
+          "replaceWith": "sxgevalapidev-plan"
         },
         {
           "find": "__Environment__",

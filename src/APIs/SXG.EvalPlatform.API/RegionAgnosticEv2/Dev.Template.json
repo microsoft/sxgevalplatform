@@ -44,6 +44,92 @@
       "metadata": {
         "description": "Azure Storage Account Name"
       }
+    },
+    "azureAdClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD Application Client ID"
+      }
+    },
+    "azureAdTenantId": {
+      "type": "string",
+      "defaultValue": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+      "metadata": {
+        "description": "Azure AD Tenant ID"
+      }
+    },
+    "azureAdAudience": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD Audience URI"
+      }
+    },
+    "serviceBusConnection": {
+      "type": "string",
+      "metadata": {
+        "description": "Service Bus Connection Endpoint"
+      }
+    },
+    "redisEndpoint": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Redis Cache Endpoint"
+      }
+    },
+    "redisInstanceName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Redis Cache Instance Name"
+      }
+    },
+    "dataVerseApiEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "DataVerse API Endpoint"
+      }
+    },
+    "dataVerseScope": {
+      "type": "string",
+      "metadata": {
+        "description": "DataVerse API Scope"
+      }
+    },
+    "enableAuthentication": {
+      "type": "string",
+      "defaultValue": "False",
+      "metadata": {
+        "description": "Enable Authentication Feature Flag"
+      }
+    },
+    "enableDataCaching": {
+      "type": "string",
+      "defaultValue": "False",
+      "metadata": {
+        "description": "Enable Data Caching Feature Flag"
+      }
+    },
+    "enablePublishingToDataPlatform": {
+      "type": "string",
+      "defaultValue": "False",
+      "metadata": {
+        "description": "Enable Publishing Eval Results to Data Platform Feature Flag"
+      }
+    },
+    "cacheProvider": {
+      "type": "string",
+      "defaultValue": "None",
+      "metadata": {
+        "description": "Cache Provider (None, Redis, Memory)"
+      }
+    },
+    "swaggerEnabled": {
+      "type": "string",
+      "defaultValue": "true",
+      "metadata": {
+        "description": "Enable Swagger UI"
+      }
     }
   },
   "resources": [
@@ -71,6 +157,10 @@
               "value": "[parameters('servicePackageLink')]"
             },
             {
+              "name": "AllowedHosts",
+              "value": "*"
+            },
+            {
               "name": "ApiSettings__Environment",
               "value": "[parameters('environment')]"
             },
@@ -91,20 +181,288 @@
               "value": "[parameters('environment')]"
             },
             {
+              "name": "Authentication__ClockSkewMinutes",
+              "value": "5"
+            },
+            {
+              "name": "Authentication__MISE__AllowStandardBearerTokens",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__MISE__EnableEventLogging",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__MISE__RequireProtectedTokens",
+              "value": "False"
+            },
+            {
+              "name": "Authentication__RequireHttpsMetadata",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__SaveToken",
+              "value": "False"
+            },
+            {
+              "name": "Authentication__ValidateAudience",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__ValidateIssuer",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__ValidateIssuerSigningKey",
+              "value": "True"
+            },
+            {
+              "name": "Authentication__ValidateLifetime",
+              "value": "True"
+            },
+            {
+              "name": "AzureAd__Audience",
+              "value": "[parameters('azureAdAudience')]"
+            },
+            {
+              "name": "AzureAd__ClientId",
+              "value": "[parameters('azureAdClientId')]"
+            },
+            {
+              "name": "AzureAd__Instance",
+              "value": "https://login.microsoftonline.com/"
+            },
+            {
+              "name": "AzureAd__TenantId",
+              "value": "[parameters('azureAdTenantId')]"
+            },
+            {
+              "name": "AzureAd__ValidIssuers__0",
+              "value": "https://login.microsoftonline.com/common/v2.0"
+            },
+            {
+              "name": "AzureAd__ValidIssuers__1",
+              "value": "https://sts.windows.net/common/"
+            },
+            {
               "name": "AzureStorage__AccountName",
               "value": "[parameters('storageAccountName')]"
             },
             {
               "name": "AzureStorage__ConfigurationContainer",
-              "value": "eval-configurations"
+              "value": "eval-metrics-configuration"
+            },
+            {
+              "name": "AzureStorage__DataSetFolderName",
+              "value": "datasets"
+            },
+            {
+              "name": "AzureStorage__DatasetsFolderName",
+              "value": "datasets"
+            },
+            {
+              "name": "AzureStorage__DataSetsTable",
+              "value": "DataSetsTable"
             },
             {
               "name": "AzureStorage__DefaultConfigurationBlob",
               "value": "default-metric-configuration.json"
             },
             {
+              "name": "AzureStorage__DefaultMetricsConfiguration",
+              "value": "default-metric-configuration.json"
+            },
+            {
+              "name": "AzureStorage__EvalResultsFolderName",
+              "value": "eval-results"
+            },
+            {
+              "name": "AzureStorage__EvalRunTable",
+              "value": "EvalRunsTable"
+            },
+            {
+              "name": "AzureStorage__MetricsConfigurationsFolderName",
+              "value": "metrics-configurations"
+            },
+            {
+              "name": "AzureStorage__MetricsConfigurationsTable",
+              "value": "MetricsConfigurationsTable"
+            },
+            {
+              "name": "AzureStorage__PlatformConfigurationsContainer",
+              "value": "platform-configurations"
+            },
+            {
+              "name": "Cache__Provider",
+              "value": "[parameters('cacheProvider')]"
+            },
+            {
+              "name": "Cache__Redis__Endpoint",
+              "value": "[parameters('redisEndpoint')]"
+            },
+            {
+              "name": "Cache__Redis__InstanceName",
+              "value": "[parameters('redisInstanceName')]"
+            },
+            {
+              "name": "DataVerseAPI__DatasetEnrichmentRequestAPIEndPoint",
+              "value": "[parameters('dataVerseApiEndpoint')]"
+            },
+            {
+              "name": "DataVerseAPI__Scope",
+              "value": "[parameters('dataVerseScope')]"
+            },
+            {
+              "name": "FeatureFlags__EnableAuthentication",
+              "value": "[parameters('enableAuthentication')]"
+            },
+            {
+              "name": "FeatureFlags__EnableDataCaching",
+              "value": "[parameters('enableDataCaching')]"
+            },
+            {
+              "name": "FeatureFlags__EnablePublishingEvalResultsToDataPlatform",
+              "value": "[parameters('enablePublishingToDataPlatform')]"
+            },
+            {
+              "name": "Logging__ApplicationInsights__LogLevel__Default",
+              "value": "Information"
+            },
+            {
+              "name": "Logging__ApplicationInsights__LogLevel__Microsoft",
+              "value": "Warning"
+            },
+            {
               "name": "Logging__LogLevel__Default",
               "value": "Information"
+            },
+            {
+              "name": "Logging__LogLevel__Microsoft.ApplicationInsights",
+              "value": "Warning"
+            },
+            {
+              "name": "Logging__LogLevel__Microsoft.AspNetCore",
+              "value": "Warning"
+            },
+            {
+              "name": "OpenTelemetry__CloudRoleName",
+              "value": "SXG-EvalPlatform-API"
+            },
+            {
+              "name": "OpenTelemetry__EnableApplicationInsights",
+              "value": "True"
+            },
+            {
+              "name": "OpenTelemetry__EnableConsoleExporter",
+              "value": "False"
+            },
+            {
+              "name": "OpenTelemetry__ExportTimeoutMilliseconds",
+              "value": "30000"
+            },
+            {
+              "name": "OpenTelemetry__MaxExportBatchSize",
+              "value": "100"
+            },
+            {
+              "name": "OpenTelemetry__SamplingRatio",
+              "value": "1"
+            },
+            {
+              "name": "OpenTelemetry__ServiceName",
+              "value": "SXG-EvalPlatform-API"
+            },
+            {
+              "name": "OpenTelemetry__ServiceVersion",
+              "value": "1.0.0"
+            },
+            {
+              "name": "RateLimiting__IpPolicy__PermitLimit",
+              "value": "100"
+            },
+            {
+              "name": "RateLimiting__IpPolicy__WindowSeconds",
+              "value": "60"
+            },
+            {
+              "name": "RateLimiting__SessionPolicy__PermitLimit",
+              "value": "30"
+            },
+            {
+              "name": "RateLimiting__SessionPolicy__WindowSeconds",
+              "value": "60"
+            },
+            {
+              "name": "RateLimiting__UserPolicy__PermitLimit",
+              "value": "50"
+            },
+            {
+              "name": "RateLimiting__UserPolicy__WindowSeconds",
+              "value": "60"
+            },
+            {
+              "name": "SecurityLogging__AlertThresholds__FailedAuthenticationAttempts",
+              "value": "5"
+            },
+            {
+              "name": "SecurityLogging__AlertThresholds__RateLimitViolations",
+              "value": "3"
+            },
+            {
+              "name": "SecurityLogging__AlertThresholds__SuspiciousActivityScore",
+              "value": "70"
+            },
+            {
+              "name": "SecurityLogging__AlertThresholds__TimeWindowMinutes",
+              "value": "10"
+            },
+            {
+              "name": "SecurityLogging__EnableApplicationInsightsSecurity",
+              "value": "True"
+            },
+            {
+              "name": "SecurityLogging__Enabled",
+              "value": "True"
+            },
+            {
+              "name": "SecurityLogging__IncludePII",
+              "value": "False"
+            },
+            {
+              "name": "SecurityLogging__LogLevel",
+              "value": "Information"
+            },
+            {
+              "name": "SecurityLogging__RetentionDays",
+              "value": "90"
+            },
+            {
+              "name": "SecurityLogging__ShutdownFlushDelayMs",
+              "value": "5000"
+            },
+            {
+              "name": "ServiceBus__EventBusConnection",
+              "value": "[parameters('serviceBusConnection')]"
+            },
+            {
+              "name": "SwaggerUI__Enabled",
+              "value": "[parameters('swaggerEnabled')]"
+            },
+            {
+              "name": "Telemetry__AppInsightsConnectionString",
+              "value": "[parameters('appInsightsConnectionString')]"
+            },
+            {
+              "name": "WEBSITE_AUTH_AAD_ALLOWED_TENANTS",
+              "value": "[parameters('azureAdTenantId')]"
+            },
+            {
+              "name": "WEBSITE_AUTH_DISABLE_WWWAUTHENTICATE_HEADER",
+              "value": "true"
+            },
+            {
+              "name": "WEBSITE_HTTPLOGGING_RETENTION_DAYS",
+              "value": "3"
             },
             {
               "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
