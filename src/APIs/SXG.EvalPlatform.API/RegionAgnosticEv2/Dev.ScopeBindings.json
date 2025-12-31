@@ -1,0 +1,39 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",
+  "contentVersion": "0.0.0.1",
+  "scopeBindings": [
+    {
+      "scopeTagName": "AppServiceTag",
+      "bindings": [
+        {
+          "find": "__Region__",
+          "replaceWith": "$config(dcmtRegionId)"
+        },
+        {
+          "find": "__AppServiceName__",
+          "replaceWith": "EVAL-API"
+        },
+        {
+          "find": "__AppServicePlanName__",
+          "replaceWith": "agent-eval-platform-appservice-plan"
+        },
+        {
+          "find": "__Environment__",
+          "replaceWith": "Production"
+        },
+        {
+          "find": "__Location__",
+          "replaceWith": "$location()"
+        },
+        {
+          "find": "__AppInsightsConnectionString__",
+          "replaceWith": "InstrumentationKey=5632387c-6748-4260-b92a-93e829ba6d98;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=a1a5a468-0871-43e3-8c00-3d6fac0d9aca"
+        },
+        {
+          "find": "__StorageAccountName__",
+          "replaceWith": "sxgagenteval"
+        }
+      ]
+    }
+  ]
+}

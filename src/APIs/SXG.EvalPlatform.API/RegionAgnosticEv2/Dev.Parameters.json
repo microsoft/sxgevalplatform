@@ -6,16 +6,13 @@
   ],
   "parameters": {
     "appService_name": {
-      "value": "sxgevalapi__Environment____Region__"
+      "value": "__AppServiceName__"
     },
     "appService_location": {
       "value": "__Location__"
     },
     "appServicePlan_name": {
-      "value": "sxgevalapi__Environment____Region__-plan"
-    },
-    "appService_slot": {
-      "value": "Staging"
+      "value": "__AppServicePlanName__"
     },
     "servicePackageLink": {
       "value": "EvalApiBuild.zip"
@@ -23,23 +20,14 @@
     "Sites_buildVersion": {
       "value": "EV2Build_Version"
     },
-    "environmentName": {
-      "value": "__EnvironmentName__"
-    },
-    "appInsightsInstrumentationKey": {
-      "value": "__AppInsightsInstrumentationKey__"
+    "environment": {
+      "value": "__Environment__"
     },
     "appInsightsConnectionString": {
       "value": "__AppInsightsConnectionString__"
     },
-    "cacheRedisEndpoint": {
-      "value": "__CacheRedisEndpoint__"
-    },
-    "cacheRedisInstanceName": {
-      "value": "__CacheRedisInstanceName__"
-    },
-    "serviceBusConnection": {
-      "value": "__ServiceBusConnection__"
+    "storageAccountName": {
+      "value": "__StorageAccountName__"
     }
   }
 }
