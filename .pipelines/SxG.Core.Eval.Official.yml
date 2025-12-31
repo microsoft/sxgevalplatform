@@ -222,7 +222,7 @@ extends:
             inputs:
               UseServerMonitorTask: false
               EndpointProviderType: Ev2Endpoint
-              ConnectedServiceName: SxGCore_Eval_Prod
+              ConnectedServiceName: Eval-Ev2Deploy-Connection
               artifactsVersionOverride: $(Build.BuildNumber)
               TaskAction: RegisterAndRollout
               forceRegistration: True
