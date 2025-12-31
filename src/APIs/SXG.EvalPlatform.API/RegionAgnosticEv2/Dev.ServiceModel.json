@@ -11,7 +11,7 @@
   "ServiceResourceGroupDefinitions": [
     {
       "Name": "ApiAppServiceResourceGroupDefinition",
-      "azureResourceGroupName": "EvalApiRg-$config(dcmtRegionId)",
+      "azureResourceGroupName": "rg-sxg-agent-evaluation-platform",
       "subscriptionKey": "Microsoft-POC-subkey",
       "ServiceResourceDefinitions": [
         {

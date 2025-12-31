@@ -273,4 +273,4 @@ extends:
               ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
               RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Prod.RolloutSpec.json
               StageMapName: 'Microsoft.Azure.SDP.Standard'
-              Select: regions(*)
+              Select: regions(eastus)
