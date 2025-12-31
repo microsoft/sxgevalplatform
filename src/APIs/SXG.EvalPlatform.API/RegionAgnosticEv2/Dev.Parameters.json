@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "servicePackageLink"
+  ],
+  "parameters": {
+    "appService_name": {
+      "value": "__AppServiceName__"
+    },
+    "appService_location": {
+      "value": "__Location__"
+    },
+    "appServicePlan_name": {
+      "value": "__AppServicePlanName__"
+    },
+    "servicePackageLink": {
+      "value": "EvalApiBuild.zip"
+    },
+    "Sites_buildVersion": {
+      "value": "EV2Build_Version"
+    },
+    "environment": {
+      "value": "__Environment__"
+    },
+    "appInsightsConnectionString": {
+      "value": "__AppInsightsConnectionString__"
+    },
+    "storageAccountName": {
+      "value": "__StorageAccountName__"
+    },
+    "azureAdClientId": {
+      "value": "ac2b08ba-4232-438f-b333-0300df1de14d"
+    },
+    "azureAdTenantId": {
+      "value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+    },
+    "azureAdAudience": {
+      "value": "api://ac2b08ba-4232-438f-b333-0300df1de14d"
+    },
+    "serviceBusConnection": {
+      "value": "sxg-eval-serviceBus-dev.servicebus.windows.net"
+    },
+    "redisEndpoint": {
+      "value": "sxgagenteval.redis.cache.windows.net:6380"
+    },
+    "redisInstanceName": {
+      "value": "evalplatformcachedev"
+    },
+    "dataVerseApiEndpoint": {
+      "value": "https://sxg-eval-dev.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun"
+    },
+    "dataVerseScope": {
+      "value": "https://sxg-eval-dev.crm.dynamics.com/.default"
+    },
+    "enableAuthentication": {
+      "value": "False"
+    },
+    "enableDataCaching": {
+      "value": "False"
+    },
+    "enablePublishingToDataPlatform": {
+      "value": "False"
+    },
+    "cacheProvider": {
+      "value": "None"
+    },
+    "swaggerEnabled": {
+      "value": "true"
+    }
+  }
+}
