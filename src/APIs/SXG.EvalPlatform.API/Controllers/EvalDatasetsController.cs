@@ -14,6 +14,7 @@ namespace SxgEvalPlatformApi.Controllers
 {
     [Authorize]
     [Route("api/v1/eval/datasets")]
+    [Route("api/eval/datasets")]
     public class EvalDatasetsController : BaseController
     {
         private readonly IDataSetRequestHandler _dataSetRequestHandler;

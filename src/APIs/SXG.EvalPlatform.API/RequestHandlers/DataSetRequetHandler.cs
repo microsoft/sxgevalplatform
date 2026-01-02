@@ -188,6 +188,8 @@ namespace SxgEvalPlatformApi.RequestHandlers
                     throw new JsonException($"Failed to deserialize dataset content for DatasetId: {datasetId}");
                 }
 
+                datasetContent = NormalizeDatasetOrdering(datasetContent);
+
                 _logger.LogInformation("Retrieved and deserialized dataset content for DatasetId: {DatasetId}, Records: {RecordCount}",
                     datasetId, datasetContent.Count);
 
@@ -203,6 +205,32 @@ namespace SxgEvalPlatformApi.RequestHandlers
                 _logger.LogError(ex, "Failed to retrieve dataset content for DatasetId: {DatasetId}", datasetId);
                 throw;
             }
+        }
+
+        private static List<EvalDataset> NormalizeDatasetOrdering(List<EvalDataset> records)
+        {
+            if (records.Count <= 1)
+            {
+                return records;
+            }
+
+            var hasTurnIndex = records.Any(r => r?.TurnIndex.HasValue == true);
+            var hasConversationId = records.Any(r => !string.IsNullOrWhiteSpace(r?.ConversationId));
+
+            if (!hasTurnIndex && !hasConversationId)
+            {
+                return records;
+            }
+
+            var ordered = records
+                .Select((record, index) => new { record, index })
+                .OrderBy(x => x.record?.ConversationId ?? string.Empty, StringComparer.Ordinal)
+                .ThenBy(x => x.record?.TurnIndex ?? 0)
+                .ThenBy(x => x.index)
+                .Select(x => x.record)
+                .ToList();
+
+            return ordered;
         }
 
         /// <summary>
