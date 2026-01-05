@@ -207,8 +207,7 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]",
-        "[resourceId('Microsoft.Web/Sites/slots/config', parameters('appService_name'), parameters('appService_slot'), 'web')]"
+        "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
       ],
       "properties": {
         "azCliVersion": "2.52.0",
