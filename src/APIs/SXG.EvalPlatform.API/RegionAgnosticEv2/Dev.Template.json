@@ -1,10 +1,10 @@
 {
-"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-"contentVersion": "1.0.0.0",
-"paths": [
-  "servicePackageLink"
-],
-"parameters": {
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "paths": [
+    "servicePackageLink"
+  ],
+  "parameters": {
     "appService_name": {
       "type": "string",
       "metadata": {
@@ -194,10 +194,6 @@
             {
               "name": "Sites_buildVersion",
               "value": "[parameters('Sites_buildVersion')]"
-            },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "[parameters('servicePackageLink')]"
             },
             {
               "name": "AllowedHosts",
@@ -644,6 +640,25 @@
         "minimumElasticInstanceCount": 1,
         "azureStorageAccounts": {},
         "http20ProxyFlag": 0
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "Eval_DeploymentScript",
+      "location": "[parameters('appService_location')]",
+      "kind": "AzureCLI",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]",
+        "[resourceId('Microsoft.Web/sites/config', parameters('appService_name'), 'web')]"
+      ],
+      "properties": {
+        "azCliVersion": "2.52.0",
+        "timeout": "PT30M",
+        "retentionInterval": "P1D",
+        "cleanupPreference": "OnSuccess",
+        "arguments": "[concat(parameters('appService_name'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\"')]",
+        "scriptContent": "wget -O app.zip \"$3\" && az webapp deployment source config-zip --name $1 --resource-group $2 --src app.zip"
       }
     }
   ]
