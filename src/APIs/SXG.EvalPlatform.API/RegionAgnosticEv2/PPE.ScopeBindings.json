@@ -40,6 +40,14 @@
         {
           "find": "__ServiceBusConnection__",
           "replaceWith": "sxgevalplatformsbtest.servicebus.windows.net"
+        },
+        {
+          "find": "__StorageAccountName__",
+          "replaceWith": "sxgagentevaltest"
+        },
+        {
+          "find": "__Identity__",
+          "replaceWith": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourcegroups/CommonRg-UsEast2Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapitest-id"
         }
       ]
     }
