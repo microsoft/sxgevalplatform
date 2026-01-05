@@ -648,6 +648,12 @@
       "name": "Eval_DeploymentScript",
       "location": "[parameters('appService_location')]",
       "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[parameters('userAssignedIdentity_resourceId')]": {}
+        }
+      },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]",
         "[resourceId('Microsoft.Web/sites/config', parameters('appService_name'), 'web')]"
