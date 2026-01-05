@@ -514,6 +514,12 @@
             "VolumeMounts": []
           }
         ],
+        "scale": {
+          "minReplicas": 1,
+          "maxReplicas": 10,
+          "cooldownPeriod": 300,
+          "pollingInterval": 30
+        },
         "InitContainers": [],
         "ServiceBinds": [],
         "Volumes": []

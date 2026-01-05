@@ -11,7 +11,7 @@
         },
         {
           "find": "__AppServiceName__",
-          "replaceWith": "sxgevalapidev"
+          "replaceWith": "sxgevalapidev2"
         },
         {
           "find": "__AppServicePlanName__",
