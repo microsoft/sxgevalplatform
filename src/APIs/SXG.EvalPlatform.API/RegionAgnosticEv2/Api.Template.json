@@ -207,16 +207,16 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]",
-        "[resourceId('Microsoft.Web/sites/config', parameters('appService_name'), 'web')]"
+        "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]",
+        "[resourceId('Microsoft.Web/Sites/slots/config', parameters('appService_name'), parameters('appService_slot'), 'web')]"
       ],
       "properties": {
         "azCliVersion": "2.52.0",
         "timeout": "PT30M",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "arguments": "[concat(parameters('appService_name'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\" ', subscription().subscriptionId)]",
-        "scriptContent": "az account set --subscription $4 && wget -O app.zip \"$3\" && az webapp deployment source config-zip --name $1 --resource-group $2 --src app.zip"
+        "arguments": "[concat(parameters('appService_name'), ' ', parameters('appService_slot'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\" ', subscription().subscriptionId)]",
+        "scriptContent": "az account set --subscription \"$5\" && wget -O app.zip \"$4\" && az webapp deployment source config-zip --name $1 --slot $2 --resource-group $3 --src app.zip"
       }
     }
   ]
