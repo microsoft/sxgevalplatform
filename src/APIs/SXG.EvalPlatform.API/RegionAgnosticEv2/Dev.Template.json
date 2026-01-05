@@ -663,8 +663,8 @@
         "timeout": "PT30M",
         "retentionInterval": "P1D",
         "cleanupPreference": "OnSuccess",
-        "arguments": "[concat(parameters('appService_name'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\"')]",
-        "scriptContent": "wget -O app.zip \"$3\" && az webapp deployment source config-zip --name $1 --resource-group $2 --src app.zip"
+        "arguments": "[concat(parameters('appService_name'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\" ', subscription().subscriptionId)]",
+        "scriptContent": "az account set --subscription $4 && wget -O app.zip \"$3\" && az webapp deployment source config-zip --name $1 --resource-group $2 --src app.zip"
       }
     }
   ]
