@@ -11,7 +11,7 @@
         },
         {
           "find": "__Environment__",
-          "replaceWith": "prod"
+          "replaceWith": "test"
         },
         {
           "find": "__Location__",
@@ -23,15 +23,15 @@
         },
         {
           "find": "__RegistryUrl__",
-          "replaceWith": "evalplatformregistryprod.azurecr.io"
+          "replaceWith": "evalplatformregistrytest.azurecr.io"
         },
         {
           "find": "__CommonRg__",
-          "replaceWith": "EvalCommonRg-UsEast2"
+          "replaceWith": "CommonRg-UsEast2Delete"
         },
         {
           "find": "__RunRg__",
-          "replaceWith": "EvalRunRg-$config(dcmtRegionId)"
+          "replaceWith": "RunRg-$config(dcmtRegionId)Delete"
         }
       ]
     }

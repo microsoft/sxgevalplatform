@@ -124,7 +124,7 @@ extends:
           # Alternative to Docker@2 - Use buildah for container builds
           
           - task: AzureCLI@2
-            displayName: Build image in ACR (remote)
+            displayName: Build image in ACR (ppe)
             inputs:
               azureSubscription: 'SxGCore_Eval_Prod'
               scriptType: ps
@@ -153,6 +153,35 @@ extends:
                   exit $LASTEXITCODE
                 }
 
+          - task: AzureCLI@2
+            displayName: Build image in ACR (prod)
+            inputs:
+              azureSubscription: 'SxGCore_Eval_Prod'
+              scriptType: ps
+              scriptLocation: inlineScript
+              inlineScript: |
+                $registry = "evalplatformregistryprod"
+                $imageRepo = "eval-runner-app"
+                $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
+                $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
+                $context    = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine"
+
+                # Build with explicit encoding build arguments
+                az acr build `
+                  --registry $registry `
+                  --image "${imageRepo}:${tag}" `
+                  --image "${imageRepo}:latest" `
+                  --file $dockerfile `
+                  --build-arg LANG=C.UTF-8 `
+                  --build-arg LC_ALL=C.UTF-8 `
+                  --build-arg PYTHONIOENCODING=utf-8 `
+                  --platform linux/amd64 `
+                  $context
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "ACR build failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
 
           # Copy Evaluation Runner EV2 files to region agnostic structure
           - task: CopyFiles@2
@@ -186,9 +215,51 @@ extends:
                     Set-Content $file.PSPath
                 }
 
+    - stage: 'PPE_EvalRunner_Release'
+      trigger: manual
+      displayName: 'PPE Region Agnostic EvalRunner Deployment'
+      variables:
+        ob_release_environment: PPE
+        ob_release_stagetype: deployment
+        ArtifactToDeploy: drop_build_main
+        CvrpManifestRelativePath: \build.manifest
+      jobs:
+      - job: DeployEvalRunner
+        displayName: 'Deploy EvalRunner Container App'
+        pool:
+          type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
+        steps:
+
+          - download: current
+            artifact: drop_build_main
+
+          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
+            displayName: 'Setup BuildNumber'
+            inputs:
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '0'
+              exclude_commit: true
+
+          - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
+            displayName: 'Ev2 EvalRunner Resource Rollout'
+            inputs:
+              UseServerMonitorTask: false
+              EndpointProviderType: Ev2Endpoint
+              ConnectedServiceName: Eval-Ev2Deploy-Connection
+              artifactsVersionOverride: $(Build.BuildNumber)
+              TaskAction: RegisterAndRollout
+              forceRegistration: True
+              SkipRegistrationIfExists: true
+              ServiceRootLocation: 'LinkedArtifact'
+              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/EvalRunner/EV2
+              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/EvalRunner/EV2/RegionAgnosticEv2/Ppe.RolloutSpec.json
+              StageMapName: 'Microsoft.Azure.SDP.Standard'
+              Select: regions(*)
+
     - stage: 'Prod_EvalRunner_Release'
       trigger: manual
-      displayName: 'Region Agnostic EvalRunner Deployment'
+      displayName: 'Prod Region Agnostic EvalRunner Deployment'
       variables:
         ob_release_environment: Production
         ob_release_stagetype: deployment

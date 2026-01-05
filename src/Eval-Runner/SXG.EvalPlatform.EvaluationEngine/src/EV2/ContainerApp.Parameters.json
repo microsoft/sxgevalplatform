@@ -34,10 +34,10 @@
                 }
     },
     "EnvironmentId": {
-      "value": "/subscriptions/__SubscriptionId__/resourcegroups/RunRg-__Region__Delete/providers/Microsoft.App/managedEnvironments/eval-framework-env-__Environment____Region__"
+      "value": "/subscriptions/__SubscriptionId__/resourcegroups/__RunRG__/providers/Microsoft.App/managedEnvironments/eval-framework-env-__Environment____Region__"
     },
     "ManagedEnvironmentId": {
-      "value": "/subscriptions/__SubscriptionId__/resourcegroups/RunRg-__Region__Delete/providers/Microsoft.App/managedEnvironments/eval-framework-env-__Environment____Region__"
+      "value": "/subscriptions/__SubscriptionId__/resourcegroups/__RunRG__/providers/Microsoft.App/managedEnvironments/eval-framework-env-__Environment____Region__"
     },
     "Template": {
       "value": {
@@ -120,7 +120,7 @@
               },
               {
                 "Name": "AZURE_RESOURCE_GROUP_NAME",
-                "Value": "CommonRg-__Region__Delete"
+                "Value": "__CommonRG__"
               },
               {
                 "Name": "AZURE_OPENAI_USE_MANAGED_IDENTITY",
@@ -144,7 +144,7 @@
               },
               {
                 "Name": "AZURE_AI_PROJECT_ID",
-                "Value": "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-__Region__Delete/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
+                "Value": "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
               },
               {
                 "Name": "EVAL_CONFIG_ENDPOINT",
@@ -212,7 +212,7 @@
               },
               {
                 "Name": "AZURE_OPENAI_RESOURCE_GROUP",
-                "Value": "RunRg-__Region__Delete"
+                "Value": "__RunRG__"
               },
               {
                 "Name": "AZURE_OPENAI_RESOURCE_NAME",
@@ -228,7 +228,7 @@
               },
               {
                 "Name": "AZURE_AI_RESOURCE_GROUP",
-                "Value": "CommonRg-__Region__Delete"
+                "Value": "__CommonRG__"
               },
               {
                 "Name": "AZURE_AI_TENANT_ID",
@@ -328,7 +328,7 @@
               },
               {
                 "Name": "AzureOpenAI__ResourceGroupName",
-                "Value": "CommonRg-__Region__Delete"
+                "Value": "__CommonRG__"
               },
               {
                 "Name": "AzureOpenAI__TenantId",
@@ -352,7 +352,7 @@
               },
               {
                 "Name": "AzureAI__ResourceGroupName",
-                "Value": "CommonRg-__Region__Delete"
+                "Value": "__CommonRG__"
               },
               {
                 "Name": "ApiEndpoints__EnrichedDatasetEndpoint",
@@ -456,7 +456,7 @@
               },
               {
                 "Name": "AzureAI__ProjectId",
-                "Value": "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-__Region__Delete/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
+                "Value": "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
               },
               {
                 "Name": "properties.template.scale.maxReplicas",
@@ -530,7 +530,7 @@
     },
     "Identity": {
       "value": {
-        "/subscriptions/__SubscriptionId__/resourceGroups/CommonRg-UsEast2Delete/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id": {}
+        "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id": {}
       }
     },
     "LocationProp": {
