@@ -130,7 +130,7 @@ extends:
               scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
-                $registry = "evalplatformregistrytest"
+                $registry = "evalcontainerregistryppe"
                 $imageRepo = "eval-runner-app"
                 $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
                 $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
