@@ -26,7 +26,7 @@
                     },
                     "registries": [
                         {
-                            "server": "evalplatformregistry__Environment__.azurecr.io",
+                            "server": "evalcontainerregistry__Environment__.azurecr.io",
                             "identity": "system"
                         }
                     ],
