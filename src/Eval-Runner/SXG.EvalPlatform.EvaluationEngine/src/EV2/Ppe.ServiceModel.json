@@ -11,7 +11,7 @@
   "ServiceResourceGroupDefinitions": [
     {
       "Name": "ApiAppServiceResourceGroupDefinition",
-      "azureResourceGroupName": "RunRg-$config(dcmtRegionId)Delete",
+      "azureResourceGroupName": "ppe-EvalRunner-$config(dcmtRegionId)Rg",
       "subscriptionKey": "Microsoft-POC-subkey",
       "ServiceResourceDefinitions": [
         {
