@@ -507,7 +507,7 @@
                 "Value": "False"
               }
             ],
-            "Image": "evalplatformregistry__Environment__.azurecr.io/eval-runner-app:EV2Build_Version",
+            "Image": "__RegistryUrl__/eval-runner-app:EV2Build_Version",
             "ImageType": "ContainerImage",
             "Name": "eval-framework-app-__Environment____Region__",
             "Probes": [],
