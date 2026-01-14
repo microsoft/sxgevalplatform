@@ -192,7 +192,7 @@ class AppSettings:
         # Only validate if they need to be used
         
     def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from appsettings file only."""
+        """Load configuration from appsettings file and override with environment variables."""
         logging.info(f"Loading configuration from: {self.config_path}")
         
         if os.path.exists(self.config_path):
@@ -200,29 +200,166 @@ class AppSettings:
                 with open(self.config_path, 'r') as f:
                     config_data = json.load(f)
                 logging.info(f"Successfully loaded configuration from {self.config_path}")
+                
+                # Override with environment variables
+                config_data = self._override_with_env_vars(config_data)
+                
                 return config_data
             except Exception as e:
                 raise ConfigurationError(f"Failed to parse configuration file {self.config_path}: {e}")
         else:
             raise ConfigurationError(f"Configuration file not found: {self.config_path}")
     
-    # Remove the old _override_with_env_vars method - we now rely purely on appsettings.json files
+    def _override_with_env_vars(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Override configuration with environment variables.
+        
+        Environment variables use double underscore (__) as hierarchy separator.
+        Supports up to 3 levels of nesting. Matching is case-insensitive.
+        
+        Examples:
+            AzureStorage__AccountName -> config_data['AzureStorage']['AccountName']
+            AzureAI__SubscriptionId -> config_data['AzureAI']['SubscriptionId']
+            ApiEndpoints__BaseUrl -> config_data['ApiEndpoints']['BaseUrl']
+            Evaluation__MaxParallelPrompts -> config_data['Evaluation']['MaxParallelPrompts']
+            Logging__LogLevel__Default -> config_data['Logging']['LogLevel']['Default']
+        """
+        overrides_applied = []
+        sensitive_keys = {'ConnectionString', 'ApiKey', 'Secret', 'Password', 'Token'}
+        
+        for env_key, env_value in os.environ.items():
+            # Split by double underscore to get hierarchy
+            if '__' in env_key:
+                parts = env_key.split('__')
+                
+                # Support 2 or 3 level hierarchies
+                if len(parts) == 2:
+                    env_section, env_key_name = parts
+                    
+                    # Find matching section (case-insensitive)
+                    section = self._find_matching_key(config_data, env_section)
+                    if not section:
+                        # Section doesn't exist, create it with original casing from env var
+                        section = env_section
+                        config_data[section] = {}
+                    
+                    # Find matching key within section (case-insensitive)
+                    if section in config_data:
+                        key = self._find_matching_key(config_data[section], env_key_name)
+                        if not key:
+                            # Key doesn't exist, use original casing from env var
+                            key = env_key_name
+                        
+                        # Ensure we're not overwriting a dict with a scalar value
+                        if isinstance(config_data[section].get(key), dict):
+                            logging.warning(f"Skipping override for {env_key}: target is a nested object. Use 3-level syntax (e.g., {env_section}__{env_key_name}__SubKey)")
+                            continue
+                        
+                        # Convert string values to appropriate types
+                        typed_value = self._convert_env_value(env_value)
+                        
+                        # Apply override
+                        config_data[section][key] = typed_value
+                        
+                        # Log override (mask sensitive values)
+                        display_value = '***' if any(sens.lower() in key.lower() for sens in sensitive_keys) else typed_value
+                        overrides_applied.append(f"{section}.{key} = {display_value}")
+                    
+                elif len(parts) == 3:
+                    env_section, env_subsection, env_key_name = parts
+                    
+                    # Find matching section (case-insensitive)
+                    section = self._find_matching_key(config_data, env_section)
+                    if not section:
+                        section = env_section
+                        config_data[section] = {}
+                    
+                    # Find matching subsection (case-insensitive)
+                    subsection = self._find_matching_key(config_data[section], env_subsection)
+                    if not subsection:
+                        subsection = env_subsection
+                        config_data[section][subsection] = {}
+                    
+                    # Find matching key (case-insensitive)
+                    if subsection in config_data[section]:
+                        key = self._find_matching_key(config_data[section][subsection], env_key_name)
+                        if not key:
+                            key = env_key_name
+                        
+                        # Convert string values to appropriate types
+                        typed_value = self._convert_env_value(env_value)
+                        
+                        # Apply override
+                        config_data[section][subsection][key] = typed_value
+                        
+                        # Log override (mask sensitive values)
+                        display_value = '***' if any(sens.lower() in key.lower() for sens in sensitive_keys) else typed_value
+                        overrides_applied.append(f"{section}.{subsection}.{key} = {display_value}")
+        
+        if overrides_applied:
+            logging.info(f"Applied {len(overrides_applied)} environment variable overrides:")
+            for override in overrides_applied:
+                logging.info(f"  - {override}")
+        else:
+            logging.info("No environment variable overrides found")
+        
+        return config_data
+    
+    def _find_matching_key(self, dictionary: Dict[str, Any], search_key: str) -> Optional[str]:
+        """Find a key in dictionary matching search_key (case-insensitive). Returns the actual key from dict."""
+        search_key_lower = search_key.lower()
+        for key in dictionary.keys():
+            if key.lower() == search_key_lower:
+                return key
+        return None
+    
+    def _convert_env_value(self, value: str) -> Any:
+        """Convert environment variable string to appropriate Python type."""
+        # Handle boolean values
+        if value.lower() in ('true', 'yes', '1'):
+            return True
+        if value.lower() in ('false', 'no', '0'):
+            return False
+        
+        # Handle numeric values
+        try:
+            if '.' in value:
+                return float(value)
+            return int(value)
+        except ValueError:
+            pass
+        
+        # Return as string
+        return value
     
     def _load_azure_storage_config(self) -> AzureStorageConfig:
         """Load Azure Storage configuration."""
         azure_config = self._config_data.get('AzureStorage', {})
         
+        # Helper to get value with case-insensitive key lookup
+        def get_config_value(key: str, default: Any) -> Any:
+            """Get configuration value with case-insensitive key matching."""
+            # Try exact match first
+            if key in azure_config:
+                return azure_config[key]
+            # Try case-insensitive match
+            key_lower = key.lower()
+            for k, v in azure_config.items():
+                if k.lower() == key_lower:
+                    return v
+            return default
+        
         # Check if we should use Managed Identity (default) or Connection String (fallback)
-        use_managed_identity = azure_config.get('UseManagedIdentity', True)
+        use_managed_identity = get_config_value('UseManagedIdentity', True)
         
         return AzureStorageConfig(
-            account_name=azure_config.get('AccountName', ''),
-            queue_name=azure_config.get('QueueName', 'eval-processing-requests'),
-            success_queue_name=azure_config.get('SuccessQueueName', 'eval-processing-requests-completed'),
-            failure_queue_name=azure_config.get('FailureQueueName', 'eval-processing-requests-failed'),
-            blob_container_prefix=azure_config.get('BlobContainerPrefix', 'agent-'),
+            account_name=get_config_value('AccountName', ''),
+            queue_name=get_config_value('QueueName', 'eval-processing-requests'),
+            success_queue_name=get_config_value('SuccessQueueName', 'eval-processing-requests-completed'),
+            failure_queue_name=get_config_value('FailureQueueName', 'eval-processing-requests-failed'),
+            blob_container_prefix=get_config_value('BlobContainerPrefix', 'agent-'),
             use_managed_identity=use_managed_identity,
-            connection_string=azure_config.get('ConnectionString', '') if not use_managed_identity else None
+            connection_string=get_config_value('ConnectionString', '') if not use_managed_identity else None
         )
     
     def _load_api_endpoints_config(self) -> ApiEndpointsConfig:
