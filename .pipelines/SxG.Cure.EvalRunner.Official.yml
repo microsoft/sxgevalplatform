@@ -107,54 +107,11 @@ extends:
               minor: '0'
               exclude_commit: true
 
-          - task: UseDotNet@2
-            displayName: 'Use .NET Core sdk 8.0.x'
-            inputs:
-              version: 8.0.x
-              includePreviewVersions: true
-
           - task: CSRF@1
             displayName: 'Run CSRF scan'
             inputs:
               Path: '$(Build.SourcesDirectory)'
               ToolVersion: Latest
-
-          - task: CmdLine@2
-            displayName: 'Restore Package'
-            inputs:
-              script: 'dotnet restore "$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj"'
-              workingDirectory: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API'
-
-          - task: MSBuild@1
-            displayName: "Build Eval API"
-            inputs:
-                solution: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj'
-                configuration: "Release"
-                msbuildArguments: '/t:rebuild'
-                clean: true
-            env:
-                DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-                DOTNET_CLI_TELEMETRY_OPTOUT: true
-                DOTNET_CORE_SDK_VERSION: 8.0.x
-
-          - task: DotNetCoreCLI@2
-            displayName: "Publish Eval API"
-            inputs:
-              command: 'publish'
-              projects: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj'
-              arguments: '--configuration Release --output $(Build.SourcesDirectory)\out\Eval\EV2\EvalApi --no-build --verbosity normal'
-              publishWebProjects: false
-              zipAfterPublish: false
-
-          - task: CopyFiles@2
-            displayName: "Copy appsettings files to published output"
-            inputs:
-              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API'
-              Contents: |
-                appsettings.json
-                appsettings.*.json
-              TargetFolder: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi\SXG.EvalPlatform.API'
-              OverWrite: true
 
           - task: onebranch.pipeline.signing@1 # https://aka.ms/obpipelines/signing
             displayName: 'Sign output'
@@ -164,128 +121,82 @@ extends:
               files_to_sign: '**/*.exe;**/*.dll;**/*.ps1;**/*.psm1;**/*.js'
               search_root: '$(Build.SourcesDirectory)\out'
 
-          - task: ArchiveFiles@2
-            displayName: "Package WebAPI Web App to zip"
+          # Alternative to Docker@2 - Use buildah for container builds
+          
+          - task: AzureCLI@2
+            displayName: Build image in ACR (remote)
             inputs:
-              rootFolderOrFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApi\SXG.EvalPlatform.API'
-              includeRootFolder: false
-              archiveType: 'zip'
-              archiveFile: '$(Build.SourcesDirectory)\out\Eval\EV2\EvalApiBuild.zip'
+              azureSubscription: 'SxGCore_Eval_Prod'
+              scriptType: ps
+              scriptLocation: inlineScript
+              inlineScript: |
+                $registry = "evalplatformregistrytest"
+                $imageRepo = "eval-runner-app"
+                $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
+                $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
+                $context    = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine"
 
+                # Build with explicit encoding build arguments
+                az acr build `
+                  --registry $registry `
+                  --image "${imageRepo}:${tag}" `
+                  --image "${imageRepo}:latest" `
+                  --file $dockerfile `
+                  --build-arg LANG=C.UTF-8 `
+                  --build-arg LC_ALL=C.UTF-8 `
+                  --build-arg PYTHONIOENCODING=utf-8 `
+                  --platform linux/amd64 `
+                  $context
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "ACR build failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+
+          # Copy Evaluation Runner EV2 files to region agnostic structure
           - task: CopyFiles@2
-            displayName: 'Copy RegionAgnosticEv2'
+            displayName: 'Copy EvalRunner RegionAgnosticEv2'
             inputs:
-              SourceFolder: '$(Build.SourcesDirectory)\src\APIs\SXG.EvalPlatform.API\RegionAgnosticEv2'
+              SourceFolder: '$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\src\EV2'
               Contents: '**/*'
-              TargetFolder: '$(REPOROOT)\out\Eval\EV2\RegionAgnosticEv2'
+              TargetFolder: '$(REPOROOT)\out\EvalRunner\EV2\RegionAgnosticEv2'
 
           - task: PowerShell@2
-            displayName: 'Inject version'
+            displayName: 'Inject version in EvalRunner'
             inputs:
               targetType: 'inline'
               script: |
-                $parameterFiles = Get-ChildItem -Recurse -Include *.json, BuildVer.txt -File -Path $(Build.SourcesDirectory)\out\Eval\EV2\RegionAgnosticEv2
-                foreach ($file in $parameterFiles) {
-                    Write-Host "Replacing contents in file " $file.PSPath
+
+                # Inject version in Evaluation Runner EV2 files
+                $evalRunnerParameterFiles = Get-ChildItem -Recurse -Include *.json, BuildVer.txt -File -Path $(Build.SourcesDirectory)\out\EvalRunner\EV2\RegionAgnosticEv2
+                foreach ($file in $evalRunnerParameterFiles) {
+                    Write-Host "Replacing contents in EvalRunner file " $file.PSPath
                     (Get-Content $file.PSPath) |
                     Foreach-Object { $_ -replace "EV2Build_Version", "$(Build.BuildNumber)" } |
                     Set-Content $file.PSPath
                 }
-    - stage: 'Test_AzureResource_Release'
+
+                # Inject Docker image tag in EvalRunner templates
+                $evalRunnerTemplateFiles = Get-ChildItem -Recurse -Include *.json -File -Path $(Build.SourcesDirectory)\out\EvalRunner\EV2\RegionAgnosticEv2
+                foreach ($file in $evalRunnerTemplateFiles) {
+                    Write-Host "Replacing Docker image tag in " $file.PSPath
+                    (Get-Content $file.PSPath) |
+                    Foreach-Object { $_ -replace "DOCKER_IMAGE_TAG", "$(Build.BuildNumber)" } |
+                    Set-Content $file.PSPath
+                }
+
+    - stage: 'Prod_EvalRunner_Release'
       trigger: manual
-      displayName: 'Dev Region Agnostic Code Deployment'
-      variables:
-        ob_release_environment: Test
-        ob_release_stagetype: deployment
-        ArtifactToDeploy: drop_build_main
-        CvrpManifestRelativePath: \build.manifest
-      jobs:
-      - job: Deploy
-        displayName: 'Deploy Code'
-        pool:
-          type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
-        steps:
-
-          - download: current
-            artifact: drop_build_main
-
-          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
-            displayName: 'Setup BuildNumber'
-            inputs:
-              system: 'RevisionCounter'
-              major: '1'
-              minor: '0'
-              exclude_commit: true
-
-          - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-            displayName: 'Ev2 Resource Rollout'
-            inputs:
-              UseServerMonitorTask: false
-              EndpointProviderType: Ev2Endpoint
-              ConnectedServiceName: Eval-Ev2Deploy-Connection
-              artifactsVersionOverride: $(Build.BuildNumber)
-              TaskAction: RegisterAndRollout
-              forceRegistration: True
-              SkipRegistrationIfExists: true
-              ServiceRootLocation: 'LinkedArtifact'
-              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
-              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Dev.RolloutSpec.json
-              StageMapName: 'Microsoft.Azure.SDP.Standard'
-              Select: regions(eastus)
-
-    - stage: 'PPE_AzureResource_Release'
-      trigger: manual
-      displayName: 'PPE Region Agnostic Code Deployment'
-      variables:
-        ob_release_environment: PPE
-        ob_release_stagetype: deployment
-        ArtifactToDeploy: drop_build_main
-        CvrpManifestRelativePath: \build.manifest
-      jobs:
-      - job: Deploy
-        displayName: 'Deploy Code'
-        pool:
-          type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
-        steps:
-
-          - download: current
-            artifact: drop_build_main
-
-          - task: onebranch.pipeline.version@1 # generates automatic version. For other versioning options check https://aka.ms/obpipelines/versioning
-            displayName: 'Setup BuildNumber'
-            inputs:
-              system: 'RevisionCounter'
-              major: '1'
-              minor: '0'
-              exclude_commit: true
-
-          - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-            displayName: 'Ev2 Resource Rollout'
-            inputs:
-              UseServerMonitorTask: false
-              EndpointProviderType: Ev2Endpoint
-              ConnectedServiceName: Eval-Ev2Deploy-Connection
-              artifactsVersionOverride: $(Build.BuildNumber)
-              TaskAction: RegisterAndRollout
-              forceRegistration: True
-              SkipRegistrationIfExists: true
-              ServiceRootLocation: 'LinkedArtifact'
-              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
-              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Ppe.RolloutSpec.json
-              StageMapName: 'Microsoft.Azure.SDP.Standard'
-              Select: regions(*)
-
-    - stage: 'Prod_AzureResource_Release'
-      trigger: manual
-      displayName: 'Prod Region Agnostic Code Deployment'
+      displayName: 'Region Agnostic EvalRunner Deployment'
       variables:
         ob_release_environment: Production
         ob_release_stagetype: deployment
         ArtifactToDeploy: drop_build_main
         CvrpManifestRelativePath: \build.manifest
       jobs:
-      - job: Deploy
-        displayName: 'Deploy Code'
+      - job: DeployEvalRunner
+        displayName: 'Deploy EvalRunner Container App'
         pool:
           type: release # read more about custom job types at https://aka.ms/obpipelines/yaml/jobs
         steps:
@@ -302,7 +213,7 @@ extends:
               exclude_commit: true
 
           - task: vsrm-ev2.ev2-rollout.ev2-rollout-task.Ev2RARollout@2
-            displayName: 'Ev2 Resource Rollout'
+            displayName: 'Ev2 EvalRunner Resource Rollout'
             inputs:
               UseServerMonitorTask: false
               EndpointProviderType: ApprovalService
@@ -312,7 +223,7 @@ extends:
               forceRegistration: True
               SkipRegistrationIfExists: true
               ServiceRootLocation: 'LinkedArtifact'
-              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2
-              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/Eval/EV2/RegionAgnosticEv2/Prod.RolloutSpec.json
+              ServiceRootPath: $(Pipeline.Workspace)/drop_build_main/EvalRunner/EV2
+              RolloutSpecPath: $(Pipeline.Workspace)/drop_build_main/EvalRunner/EV2/RegionAgnosticEv2/Prod.RolloutSpec.json
               StageMapName: 'Microsoft.Azure.SDP.Standard'
               Select: regions(*)

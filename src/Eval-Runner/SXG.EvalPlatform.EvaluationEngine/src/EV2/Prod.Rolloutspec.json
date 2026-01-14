@@ -19,9 +19,9 @@
 	},
 	"OrchestratedSteps": [
 		{
-			"Name": "AppServiceProd-API-Deploy",
+			"Name": "AppServiceProd-Runner-Deploy",
 			"TargetType": "ServiceResourceDefinition",
-			"TargetName": "AppServiceServiceDefinitionApi",
+			"TargetName": "AppServiceServiceDefinitionRunner",
 			"Actions": [ "Deploy" ],
 			"DependsOn": []
 		}

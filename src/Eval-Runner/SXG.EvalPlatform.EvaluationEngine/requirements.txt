@@ -1,20 +1,10 @@
-# Production dependencies for SXG Evaluation Platform
-# Azure SDK packages - core dependencies
 azure-storage-queue
-azure-storage-blob  
+azure-storage-blob
 azure-identity
-
-# Azure AI Evaluation package
 azure-ai-evaluation
-
-# HTTP client for API calls
 aiohttp
-
-# Logging utilities
 structlog
 python-json-logger
-
-# OpenTelemetry telemetry (modern standard)
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-logging

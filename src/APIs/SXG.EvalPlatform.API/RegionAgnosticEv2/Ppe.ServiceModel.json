@@ -1,0 +1,34 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticServiceModel.json",
+  "contentVersion": "1.0.0.0",
+  "ServiceMetadata": {
+    "serviceIdentifier": "a9adb189-d25e-405f-8f6f-ecca2634ac67",
+    "ServiceGroup": "Microsoft.POC.Test",
+    "Environment": "Prod",
+    "displayName": "Production",
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+  },
+  "ServiceResourceGroupDefinitions": [
+    {
+      "Name": "ApiAppServiceResourceGroupDefinition",
+      "azureResourceGroupName": "ApiRg-$config(dcmtRegionId)Delete",
+      "subscriptionKey": "Microsoft-POC-subkey",
+      "ServiceResourceDefinitions": [
+        {
+          "name": "AppServiceServiceDefinitionApi",
+          "composedOf": {
+            "arm": {
+              "templatePath": "RegionAgnosticEv2/Api.Template.json",
+              "parametersPath": "RegionAgnosticEv2/Api.Parameters.json"
+            }
+          },
+          "scopeTags": [
+            {
+              "name": "AppServiceTag"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

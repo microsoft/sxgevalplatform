@@ -22,6 +22,24 @@
     },
     "Sites_buildVersion": {
       "value": "EV2Build_Version"
+    },
+    "environmentName": {
+      "value": "__EnvironmentName__"
+    },
+    "appInsightsInstrumentationKey": {
+      "value": "__AppInsightsInstrumentationKey__"
+    },
+    "appInsightsConnectionString": {
+      "value": "__AppInsightsConnectionString__"
+    },
+    "cacheRedisEndpoint": {
+      "value": "__CacheRedisEndpoint__"
+    },
+    "cacheRedisInstanceName": {
+      "value": "__CacheRedisInstanceName__"
+    },
+    "serviceBusConnection": {
+      "value": "__ServiceBusConnection__"
     }
   }
 }

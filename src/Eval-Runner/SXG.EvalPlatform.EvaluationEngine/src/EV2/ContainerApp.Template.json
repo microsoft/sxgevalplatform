@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "identity":
+      {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": "[parameters('Identity')]"
+      },
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('Name')]",
+      "properties": {
+        "configuration": "[parameters('Configuration')]",
+        "environmentId": "[parameters('EnvironmentId')]",
+        "managedEnvironmentId": "[parameters('ManagedEnvironmentId')]",
+        "template": "[parameters('Template')]",
+        "workloadProfileName": "[parameters('WorkloadProfileName')]"
+      },
+      "type": "Microsoft.App/containerApps",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-10-02-preview"
+    }
+  ],
+  "parameters": {
+    "Name": {
+      "type": "string"
+    },
+    "Configuration": {
+      "type": "object"
+    },
+    "EnvironmentId": {
+      "type": "string"
+    },
+    "ManagedEnvironmentId": {
+      "type": "string"
+    },
+    "Template": {
+      "type": "object"
+    },
+    "WorkloadProfileName": {
+      "type": "string"
+    },
+    "Identity": {
+      "type": "object"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}
