@@ -11,7 +11,7 @@ from datetime import datetime
 from azure.storage.queue.aio import QueueServiceClient, QueueClient
 from azure.storage.blob.aio import BlobServiceClient
 from azure.core.exceptions import AzureError
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
 
 from ..config.settings import app_settings
 from ..models.eval_models import QueueMessage
@@ -33,7 +33,7 @@ class AzureQueueService:
         self.success_queue_client: Optional[QueueClient] = None
         self.failure_queue_client: Optional[QueueClient] = None
         self.service_client: Optional[QueueServiceClient] = None
-        self.credential: Optional[DefaultAzureCredential] = None
+        self.credential = None  # Can be DefaultAzureCredential or ManagedIdentityCredential
         self._initialized = False
         
     async def initialize(self) -> None:
@@ -42,9 +42,22 @@ class AzureQueueService:
             return
             
         try:
-            if self.config.use_managed_identity:
-                # Use Managed Identity with connection pooling
-                self.credential = DefaultAzureCredential()
+            # Get managed identity settings from centralized config
+            mi_config = app_settings.managed_identity
+            
+            if mi_config.use_managed_identity:
+                if mi_config.use_default_azure_credentials:
+                    # Use DefaultAzureCredential for flexible authentication
+                    self.credential = DefaultAzureCredential() # CodeQL [SM05137] justification - Not used in production
+                    logger.info("Using DefaultAzureCredential for Queue Service")
+                elif mi_config.client_id:
+                    # Use User-Assigned Managed Identity with specific client_id
+                    self.credential = ManagedIdentityCredential(client_id=mi_config.client_id)
+                    logger.info(f"Using User-Assigned Managed Identity with client_id: {mi_config.client_id}")
+                else:
+                    # Use System-Assigned Managed Identity (no client_id)
+                    self.credential = ManagedIdentityCredential()
+                    logger.info("Using System-Assigned Managed Identity (no client_id configured)")
                 account_url = f"https://{self.config.account_name}.queue.core.windows.net"
                 self.service_client = QueueServiceClient(
                     account_url=account_url, 
@@ -570,11 +583,24 @@ class AzureBlobService:
     def __init__(self):
         """Initialize the blob service with Managed Identity or connection string."""
         self.config = app_settings.azure_storage
-        self.credential: Optional[DefaultAzureCredential] = None
+        self.credential = None  # Can be DefaultAzureCredential or ManagedIdentityCredential
         
-        if self.config.use_managed_identity:
-            # Use Managed Identity
-            self.credential = DefaultAzureCredential()
+        # Get managed identity settings from centralized config
+        mi_config = app_settings.managed_identity
+        
+        if mi_config.use_managed_identity:
+            if mi_config.use_default_azure_credentials:
+                # Use DefaultAzureCredential for flexible authentication
+                self.credential = DefaultAzureCredential()
+                logger.info("Using DefaultAzureCredential for Blob Service")
+            elif mi_config.client_id:
+                # Use User-Assigned Managed Identity with specific client_id
+                self.credential = ManagedIdentityCredential(client_id=mi_config.client_id)
+                logger.info(f"Using User-Assigned Managed Identity with client_id: {mi_config.client_id}")
+            else:
+                # Use System-Assigned Managed Identity (no client_id)
+                self.credential = ManagedIdentityCredential()
+                logger.info("Using System-Assigned Managed Identity (no client_id configured)")
             account_url = f"https://{self.config.account_name}.blob.core.windows.net"
             self.service_client = BlobServiceClient(account_url=account_url, credential=self.credential)
             logger.info(f"Using Managed Identity for Blob Service: {account_url}")

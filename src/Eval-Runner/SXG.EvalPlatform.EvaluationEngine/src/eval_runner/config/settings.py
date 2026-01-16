@@ -11,6 +11,13 @@ import logging
 from ..exceptions import ConfigurationError
 
 @dataclass
+class ManagedIdentityConfig:
+    """Configuration for Managed Identity authentication."""
+    client_id: Optional[str] = None  # Client ID for user-assigned managed identity
+    use_managed_identity: bool = True  # If true, use managed identity; if false, use connection strings
+    use_default_azure_credentials: bool = False  # If true, use DefaultAzureCredential instead of ManagedIdentityCredential
+
+@dataclass
 class AzureStorageConfig:
     """Configuration for Azure Storage services."""
     account_name: str
@@ -18,17 +25,13 @@ class AzureStorageConfig:
     success_queue_name: str = "eval-processing-requests-completed"  # Queue for successfully processed messages
     failure_queue_name: str = "eval-processing-requests-failed"     # Queue for failed processed messages
     blob_container_prefix: Optional[str] = None  # No longer used - containers use agent_id directly
-    use_managed_identity: bool = True
     connection_string: Optional[str] = None  # Fallback for local development
     
     def validate(self) -> None:
         """Validate Azure storage configuration."""
-        if self.use_managed_identity:
-            if not self.account_name or self.account_name == "your-storage-account-name":
-                raise ConfigurationError("Azure storage account name must be configured for Managed Identity")
-        else:
+        if not self.account_name or self.account_name == "your-storage-account-name":
             if not self.connection_string or self.connection_string == "your-azure-storage-connection-string":
-                raise ConfigurationError("Azure storage connection string must be configured")
+                raise ConfigurationError("Azure storage account name or connection string must be configured")
         if not self.queue_name:
             raise ConfigurationError("Azure queue name must be configured")
 
@@ -53,7 +56,6 @@ class ApiAuthenticationConfig:
     scope: str = "api://ac2b08ba-4232-438f-b333-0300df1de14d/.default"  # Use .default for app permissions
     
     # Authentication options
-    use_managed_identity: bool = True
     enable_authentication: bool = True  # Feature flag to enable/disable authentication
     enable_token_caching: bool = True
     token_refresh_buffer_seconds: int = 300  # Refresh token 5 minutes before expiry
@@ -101,24 +103,10 @@ class AzureAIConfig:
     deployment_name: str = "gpt-4.1"
     api_version: str = "2025-01-01-preview"
     tenant_id: Optional[str] = None
-    
-    # Authentication configuration
-    use_default_credentials: bool = False
-    use_managed_identity: bool = True
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None  # Fallback for non-managed identity scenarios
     
     def validate(self) -> None:
         """Validate Azure AI configuration."""        
-        # Authentication validation
-        if self.use_managed_identity:
-            if self.tenant_id and self.tenant_id == "your-tenant-id":
-                raise ConfigurationError("Azure tenant ID must be configured for managed identity")
-            if self.subscription_id and self.subscription_id == "your-subscription-id":
-                raise ConfigurationError("Azure subscription ID should be configured for managed identity")
-        else:
-            if not self.api_key or self.api_key == "your-azure-openai-api-key":
-                raise ConfigurationError("Azure OpenAI API key must be configured when not using managed identity")
-        
         # Required fields validation
         if not self.deployment_name or self.deployment_name == "your-gpt-deployment-name":
             raise ConfigurationError("Azure OpenAI deployment name must be configured")
@@ -172,6 +160,7 @@ class AppSettings:
         self._config_data = self._load_config()
         
         # Load configurations
+        self.managed_identity = self._load_managed_identity_config()
         self.azure_storage = self._load_azure_storage_config()
         self.api_endpoints = self._load_api_endpoints_config()
         self.api_authentication = self._load_api_authentication_config()
@@ -236,17 +225,31 @@ class AppSettings:
         # Fall back to default
         return default
     
+    def _load_managed_identity_config(self) -> ManagedIdentityConfig:
+        """Load Managed Identity configuration with environment variable fallback."""
+        mi_config = self._config_data.get('ManagedIdentity', {})
+        
+        return ManagedIdentityConfig(
+            client_id=self._get_config_value(
+                mi_config.get('ClientId'),
+                'ManagedIdentity__ClientId',
+                None
+            ),
+            use_managed_identity=str(self._get_config_value(
+                mi_config.get('UseManagedIdentity'),
+                'ManagedIdentity__UseManagedIdentity',
+                'True'
+            )).lower() in ('true', '1', 'yes'),
+            use_default_azure_credentials=str(self._get_config_value(
+                mi_config.get('UseDefaultAzureCredentials'),
+                'ManagedIdentity__UseDefaultAzureCredentials',
+                'False'
+            )).lower() in ('true', '1', 'yes')
+        )
+    
     def _load_azure_storage_config(self) -> AzureStorageConfig:
         """Load Azure Storage configuration with environment variable fallback."""
         azure_config = self._config_data.get('AzureStorage', {})
-        
-        # Check if we should use Managed Identity (default) or Connection String (fallback)
-        use_managed_identity_str = self._get_config_value(
-            azure_config.get('UseManagedIdentity'), 
-            'AzureStorage__UseManagedIdentity', 
-            'True'
-        )
-        use_managed_identity = str(use_managed_identity_str).lower() in ('true', '1', 'yes')
         
         return AzureStorageConfig(
             account_name=self._get_config_value(
@@ -274,12 +277,11 @@ class AppSettings:
                 'AzureStorage__BlobContainerPrefix',
                 'agent-'
             ),
-            use_managed_identity=use_managed_identity,
             connection_string=self._get_config_value(
                 azure_config.get('ConnectionString'),
                 'AzureStorage__ConnectionString',
-                ''
-            ) if not use_managed_identity else None
+                None
+            )
         )
     
     def _load_api_endpoints_config(self) -> ApiEndpointsConfig:
@@ -337,11 +339,6 @@ class AppSettings:
                 'ApiAuthentication__Scope',
                 'api://ac2b08ba-4232-438f-b333-0300df1de14d/.default'
             ),
-            use_managed_identity=str(self._get_config_value(
-                auth_config.get('UseManagedIdentity'),
-                'ApiAuthentication__UseManagedIdentity',
-                'True'
-            )).lower() in ('true', '1', 'yes'),
             enable_authentication=str(self._get_config_value(
                 auth_config.get('EnableAuthentication'),
                 'ApiAuthentication__EnableAuthentication',
@@ -481,18 +478,6 @@ class AppSettings:
                 'AzureAI__TenantId',
                 None
             ),
-            
-            # Authentication (check both sections, prefer AzureAI)
-            use_default_credentials=str(self._get_config_value(
-                ai_config.get('UseDefaultAzureCredential') or openai_config.get('UseDefaultAzureCredential'),
-                'AzureAI__UseDefaultAzureCredential',
-                'False'
-            )).lower() in ('true', '1', 'yes'),
-            use_managed_identity=str(self._get_config_value(
-                ai_config.get('UseManagedIdentity') or openai_config.get('UseManagedIdentity'),
-                'AzureAI__UseManagedIdentity',
-                'True'
-            )).lower() in ('true', '1', 'yes'),
             api_key=self._get_config_value(
                 openai_config.get('ApiKey'),
                 'AzureOpenAI__ApiKey',

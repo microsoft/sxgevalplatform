@@ -50,10 +50,21 @@ class AzureAIEvaluatorConfig:
         if self._credential is None:
             ai_config = app_settings.azure_ai
             
-            if ai_config.use_default_credentials:
+            # Get managed identity settings from centralized config
+            mi_config = app_settings.managed_identity
+            
+            if mi_config.use_default_azure_credentials:
+                # Use DefaultAzureCredential for flexible authentication
                 self._credential = DefaultAzureCredential() # CodeQL [SM05137] justification - Not used in production
+                print("[SUCCESS] Configured DefaultAzureCredential for flexible authentication")
+            elif mi_config.client_id:
+                # Use User-Assigned Managed Identity with specific client_id
+                self._credential = ManagedIdentityCredential(client_id=mi_config.client_id)
+                print(f"[SUCCESS] Configured User-Assigned Managed Identity with client_id: {mi_config.client_id}")
             else:
+                # Use System-Assigned Managed Identity (no client_id)
                 self._credential = ManagedIdentityCredential()
+                print("[SUCCESS] Configured System-Assigned Managed Identity (no client_id)")
             
             if ai_config.tenant_id:
                 print(f"[SUCCESS] Configured Azure credential for tenant: {ai_config.tenant_id}")
@@ -68,6 +79,7 @@ class AzureAIEvaluatorConfig:
         if self._model_config is None:
             try:
                 ai_config = app_settings.azure_ai
+                mi_config = app_settings.managed_identity
                 
                 # Extract base endpoint from the URL if it contains specific paths
                 # Convert: https://evalplatform.cognitive...com/openai/deployments/gpt-4.1/chat/completions?api-version=...
@@ -82,7 +94,7 @@ class AzureAIEvaluatorConfig:
                 if not base_endpoint.endswith('/'):
                     base_endpoint += '/'
                 
-                if ai_config.use_managed_identity:
+                if mi_config.use_managed_identity:
                     # For managed identity - use basic config, authentication handled by credential
                     self._model_config = {
                         "azure_endpoint": base_endpoint,
