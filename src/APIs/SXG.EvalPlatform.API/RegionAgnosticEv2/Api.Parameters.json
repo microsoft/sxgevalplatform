@@ -46,6 +46,9 @@
     },
     "userAssignedIdentity_resourceId": {
       "value": "__Identity__"
+    },
+    "managedIdentityClientId": {
+      "value": "__ManagedIdentityClientId__"
     }
   }
 }
