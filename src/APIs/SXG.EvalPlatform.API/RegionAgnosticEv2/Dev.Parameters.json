@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "paths": [
     "servicePackageLink"
@@ -11,14 +11,20 @@
     "appService_location": {
       "value": "__Location__"
     },
-    "appServicePlan_name": {
-      "value": "__AppServicePlanName__"
+    "appServicePlan_externalid": {
+      "value": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/rg-sxg-agent-evaluation-platform/providers/Microsoft.Web/serverfarms/sxgevalapidev-plan"
+    },
+    "userAssignedIdentity_resourceId": {
+      "value": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourcegroups/rg-sxg-agent-evaluation-platform/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapidev-id-9b29"
     },
     "servicePackageLink": {
       "value": "EvalApiBuild.zip"
     },
     "Sites_buildVersion": {
       "value": "EV2Build_Version"
+    },
+    "alwaysOn": {
+      "value": false
     },
     "environment": {
       "value": "__Environment__"

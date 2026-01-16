@@ -65,6 +65,18 @@
       "metadata": {
         "description": "Service Bus connection endpoint"
       }
+    },
+    "StorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Service Bus connection endpoint"
+      }
+    },
+    "userAssignedIdentity_resourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the User Assigned Managed Identity"
+      }
     }
   },
   "resources": [
@@ -92,7 +104,6 @@
           ],
           "properties": {
             "Sites_buildVersion": "[parameters('Sites_buildVersion')]",
-            "WEBSITE_RUN_FROM_PACKAGE": "[parameters('servicePackageLink')]",
             "AllowedHosts": "*",
             "ApiSettings__Environment": "[parameters('environmentName')]",
             "ApiSettings__Version": "1.0.0",
@@ -119,7 +130,7 @@
             "AzureAd__TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
             "AzureAd__ValidIssuers__0": "https://login.microsoftonline.com/common/v2.0",
             "AzureAd__ValidIssuers__1": "https://sts.windows.net/common/",
-            "AzureStorage__AccountName": "sxgagentevalprod",
+            "AzureStorage__AccountName": "[parameters('StorageAccountName')]",
             "AzureStorage__DatasetEnrichmentRequestsQueueName": "dataset-enrichment-requests",
             "AzureStorage__DataSetFolderName": "datasets",
             "AzureStorage__DatasetsFolderName": "datasets",
@@ -182,6 +193,30 @@
           }
         }
       ]
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "Eval_DeploymentScript",
+      "location": "[parameters('appService_location')]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[parameters('userAssignedIdentity_resourceId')]": {}
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/Sites/slots', parameters('appService_name'), parameters('appService_slot'))]"
+      ],
+      "properties": {
+        "azCliVersion": "2.52.0",
+        "timeout": "PT30M",
+        "retentionInterval": "P1D",
+        "cleanupPreference": "OnSuccess",
+        "arguments": "[concat(parameters('appService_name'), ' ', parameters('appService_slot'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\" ', subscription().subscriptionId)]",
+        "scriptContent": "az account set --subscription \"$5\" && wget -O app.zip \"$4\" && az webapp deployment source config-zip --name $1 --slot $2 --resource-group $3 --src app.zip"
+      }
     }
   ]
 }

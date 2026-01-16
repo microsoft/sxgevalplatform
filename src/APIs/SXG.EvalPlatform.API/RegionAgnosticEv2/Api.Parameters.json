@@ -40,6 +40,12 @@
     },
     "serviceBusConnection": {
       "value": "__ServiceBusConnection__"
+    },
+    "StorageAccountName": {
+      "value": "__StorageAccountName__"
+    },
+    "userAssignedIdentity_resourceId": {
+      "value": "__Identity__"
     }
   }
 }

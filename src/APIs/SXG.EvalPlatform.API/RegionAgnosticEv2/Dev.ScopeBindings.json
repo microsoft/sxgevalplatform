@@ -11,7 +11,7 @@
         },
         {
           "find": "__AppServiceName__",
-          "replaceWith": "sxgevalapidev"
+          "replaceWith": "sxgevalapidev2"
         },
         {
           "find": "__AppServicePlanName__",
@@ -31,7 +31,7 @@
         },
         {
           "find": "__StorageAccountName__",
-          "replaceWith": "sxgagenteval"
+          "replaceWith": "sxgagentevaldev"
         }
       ]
     }

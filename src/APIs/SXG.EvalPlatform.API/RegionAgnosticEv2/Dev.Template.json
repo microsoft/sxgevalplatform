@@ -1,28 +1,50 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "paths": [
     "servicePackageLink"
   ],
   "parameters": {
     "appService_name": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Name of the App Service"
+      }
     },
     "appService_location": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "East US",
+      "metadata": {
+        "description": "Location for the App Service"
+      }
     },
-    "appServicePlan_name": {
-      "type": "string"
+    "appServicePlan_externalid": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the App Service Plan"
+      }
+    },
+    "userAssignedIdentity_resourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the User Assigned Managed Identity"
+      }
     },
     "Sites_buildVersion": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Build version for the deployment"
+      }
     },
     "servicePackageLink": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "URL or path to the deployment package"
+      }
     },
     "alwaysOn": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": false,
       "metadata": {
         "description": "Whether the web app should remain loaded after 20 minutes of inactivity."
       }
@@ -132,29 +154,46 @@
       }
     }
   },
+  "variables": {},
   "resources": [
     {
-      "comments": "The App Service for Dev environment (no slot)",
-      "apiVersion": "2022-09-01",
       "type": "Microsoft.Web/sites",
-      "kind": "app",
+      "apiVersion": "2024-11-01",
       "name": "[parameters('appService_name')]",
       "location": "[parameters('appService_location')]",
+      "kind": "app,linux",
+      "identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": {
+          "[parameters('userAssignedIdentity_resourceId')]": {}
+        }
+      },
       "properties": {
         "enabled": true,
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlan_name'))]",
-        "buildVersion": "[parameters('Sites_buildVersion')]",
+        "serverFarmId": "[parameters('appServicePlan_externalid')]",
+        "reserved": true,
+        "isXenon": false,
+        "hyperV": false,
+        "dnsConfiguration": {},
+        "outboundVnetRouting": {
+          "allTraffic": false,
+          "applicationTraffic": false,
+          "contentShareTraffic": false,
+          "imagePullTraffic": false,
+          "backupRestoreTraffic": false
+        },
         "siteConfig": {
+          "numberOfWorkers": 1,
+          "linuxFxVersion": "DOTNETCORE|8.0",
+          "acrUseManagedIdentityCreds": false,
           "alwaysOn": "[parameters('alwaysOn')]",
-          "netFrameworkVersion": "v8.0",
+          "http20Enabled": true,
+          "functionAppScaleLimit": 0,
+          "minimumElasticInstanceCount": 1,
           "appSettings": [
             {
               "name": "Sites_buildVersion",
               "value": "[parameters('Sites_buildVersion')]"
-            },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "[parameters('servicePackageLink')]"
             },
             {
               "name": "AllowedHosts",
@@ -473,7 +512,159 @@
               "value": "Recommended"
             }
           ]
+        },
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": true,
+        "clientAffinityProxyEnabled": false,
+        "clientCertEnabled": false,
+        "clientCertMode": "Required",
+        "hostNamesDisabled": false,
+        "ipMode": "IPv4",
+        "containerSize": 0,
+        "dailyMemoryTimeQuota": 0,
+        "httpsOnly": true,
+        "endToEndEncryptionEnabled": false,
+        "redundancyMode": "None",
+        "publicNetworkAccess": "Enabled",
+        "storageAccountRequired": false,
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-11-01",
+      "name": "[concat(parameters('appService_name'), '/ftp')]",
+      "location": "[parameters('appService_location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-11-01",
+      "name": "[concat(parameters('appService_name'), '/scm')]",
+      "location": "[parameters('appService_location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2024-11-01",
+      "name": "[concat(parameters('appService_name'), '/web')]",
+      "location": "[parameters('appService_location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]"
+      ],
+      "properties": {
+        "numberOfWorkers": 1,
+        "defaultDocuments": [
+          "Default.htm",
+          "Default.html",
+          "Default.asp",
+          "index.htm",
+          "index.html",
+          "iisstart.htm",
+          "default.aspx",
+          "index.php",
+          "hostingstart.html"
+        ],
+        "netFrameworkVersion": "v4.0",
+        "linuxFxVersion": "DOTNETCORE|8.0",
+        "requestTracingEnabled": false,
+        "remoteDebuggingEnabled": false,
+        "remoteDebuggingVersion": "VS2022",
+        "httpLoggingEnabled": true,
+        "acrUseManagedIdentityCreds": false,
+        "logsDirectorySizeLimit": 100,
+        "detailedErrorLoggingEnabled": false,
+        "scmType": "None",
+        "use32BitWorkerProcess": true,
+        "webSocketsEnabled": false,
+        "alwaysOn": "[parameters('alwaysOn')]",
+        "managedPipelineMode": "Integrated",
+        "virtualApplications": [
+          {
+            "virtualPath": "/",
+            "physicalPath": "site\\wwwroot",
+            "preloadEnabled": false
+          }
+        ],
+        "loadBalancing": "LeastRequests",
+        "experiments": {
+          "rampUpRules": []
+        },
+        "autoHealEnabled": false,
+        "vnetRouteAllEnabled": false,
+        "vnetPrivatePortsCount": 0,
+        "publicNetworkAccess": "Enabled",
+        "cors": {
+          "allowedOrigins": [
+            "*"
+          ],
+          "supportCredentials": false
+        },
+        "localMySqlEnabled": false,
+        "ipSecurityRestrictions": [
+          {
+            "ipAddress": "Any",
+            "action": "Allow",
+            "priority": 2147483647,
+            "name": "Allow all",
+            "description": "Allow all access"
+          }
+        ],
+        "scmIpSecurityRestrictions": [
+          {
+            "ipAddress": "Any",
+            "action": "Allow",
+            "priority": 2147483647,
+            "name": "Allow all",
+            "description": "Allow all access"
+          }
+        ],
+        "scmIpSecurityRestrictionsUseMain": false,
+        "http20Enabled": true,
+        "minTlsVersion": "1.2",
+        "scmMinTlsVersion": "1.2",
+        "ftpsState": "FtpsOnly",
+        "preWarmedInstanceCount": 0,
+        "elasticWebAppScaleLimit": 0,
+        "functionsRuntimeScaleMonitoringEnabled": false,
+        "minimumElasticInstanceCount": 1,
+        "azureStorageAccounts": {},
+        "http20ProxyFlag": 0
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "Eval_DeploymentScript",
+      "location": "[parameters('appService_location')]",
+      "kind": "AzureCLI",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[parameters('userAssignedIdentity_resourceId')]": {}
         }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appService_name'))]",
+        "[resourceId('Microsoft.Web/sites/config', parameters('appService_name'), 'web')]"
+      ],
+      "properties": {
+        "azCliVersion": "2.52.0",
+        "timeout": "PT30M",
+        "retentionInterval": "P1D",
+        "cleanupPreference": "OnSuccess",
+        "arguments": "[concat(parameters('appService_name'), ' ', resourceGroup().name, ' \"', parameters('servicePackageLink'), '\" ', subscription().subscriptionId)]",
+        "scriptContent": "az account set --subscription $4 && wget -O app.zip \"$3\" && az webapp deployment source config-zip --name $1 --resource-group $2 --src app.zip"
       }
     }
   ]
