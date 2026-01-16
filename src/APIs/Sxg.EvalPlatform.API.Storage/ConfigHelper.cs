@@ -247,5 +247,15 @@ namespace Sxg.EvalPlatform.API.Storage
             _configuration.GetSection(sectionName).Bind(configObject);
             return configObject;
         }
+
+        /// <summary>
+        /// Gets the user-assigned managed identity client ID for Azure authentication
+        /// Returns null if not configured (will use system-assigned MI or local credentials)
+        /// </summary>
+        /// <returns>The managed identity client ID or null if not configured</returns>
+        public string? GetManagedIdentityClientId()
+        {
+            return _configuration["ManagedIdentity:ClientId"];
+        }
     }
 }

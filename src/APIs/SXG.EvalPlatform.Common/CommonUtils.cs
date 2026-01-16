@@ -5,8 +5,7 @@ namespace SXG.EvalPlatform.Common
 {
     public class CommonUtils
     {
-
-        public static TokenCredential GetTokenCredential(string environment)
+        public static TokenCredential GetTokenCredential(string environment, string? managedIdentityClientId = null)
         {
             var isLocal = environment.Equals("Local", StringComparison.OrdinalIgnoreCase);
 
@@ -15,13 +14,14 @@ namespace SXG.EvalPlatform.Common
                 return new AzureCliCredential();
             }
 
-            #if DEBUG
-            // For local development, use DefaultAzureCredential
-            return new DefaultAzureCredential(); // CodeQL [SM05137] justification - Not used in production
-            #else
-            // For non-debug local builds, use Managed Identity                                    
+            // For non-local environments, use User-Assigned Managed Identity if ClientId is provided
+            if (!string.IsNullOrEmpty(managedIdentityClientId))
+            {
+                return new ManagedIdentityCredential(managedIdentityClientId);
+            }
+
+            // Fallback to System-Assigned Managed Identity (for backward compatibility)
             return new ManagedIdentityCredential();
-            #endif
         }
 
         public static string TrimAndRemoveSpaces(string input)

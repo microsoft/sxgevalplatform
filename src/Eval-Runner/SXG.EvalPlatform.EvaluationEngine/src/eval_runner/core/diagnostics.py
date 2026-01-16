@@ -176,14 +176,14 @@ class DiagnosticsService:
                 client_id=app_settings.api_authentication.client_id,
                 tenant_id=app_settings.api_authentication.tenant_id,
                 scope=app_settings.api_authentication.scope,
-                use_managed_identity=app_settings.api_authentication.use_managed_identity,
+                use_managed_identity=app_settings.managed_identity.use_managed_identity,
                 enable_caching=app_settings.api_authentication.enable_token_caching,
                 refresh_buffer_seconds=app_settings.api_authentication.token_refresh_buffer_seconds
             )
             
             duration_ms = (time.time() - start_time) * 1000
             
-            auth_type = "managed identity" if app_settings.api_authentication.use_managed_identity else "service principal"
+            auth_type = "managed identity" if app_settings.managed_identity.use_managed_identity else "service principal"
             auth_enabled = app_settings.api_authentication.enable_authentication
             
             status_msg = f"Authentication provider initialized with {auth_type}"
@@ -197,7 +197,7 @@ class DiagnosticsService:
                 message=status_msg,
                 details={
                     "authentication_enabled": auth_enabled,
-                    "use_managed_identity": app_settings.api_authentication.use_managed_identity,
+                    "use_managed_identity": app_settings.managed_identity.use_managed_identity,
                     "tenant_id": app_settings.api_authentication.tenant_id,
                     "scope": app_settings.api_authentication.scope
                 },
@@ -303,7 +303,7 @@ class DiagnosticsService:
                 details={
                     "account_name": app_settings.azure_storage.account_name,
                     "queue_name": app_settings.azure_storage.queue_name,
-                    "use_managed_identity": app_settings.azure_storage.use_managed_identity
+                    "use_managed_identity": app_settings.managed_identity.use_managed_identity
                 },
                 duration_ms=duration_ms
             )
@@ -609,7 +609,7 @@ class DiagnosticsService:
                 details={
                     "deployment_name": app_settings.azure_openai.deployment_name,
                     "resource_name": app_settings.azure_openai.resource_name,
-                    "use_managed_identity": app_settings.azure_openai.use_managed_identity
+                    "use_managed_identity": app_settings.managed_identity.use_managed_identity
                 },
                 duration_ms=duration_ms
             )

@@ -33,8 +33,9 @@ public class EvalRunTableService : IEvalRunTableService
         var tableUri = $"https://{accountName}.table.core.windows.net";
         
         var environment = _configHelper.GetASPNetCoreEnvironment();
+        var managedIdentityClientId = _configHelper.GetManagedIdentityClientId();
 
-        var tokenCredential = CommonUtils.GetTokenCredential(environment);
+        var tokenCredential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
         var serviceClient = new TableServiceClient(new Uri(tableUri), tokenCredential);
         _tableClient = serviceClient.GetTableClient(_storageTableName);

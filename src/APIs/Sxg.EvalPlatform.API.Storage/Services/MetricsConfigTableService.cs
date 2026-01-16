@@ -61,7 +61,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
                 var tableUri = $"https://{_accountName}.table.core.windows.net";
                 var environment = _configHelper.GetASPNetCoreEnvironment() ?? "Production";
-                TokenCredential credential = CommonUtils.GetTokenCredential(environment);
+                var managedIdentityClientId = _configHelper.GetManagedIdentityClientId();
+                TokenCredential credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
                 var serviceClient = new TableServiceClient(new Uri(tableUri), credential);
                 var tableClient = serviceClient.GetTableClient(_tableName);
@@ -150,7 +151,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             }
         }
 
-        public async Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity)
+        public async Task<MetricsConfigurationTableEntity> SaveMetricsConfigurationAsync(MetricsConfigurationTableEntity entity
+)
         {
             try
             {

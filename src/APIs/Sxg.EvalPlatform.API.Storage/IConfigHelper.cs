@@ -1,4 +1,6 @@
-﻿namespace Sxg.EvalPlatform.API.Storage
+﻿using Microsoft.Extensions.Configuration;
+
+namespace Sxg.EvalPlatform.API.Storage
 {
     public interface IConfigHelper
     {
@@ -37,5 +39,11 @@
 
         // Configuration helper for binding sections (needed for CacheOptions)
         T GetConfigurationSection<T>(string sectionName) where T : class, new();
+
+        /// <summary>
+        /// Gets the user-assigned managed identity client ID for Azure authentication
+        /// Returns null if not configured (will use system-assigned MI or local credentials)
+        /// </summary>
+        string? GetManagedIdentityClientId();
     }
 }

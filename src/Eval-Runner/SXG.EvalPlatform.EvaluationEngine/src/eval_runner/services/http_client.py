@@ -36,7 +36,7 @@ class EvaluationApiClient:
             client_id=auth_config.client_id,
             tenant_id=auth_config.tenant_id,
             scope=auth_config.scope,
-            use_managed_identity=auth_config.use_managed_identity,
+            use_managed_identity=app_settings.managed_identity.use_managed_identity,
             enable_caching=auth_config.enable_token_caching,
             refresh_buffer_seconds=auth_config.token_refresh_buffer_seconds
         )

@@ -293,8 +293,9 @@ public static class ServiceCollectionExtensions
         services.AddAzureClients(clients =>
         {
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
+            var managedIdentityClientId = configuration["ManagedIdentity:ClientId"];
 
-            Azure.Core.TokenCredential credential = CommonUtils.GetTokenCredential(environment);
+            Azure.Core.TokenCredential credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
             _ = clients.AddServiceBusClientWithNamespace(configuration.GetSection("ServiceBus")
                 .GetValue<string>("EventBusConnection"))

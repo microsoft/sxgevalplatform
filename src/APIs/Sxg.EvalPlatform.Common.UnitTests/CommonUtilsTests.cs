@@ -45,14 +45,14 @@ namespace Sxg.EvalPlatform.Common.UnitTests
         [InlineData("Production")]
         [InlineData("Test")]
         [InlineData("")]
-        public void GetTokenCredential_WithNonLocalEnvironment_ReturnsDefaultAzureCredential(string environment)
+        public void GetTokenCredential_WithNonLocalEnvironment_ReturnsManagedIdentityCredential(string environment)
         {
             // Arrange & Act
             var credential = CommonUtils.GetTokenCredential(environment);
 
             // Assert
             Assert.NotNull(credential);
-            Assert.IsType<DefaultAzureCredential>(credential);
+            Assert.IsType<ManagedIdentityCredential>(credential);
         }
 
         #endregion
@@ -875,6 +875,8 @@ namespace Sxg.EvalPlatform.Common.UnitTests
         #endregion
     }
 }
+
+
 
 
 
