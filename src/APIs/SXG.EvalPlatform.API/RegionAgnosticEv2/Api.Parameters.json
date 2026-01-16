@@ -46,6 +46,9 @@
     },
     "userAssignedIdentity_resourceId": {
       "value": "__Identity__"
+    },
+    "azureAdClientId": {
+      "value": "__AzureAdClientId__"
     }
   }
 }

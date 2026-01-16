@@ -77,6 +77,12 @@
       "metadata": {
         "description": "Resource ID of the User Assigned Managed Identity"
       }
+    },
+    "azureAdClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD Client ID for authentication"
+      }
     }
   },
   "resources": [
@@ -124,8 +130,8 @@
             "Authentication__ValidateIssuer": "True",
             "Authentication__ValidateIssuerSigningKey": "True",
             "Authentication__ValidateLifetime": "True",
-            "AzureAd__Audience": "api://dafa5810-9bba-4c5b-b443-abe1a40aa240",
-            "AzureAd__ClientId": "dafa5810-9bba-4c5b-b443-abe1a40aa240",
+            "AzureAd__Audience": "[concat('api://', parameters('azureAdClientId'))]",
+            "AzureAd__ClientId": "[parameters('azureAdClientId')]",
             "AzureAd__Instance": "https://login.microsoftonline.com/",
             "AzureAd__TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
             "AzureAd__ValidIssuers__0": "https://login.microsoftonline.com/common/v2.0",
