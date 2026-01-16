@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "PrivateLinkResourceId": {
+      "value": "__PrivateLinkResourceId__"
+    },
+    "ProfileId": {
+      "value": "__ProfileId__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

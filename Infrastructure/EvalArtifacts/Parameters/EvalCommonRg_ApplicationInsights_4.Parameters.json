@@ -1,0 +1,54 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "Kind": {
+      "value": "__Kind__"
+    },
+    "IngestionMode": {
+      "value": "__IngestionMode__"
+    },
+    "PublicNetworkAccessForIngestion": {
+      "value": "__PublicNetworkAccessForIngestion__"
+    },
+    "PublicNetworkAccessForQuery": {
+      "value": "__PublicNetworkAccessForQuery__"
+    },
+    "RetentionInDays": {
+      "value": "__RetentionInDays__"
+    },
+    "WorkspaceResourceId": {
+      "value": "__WorkspaceResourceId__"
+    },
+    "ApplicationType": {
+      "value": "__ApplicationType__"
+    },
+    "FlowType": {
+      "value": "__FlowType__"
+    },
+    "RequestSource": {
+      "value": "__RequestSource__"
+    },
+    "SamplingPercentage": {
+      "value": "__SamplingPercentage__"
+    },
+    "ImmediatePurgeDataOn30Days": {
+      "value": "__ImmediatePurgeDataOn30Days__"
+    },
+    "DisableIpMasking": {
+      "value": "__DisableIpMasking__"
+    },
+    "DisableLocalAuth": {
+      "value": "__DisableLocalAuth__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

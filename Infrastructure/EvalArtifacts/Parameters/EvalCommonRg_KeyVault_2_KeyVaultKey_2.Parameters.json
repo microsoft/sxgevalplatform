@@ -1,0 +1,30 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "Enabled": {
+      "value": "__Enabled__"
+    },
+    "Exp": {
+      "value": "__Exp__"
+    },
+    "Nbf": {
+      "value": "__Nbf__"
+    },
+    "KeySize": {
+      "value": "__KeySize__"
+    },
+    "KeyType": {
+      "value": "__KeyType__"
+    },
+    "RotationPolicy": {
+      "value": "__RotationPolicy__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

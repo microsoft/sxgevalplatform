@@ -1,0 +1,54 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "alwaysServe": "[parameters('AlwaysServe')]",
+        "endpointLocation": "[parameters('EndpointLocation')]",
+        "endpointMonitorStatus": "[parameters('EndpointMonitorStatus')]",
+        "endpointStatus": "[parameters('EndpointStatus')]",
+        "priority": "[parameters('Priority')]",
+        "target": "[parameters('Target')]",
+        "targetResourceId": "[parameters('TargetResourceId')]",
+        "weight": "[parameters('Weight')]"
+      },
+      "type": "Microsoft.Network/trafficmanagerprofiles/AzureEndpoints",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-04-01-preview"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "AlwaysServe": {
+      "type": "string"
+    },
+    "EndpointLocation": {
+      "type": "string"
+    },
+    "EndpointMonitorStatus": {
+      "type": "string"
+    },
+    "EndpointStatus": {
+      "type": "string"
+    },
+    "Priority": {
+      "type": "string"
+    },
+    "Target": {
+      "type": "string"
+    },
+    "TargetResourceId": {
+      "type": "string"
+    },
+    "Weight": {
+      "type": "int"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

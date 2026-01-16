@@ -1,0 +1,57 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "NickName": {
+      "value": "__NickName__"
+    },
+    "StorageAccount": {
+      "value": "__StorageAccount__"
+    },
+    "KeyVault": {
+      "value": "__KeyVault__"
+    },
+    "HbiWorkspace": {
+      "value": "__HbiWorkspace__"
+    },
+    "ManagedNetwork": {
+      "value": "__ManagedNetwork__"
+    },
+    "V1LegacyMode": {
+      "value": "__V1LegacyMode__"
+    },
+    "WorkspaceHubConfig": {
+      "value": "__WorkspaceHubConfig__"
+    },
+    "PublicNetworkAccess": {
+      "value": "__PublicNetworkAccess__"
+    },
+    "DiscoveryUrl": {
+      "value": "__DiscoveryUrl__"
+    },
+    "EnableDataIsolation": {
+      "value": "__EnableDataIsolation__"
+    },
+    "SystemDatastoresAuthMode": {
+      "value": "__SystemDatastoresAuthMode__"
+    },
+    "Kind": {
+      "value": "__Kind__"
+    },
+    "Sku": {
+      "value": "__Sku__"
+    },
+    "Identity": {
+      "value": "__Identity__"
+    },
+    "LocationProp": {
+      "value": "__WorkspaceLocation__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

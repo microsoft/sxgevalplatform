@@ -1,0 +1,24 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "HostNameType": {
+      "value": "__HostNameType__"
+    },
+    "SiteName": {
+      "value": "__SiteName__"
+    },
+    "Certificate": {
+      "value": "__Certificate__"
+    },
+    "SslState": {
+      "value": "__SslState__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

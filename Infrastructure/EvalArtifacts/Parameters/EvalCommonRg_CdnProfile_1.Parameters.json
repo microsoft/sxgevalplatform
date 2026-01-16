@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "OriginResponseTimeoutSeconds": {
+      "value": "__OriginResponseTimeoutSeconds__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "Identity": {
+      "value": "__Identity__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

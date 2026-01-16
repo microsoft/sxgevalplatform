@@ -1,0 +1,30 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "flushConnection": "[if(equals(parameters('FlushConnection'),''), 'false', parameters('FlushConnection'))]"
+      },
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-05-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "FlushConnection": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

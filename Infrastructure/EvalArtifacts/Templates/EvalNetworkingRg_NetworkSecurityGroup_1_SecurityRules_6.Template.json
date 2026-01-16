@@ -1,0 +1,74 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "access": "[parameters('Access')]",
+        "description": "[parameters('Description')]",
+        "destinationAddressPrefix": "[if(equals(parameters('DestinationAddressPrefix'), ''), json('null'), parameters('DestinationAddressPrefix'))]",
+        "destinationAddressPrefixes": "[parameters('DestinationAddressPrefixes')]",
+        "destinationPortRange": "[if(equals(parameters('DestinationPortRange'), ''), json('null'), parameters('DestinationPortRange'))]",
+        "destinationPortRanges": "[parameters('DestinationPortRanges')]",
+        "direction": "[parameters('Direction')]",
+        "priority": "[parameters('Priority')]",
+        "protocol": "[parameters('Protocol')]",
+        "sourceAddressPrefix": "[if(equals(parameters('SourceAddressPrefix'), ''), json('null'), parameters('SourceAddressPrefix'))]",
+        "sourceAddressPrefixes": "[parameters('SourceAddressPrefixes')]",
+        "sourcePortRange": "[if(equals(parameters('SourcePortRange'), ''), json('null'), parameters('SourcePortRange'))]",
+        "sourcePortRanges": "[parameters('SourcePortRanges')]"
+      },
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-05-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "Access": {
+      "type": "string"
+    },
+    "Direction": {
+      "type": "string"
+    },
+    "Priority": {
+      "type": "int"
+    },
+    "Protocol": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "DestinationAddressPrefixes": {
+      "type": "array"
+    },
+    "DestinationPortRanges": {
+      "type": "array"
+    },
+    "SourceAddressPrefixes": {
+      "type": "array"
+    },
+    "SourcePortRanges": {
+      "type": "array"
+    },
+    "SourcePortRange": {
+      "type": "string"
+    },
+    "SourceAddressPrefix": {
+      "type": "string"
+    },
+    "DestinationPortRange": {
+      "type": "string"
+    },
+    "DestinationAddressPrefix": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

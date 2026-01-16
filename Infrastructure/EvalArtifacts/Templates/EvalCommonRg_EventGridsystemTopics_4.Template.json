@@ -1,0 +1,34 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('eventL1Name')]",
+      "properties": {
+        "source": "[parameters('Source')]",
+        "topicType": "[parameters('TopicType')]"
+      },
+      "type": "Microsoft.EventGrid/systemTopics",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-06-01-preview"
+    }
+  ],
+  "parameters": {
+    "eventL1Name": {
+      "type": "string"
+    },
+    "Source": {
+      "type": "string"
+    },
+    "TopicType": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

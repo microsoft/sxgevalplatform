@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "Type": {
+      "value": "__Type__"
+    },
+    "WafPolicy": {
+      "value": "__WafPolicy__"
+    },
+    "Associations": {
+      "value": "__Associations__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

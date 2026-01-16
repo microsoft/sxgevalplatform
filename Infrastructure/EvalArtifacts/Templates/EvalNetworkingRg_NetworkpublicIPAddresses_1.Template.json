@@ -1,0 +1,60 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('networkL1Name')]",
+      "properties": {
+        "ddosSettings": "[if(empty(parameters('DdosSettings')), json('null'), parameters('DdosSettings'))]",
+        "dnsSettings": "[if(empty(parameters('DnsSettings')), json('null'), parameters('DnsSettings'))]",
+        "idleTimeoutInMinutes": "[parameters('IdleTimeoutInMinutes')]",
+        "ipTags": "[if(empty(parameters('IpTags')), json('null'), parameters('IpTags'))]",
+        "publicIPAddressVersion": "[parameters('PublicIPAddressVersion')]",
+        "publicIPAllocationMethod": "[parameters('PublicIPAllocationMethod')]"
+      },
+      "sku": {
+        "name": "[parameters('SkuName')]",
+        "tier": "[parameters('SkuTier')]"
+      },
+      "type": "Microsoft.Network/publicIPAddresses",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-05-01"
+    }
+  ],
+  "parameters": {
+    "networkL1Name": {
+      "type": "string"
+    },
+    "IdleTimeoutInMinutes": {
+      "type": "int"
+    },
+    "PublicIPAddressVersion": {
+      "type": "string"
+    },
+    "PublicIPAllocationMethod": {
+      "type": "string"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "SkuTier": {
+      "type": "string"
+    },
+    "DnsSettings": {
+      "type": "object"
+    },
+    "DdosSettings": {
+      "type": "object"
+    },
+    "IpTags": {
+      "type": "array"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

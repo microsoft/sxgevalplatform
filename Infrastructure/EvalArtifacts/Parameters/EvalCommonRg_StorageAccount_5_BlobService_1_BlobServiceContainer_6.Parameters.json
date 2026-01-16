@@ -1,0 +1,24 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L3Name": {
+      "value": "__L1Name__/__L2Name__/__L3Name__"
+    },
+    "DefaultEncryptionScope": {
+      "value": "__DefaultEncryptionScope__"
+    },
+    "DenyEncryptionScopeOverride": {
+      "value": "__DenyEncryptionScopeOverride__"
+    },
+    "Enabled": {
+      "value": "__Enabled__"
+    },
+    "PublicAccess": {
+      "value": "__PublicAccess__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

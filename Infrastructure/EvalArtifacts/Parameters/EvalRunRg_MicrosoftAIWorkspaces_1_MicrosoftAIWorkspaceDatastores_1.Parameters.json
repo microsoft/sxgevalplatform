@@ -1,0 +1,60 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "value": "__L1Name__/__name__"
+    },
+    "properties.subscriptionId": {
+      "value": "__properties.subscriptionId__"
+    },
+    "properties.resourceGroup": {
+      "value": "__properties.resourceGroup__"
+    },
+    "properties.datastoreType": {
+      "value": "__properties.datastoreType__"
+    },
+    "properties.accountName": {
+      "value": "__properties.accountName__"
+    },
+    "properties.containerName": {
+      "value": "__properties.containerName__"
+    },
+    "properties.fileShareName": {
+      "value": "__properties.fileShareName__"
+    },
+    "properties.storeName": {
+      "value": "__properties.storeName__"
+    },
+    "properties.oneLakeWorkspaceName": {
+      "value": "__properties.oneLakeWorkspaceName__"
+    },
+    "properties.artifact": {
+      "value": "__properties.artifact__"
+    },
+    "properties.hdfsServerCertificate": {
+      "value": "__properties.hdfsServerCertificate__"
+    },
+    "properties.nameNodeAddress": {
+      "value": "__properties.nameNodeAddress__"
+    },
+    "properties.fileSystem": {
+      "value": "__properties.fileSystem__"
+    },
+    "properties.endpoint": {
+      "value": "__properties.endpoint__"
+    },
+    "properties.protocol": {
+      "value": "__properties.protocol__"
+    },
+    "properties.serviceDataAccessAuthIdentity": {
+      "value": "__properties.serviceDataAccessAuthIdentity__"
+    },
+    "properties.credentials": {
+      "value": "__properties.credentials__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

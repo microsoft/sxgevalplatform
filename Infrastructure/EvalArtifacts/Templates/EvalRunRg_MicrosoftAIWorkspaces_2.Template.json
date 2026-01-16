@@ -1,0 +1,79 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "identity": "[if(empty(parameters('Identity')), json('null'), json(concat('{\"type\":\"', parameters('Identity').type, '\",', if(contains(parameters('Identity'), 'userAssignedIdentities'), concat('\"userAssignedIdentities\":', parameters('Identity').userAssignedIdentities, ','), ''), '}')))]",
+      "kind": "[parameters('Kind')]",
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "discoveryUrl": "[parameters('DiscoveryUrl')]",
+        "enableDataIsolation": "[parameters('EnableDataIsolation')]",
+        "friendlyName": "[parameters('NickName')]",
+        "hbiWorkspace": "[parameters('HbiWorkspace')]",
+        "hubResourceId": "[parameters('HubResourceId')]",
+        "publicNetworkAccess": "[parameters('PublicNetworkAccess')]",
+        "systemDatastoresAuthMode": "[parameters('SystemDatastoresAuthMode')]",
+        "v1LegacyMode": "[parameters('V1LegacyMode')]",
+      },
+      "sku": "[parameters('Sku')]",
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-04-01-preview"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "NickName": {
+      "type": "string"
+    },
+    "StorageAccount": {
+      "type": "string"
+    },
+    "KeyVault": {
+      "type": "string"
+    },
+    "HbiWorkspace": {
+      "type": "string"
+    },
+    "ManagedNetwork": {
+      "type": "object"
+    },
+    "V1LegacyMode": {
+      "type": "string"
+    },
+    "PublicNetworkAccess": {
+      "type": "string"
+    },
+    "DiscoveryUrl": {
+      "type": "string"
+    },
+    "HubResourceId": {
+      "type": "string"
+    },
+    "EnableDataIsolation": {
+      "type": "string"
+    },
+    "SystemDatastoresAuthMode": {
+      "type": "string"
+    },
+    "Kind": {
+      "type": "string"
+    },
+    "Sku": {
+      "type": "object"
+    },
+    "Identity": {
+      "type": "object"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

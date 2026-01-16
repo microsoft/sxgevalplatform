@@ -1,0 +1,42 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "PublicNetworkAccessForIngestion": {
+      "value": "__PublicNetworkAccessForIngestion__"
+    },
+    "PublicNetworkAccessForQuery": {
+      "value": "__PublicNetworkAccessForQuery__"
+    },
+    "RetentionInDays": {
+      "value": "__RetentionInDays__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "DailyQuotaGb": {
+      "value": "__DailyQuotaGb__"
+    },
+    "EnableLogAccessUsingOnlyResourcePermissions": {
+      "value": "__EnableLogAccessUsingOnlyResourcePermissions__"
+    },
+    "DisableLocalAuth": {
+      "value": "__DisableLocalAuth__"
+    },
+    "EnableDataExport": {
+      "value": "__EnableDataExport__"
+    },
+    "ImmediatePurgeDataOn30Days": {
+      "value": "__ImmediatePurgeDataOn30Days__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

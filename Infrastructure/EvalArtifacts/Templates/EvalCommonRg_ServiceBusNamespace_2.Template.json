@@ -1,0 +1,57 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "disableLocalAuth": true,
+        "minimumTlsVersion": "[parameters('MinimumTlsVersion')]",
+        "premiumMessagingPartitions": "[parameters('PremiumMessagingPartitions')]",
+        "publicNetworkAccess": "[parameters('PublicNetworkAccess')]",
+        "zoneRedundant": "[parameters('ZoneRedundant')]"
+      },
+      "sku": {
+        "capacity": "[if(equals(parameters('SkuCapacity'),-1), 0, parameters('SkuCapacity'))]",
+        "name": "[parameters('SkuName')]",
+        "tier": "[parameters('SkuTier')]"
+      },
+      "type": "Microsoft.ServiceBus/namespaces",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-10-01-preview"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "MinimumTlsVersion": {
+      "type": "string"
+    },
+    "PremiumMessagingPartitions": {
+      "type": "string"
+    },
+    "PublicNetworkAccess": {
+      "type": "string"
+    },
+    "ZoneRedundant": {
+      "type": "string"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "SkuTier": {
+      "type": "string"
+    },
+    "SkuCapacity": {
+      "type": "int"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

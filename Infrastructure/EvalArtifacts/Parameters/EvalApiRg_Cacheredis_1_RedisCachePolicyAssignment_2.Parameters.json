@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Name": {
+      "value": "__L1Name__/__Name__"
+    },
+    "AccessPolicyName": {
+      "value": "__AccessPolicyName__"
+    },
+    "ObjectId": {
+      "value": "__ObjectId__"
+    },
+    "ObjectIdAlias": {
+      "value": "__ObjectIdAlias__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L3Name": {
+      "value": "__L1Name__/__L2Name__/__L3Name__"
+    },
+    "AccessTier": {
+      "value": "__AccessTier__"
+    },
+    "EnabledProtocols": {
+      "value": "__EnabledProtocols__"
+    },
+    "ShareQuota": {
+      "value": "__ShareQuota__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

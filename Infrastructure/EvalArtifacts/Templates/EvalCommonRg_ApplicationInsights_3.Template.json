@@ -1,0 +1,78 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "kind": "[parameters('Kind')]",
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "Application_Type": "[parameters('ApplicationType')]",
+        "DisableIpMasking": "[if(equals(parameters('DisableIpMasking'),''), 'false', parameters('DisableIpMasking'))]",
+        "DisableLocalAuth": "[if(equals(parameters('DisableLocalAuth'),''), 'false', parameters('DisableLocalAuth'))]",
+        "Flow_Type": "[parameters('FlowType')]",
+        "ImmediatePurgeDataOn30Days": "[if(equals(parameters('ImmediatePurgeDataOn30Days'),''), 'false', parameters('ImmediatePurgeDataOn30Days'))]",
+        "IngestionMode": "[parameters('IngestionMode')]",
+        "publicNetworkAccessForIngestion": "[parameters('PublicNetworkAccessForIngestion')]",
+        "publicNetworkAccessForQuery": "[parameters('PublicNetworkAccessForQuery')]",
+        "Request_Source": "[parameters('RequestSource')]",
+        "RetentionInDays": "[parameters('RetentionInDays')]",
+        "SamplingPercentage": "[if(equals(parameters('SamplingPercentage'), -1), json('null'), parameters('SamplingPercentage'))]",
+        "WorkspaceResourceId": "[parameters('WorkspaceResourceId')]"
+      },
+      "type": "Microsoft.Insights/components",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2020-02-02"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "Kind": {
+      "type": "string"
+    },
+    "IngestionMode": {
+      "type": "string"
+    },
+    "PublicNetworkAccessForIngestion": {
+      "type": "string"
+    },
+    "PublicNetworkAccessForQuery": {
+      "type": "string"
+    },
+    "RetentionInDays": {
+      "type": "int"
+    },
+    "WorkspaceResourceId": {
+      "type": "string"
+    },
+    "ApplicationType": {
+      "type": "string"
+    },
+    "FlowType": {
+      "type": "string"
+    },
+    "RequestSource": {
+      "type": "string"
+    },
+    "SamplingPercentage": {
+      "type": "int"
+    },
+    "ImmediatePurgeDataOn30Days": {
+      "type": "string"
+    },
+    "DisableIpMasking": {
+      "type": "string"
+    },
+    "DisableLocalAuth": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

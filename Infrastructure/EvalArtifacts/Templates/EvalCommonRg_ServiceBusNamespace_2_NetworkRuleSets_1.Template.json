@@ -1,0 +1,58 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('ChildL2Name')]",
+      "properties": {
+        "defaultAction": "[parameters('DefaultAction')]",
+        "publicNetworkAccess": "[parameters('PublicNetworkAccess')]",
+        "trustedServiceAccessEnabled": "[parameters('TrustedServiceAccessEnabled')]",
+        "copy": [
+          {
+            "name": "ipRules",
+            "count": "[length(parameters('IpRules'))]",
+            "input": {
+              "action": "[parameters('IpRules')[copyIndex('ipRules')].action]",
+              "ipMask": "[parameters('IpRules')[copyIndex('ipRules')].ipMask]"
+            }
+          },
+          {
+            "name": "virtualNetworkRules",
+            "count": "[length(parameters('VirtualNetworkRules'))]",
+            "input": {
+              "ignoreMissingVnetServiceEndpoint": "[parameters('VirtualNetworkRules')[copyIndex('virtualNetworkRules')].ignoreMissingVnetServiceEndpoint]",
+              "subnet": "[parameters('VirtualNetworkRules')[copyIndex('virtualNetworkRules')].subnet]"
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.ServiceBus/namespaces/networkRuleSets",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-10-01-preview"
+    }
+  ],
+  "parameters": {
+    "ChildL2Name": {
+      "type": "string"
+    },
+    "DefaultAction": {
+      "type": "string"
+    },
+    "PublicNetworkAccess": {
+      "type": "string"
+    },
+    "TrustedServiceAccessEnabled": {
+      "type": "string"
+    },
+    "IpRules": {
+      "type": "array"
+    },
+    "VirtualNetworkRules": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

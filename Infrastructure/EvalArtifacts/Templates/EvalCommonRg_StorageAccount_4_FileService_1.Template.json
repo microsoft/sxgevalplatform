@@ -1,0 +1,54 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "cors": {
+          "copy": [
+            {
+              "name": "corsRules",
+              "count": "[length(parameters('CorsRules'))]",
+              "input": {
+                "allowedHeaders": "[parameters('CorsRules')[copyIndex('corsRules')].allowedHeaders]",
+                "allowedMethods": "[parameters('CorsRules')[copyIndex('corsRules')].allowedMethods]",
+                "allowedOrigins": "[parameters('CorsRules')[copyIndex('corsRules')].allowedOrigins]",
+                "exposedHeaders": "[parameters('CorsRules')[copyIndex('corsRules')].exposedHeaders]",
+                "maxAgeInSeconds": "[parameters('CorsRules')[copyIndex('corsRules')].maxAgeInSeconds]"
+              }
+            }
+          ]
+        },
+        "shareDeleteRetentionPolicy": {
+          "allowPermanentDelete": "[if(equals(parameters('AllowPermanentDelete'), ''), json('null'), parameters('AllowPermanentDelete'))]",
+          "days": "[if(equals(parameters('DeleteRetentionDays'), -1), json('null'), parameters('DeleteRetentionDays'))]",
+          "enabled": "[parameters('DeleteRetentionEnabled')]"
+        }
+      },
+      "type": "Microsoft.Storage/storageAccounts/fileServices",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-01-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "DeleteRetentionEnabled": {
+      "type": "bool"
+    },
+    "CorsRules": {
+      "type": "array"
+    },
+    "DeleteRetentionDays": {
+      "type": "int"
+    },
+    "AllowPermanentDelete": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "L2Name": {
+      "type": "string"
+    },
+    "Target": {
+      "type": "string"
+    },
+    "ResourceId": {
+      "type": "string"
+    },
+  },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.CognitiveServices/accounts/projects",
+            "apiVersion": "2025-06-01",
+            "name": "[concat(parameters('L1Name'),'/',parameters('L2Name'))]",
+            "location": "eastus2",
+            "kind": "AIServices",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+            "apiVersion": "2025-06-01",
+            "name": "[concat(parameters('L1Name'),'/',parameters('L2Name'),'/storageConnection')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('L1Name'), parameters('L2Name'))]"
+            ],
+            "properties": {
+                "authType": "AAD",
+                "category": "AzureStorageAccount",
+                "target": "[parameters('Target')]",
+                "useWorkspaceManagedIdentity": false,
+                "isSharedToAll": true,
+                "sharedUserList": [],
+                "peRequirement": "NotRequired",
+                "peStatus": "NotApplicable",
+                "metadata": {
+                    "ApiType": "Azure",
+                    "ResourceId": "[parameters('ResourceId')]"
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,33 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "GroupIds": {
+      "value": "__GroupIds__"
+    },
+    "Id": {
+      "value": "__Id__"
+    },
+    "Frequency": {
+      "value": "__Frequency__"
+    },
+    "AlertScope": {
+      "value": "__AlertScope__"
+    },
+    "Severity": {
+      "value": "__Severity__"
+    },
+    "State": {
+      "value": "__State__"
+    },
+    "Description": {
+      "value": "__Description__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

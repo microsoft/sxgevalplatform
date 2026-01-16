@@ -1,0 +1,34 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('Name')]",
+      "properties": {
+        "accessPolicyName": "[parameters('AccessPolicyName')]",
+        "objectId": "[parameters('ObjectId')]",
+        "objectIdAlias": "[parameters('ObjectIdAlias')]"
+      },
+      "type": "Microsoft.Cache/redis/accessPolicyAssignments",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-05-01-preview"
+    }
+  ],
+  "parameters": {
+    "Name": {
+      "type": "string"
+    },
+    "AccessPolicyName": {
+      "type": "string"
+    },
+    "ObjectId": {
+      "type": "string"
+    },
+    "ObjectIdAlias": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

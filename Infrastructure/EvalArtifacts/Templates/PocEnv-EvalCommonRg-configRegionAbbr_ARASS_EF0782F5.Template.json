@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[guid(parameters('scopeName'), 'ba92f5b4-2d11-453d-a403-e96b0029c9fe', parameters('EvalCommonRg_StorageAccount_1_EvalApiRg_AppService_1'))]",
+      "properties": {
+        "principalId": "[parameters('EvalCommonRg_StorageAccount_1_EvalApiRg_AppService_1')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('scopeName'))]",
+      "apiVersion": "2018-09-01-preview"
+    }
+  ],
+  "parameters": {
+    "scopeName": {
+      "type": "string"
+    },
+    "EvalCommonRg_StorageAccount_1_EvalApiRg_AppService_1": {
+      "type": "string"
+    }
+  }
+}

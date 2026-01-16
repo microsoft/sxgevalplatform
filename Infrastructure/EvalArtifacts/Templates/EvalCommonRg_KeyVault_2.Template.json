@@ -1,0 +1,66 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "accessPolicies": [],
+        "enabledForDeployment": "[parameters('EnabledForDeployment')]",
+        "enabledForDiskEncryption": "[parameters('EnabledForDiskEncryption')]",
+        "enabledForTemplateDeployment": "[parameters('EnabledForTemplateDeployment')]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": "[parameters('EnableSoftDelete')]",
+        "publicNetworkAccess": "[parameters('PublicNetworkAccess')]",
+        "sku": {
+          "family": "[parameters('SkuFamily')]",
+          "name": "[parameters('SkuName')]"
+        },
+        "softDeleteRetentionInDays": "[parameters('SoftDeleteRetentionInDays')]",
+        "tenantId": "[parameters('TenantId')]"
+      },
+      "type": "Microsoft.KeyVault/vaults",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-02-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "SkuFamily": {
+      "type": "string"
+    },
+    "EnabledForDeployment": {
+      "type": "bool"
+    },
+    "EnabledForDiskEncryption": {
+      "type": "bool"
+    },
+    "EnabledForTemplateDeployment": {
+      "type": "bool"
+    },
+    "EnableSoftDelete": {
+      "type": "bool"
+    },
+    "PublicNetworkAccess": {
+      "type": "string"
+    },
+    "SoftDeleteRetentionInDays": {
+      "type": "int"
+    },
+    "TenantId": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

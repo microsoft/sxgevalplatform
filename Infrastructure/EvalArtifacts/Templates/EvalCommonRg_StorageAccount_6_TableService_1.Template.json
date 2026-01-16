@@ -1,0 +1,40 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "cors": {
+          "copy": [
+            {
+              "name": "corsRules",
+              "count": "[length(parameters('CorsRules'))]",
+              "input": {
+                "allowedHeaders": "[parameters('CorsRules')[copyIndex('corsRules')].allowedHeaders]",
+                "allowedMethods": "[parameters('CorsRules')[copyIndex('corsRules')].allowedMethods]",
+                "allowedOrigins": "[parameters('CorsRules')[copyIndex('corsRules')].allowedOrigins]",
+                "exposedHeaders": "[parameters('CorsRules')[copyIndex('corsRules')].exposedHeaders]",
+                "maxAgeInSeconds": "[parameters('CorsRules')[copyIndex('corsRules')].maxAgeInSeconds]"
+              }
+            }
+          ]
+        }
+      },
+      "type": "Microsoft.Storage/storageAccounts/tableServices",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-01-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "CorsRules": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}
