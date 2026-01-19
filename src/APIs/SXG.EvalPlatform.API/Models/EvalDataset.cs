@@ -10,17 +10,39 @@ namespace SxgEvalPlatformApi.Models
     /// </summary>
     public class EvalDataset
     {
+        /// <summary>
+        /// Canonical user message for this turn.
+        /// In JSON, this is typically "query" (legacy producers may send "prompt").
+        /// </summary>
         [JsonPropertyName("query")]
         public string Query { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Ground truth / expected answer for this turn.
+        /// </summary>
         [JsonPropertyName("groundTruth")]
         public string GroundTruth { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Actual response produced by the agent (enrichment fills this).
+        /// </summary>
         [JsonPropertyName("actualResponse")]
         public string ActualResponse { get; set; } = string.Empty;
-        
+
+        /// <summary>
+        /// Optional evaluation context. Supports either a string or array/object payload.
+        /// </summary>
         [JsonPropertyName("context")]
         public string Context { get; set; } = string.Empty;
+
+        [JsonPropertyName("conversationId")]
+        public string? ConversationId { get; set; }
+
+        [JsonPropertyName("turnIndex")]
+        public int? TurnIndex { get; set; }
+
+        [JsonPropertyName("copilotConversationId")]
+        public string? CopilotConversationId { get; set; }
     }
 
     /// <summary>
