@@ -24,18 +24,20 @@ RUN tdnf install -y \
     gcc \
     gcc-c++ \
     glibc-lang \
+    python3-pip \
     && tdnf clean all
 
-# Upgrade pip to latest version (suppress output to avoid encoding issues)
-RUN python3 -m pip install --upgrade pip setuptools wheel > /dev/null 2>&1
+# Verify Python and pip are available
+RUN python3 --version && python3 -m pip --version
+
+# Upgrade pip to latest version using ASCII-only output
+RUN python3 -m pip install --no-input --disable-pip-version-check --upgrade pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies (suppress verbose output to avoid encoding issues)
-RUN python3 -m pip install --no-cache-dir --user -r requirements.txt > /dev/null 2>&1 || \
-    (echo "Pip install failed. Retrying with verbose output..." && \
-     python3 -m pip install --no-cache-dir --user -r requirements.txt)
+# Install Python dependencies with progress bar disabled
+RUN python3 -m pip install --no-cache-dir --user --progress-bar off -r requirements.txt
 
 # Production stage - Azure Linux base Python image
 FROM mcr.microsoft.com/azurelinux/base/python:3
