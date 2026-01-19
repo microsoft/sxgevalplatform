@@ -47,219 +47,63 @@
             "Command": [],
             "Env": [
               {
-                "Name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                "Value": "__InstrumentationKey__"
+                "Name": "ApiAuthentication__ClientId",
+                "Value": "5ab8b0f2-f000-4b86-ac8d-46fa6e58b197"
               },
               {
-                "Name": "ManagedIdentity__ClientId",
-                "Value": "__ManagedIdentityClientId__"
-              },
-              {
-                "Name": "ManagedIdentity__UseManagedIdentity",
-                "Value": "True"
-              },
-              {
-                "Name": "ManagedIdentity__UseDefaultAzureCredentials",
+                "Name": "ApiAuthentication__EnableAuthentication",
                 "Value": "False"
               },
               {
-                "Name": "AZURE_STORAGE_ACCOUNT_NAME",
-                "Value": "sxgcommonstore__Environment__"
+                "Name": "ApiAuthentication__EnableTokenCaching",
+                "Value": "True"
               },
               {
-                "Name": "AZURE_QUEUE_NAME",
-                "Value": "eval-processing-requests"
+                "Name": "ApiAuthentication__ResourceAppId",
+                "Value": "__AuthenticationResourceId__"
               },
               {
-                "Name": "AZURE_OPENAI_ENDPOINT",
-                "Value": "https://evalplatform__Environment____Region__.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
+                "Name": "ApiAuthentication__Scope",
+                "Value": "api://__AuthenticationResourceId__/.default"
               },
               {
-                "Name": "AZURE_OPENAI_API_VERSION",
-                "Value": "2025-01-01-preview"
-              },
-              {
-                "Name": "AZURE_OPENAI_DEPLOYMENT_NAME",
-                "Value": "gpt-4.1"
-              },
-              {
-                "Name": "AZURE_TENANT_ID",
+                "Name": "ApiAuthentication__TenantId",
                 "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
               },
               {
-                "Name": "AZURE_SUBSCRIPTION_ID",
-                "Value": "__SubscriptionId__"
+                "Name": "ApiAuthentication__TokenRefreshBufferSeconds",
+                "Value": "300"
               },
               {
-                "Name": "AZURE_AI_PROJECT_NAME",
-                "Value": "evalplatformproject__Environment____Region__"
+                "Name": "ApiEndpoints__BaseUrl",
+                "Value": "https://sxgevalapi__Environment____Region__.azurewebsites.net"
               },
               {
-                "Name": "MAX_DATASET_CONCURRENCY",
-                "Value": "3"
+                "Name": "ApiEndpoints__EnrichedDatasetEndpoint",
+                "Value": "/api/v1/eval/runs/{EvalRunId}/enriched-dataset"
               },
               {
-                "Name": "MAX_METRICS_CONCURRENCY",
-                "Value": "8"
+                "Name": "ApiEndpoints__MetricsConfigurationEndpoint",
+                "Value": "/api/v1/eval/configurations/{MetricsConfigurationId}"
               },
               {
-                "Name": "EVALUATION_TIMEOUT",
-                "Value": "30"
-              },
-              {
-                "Name": "HTTP_POOL_CONNECTIONS",
-                "Value": "20"
-              },
-              {
-                "Name": "HTTP_POOL_MAXSIZE",
-                "Value": "10"
-              },
-              {
-                "Name": "HTTP_SESSION_LIFETIME",
-                "Value": "3600"
-              },
-              {
-                "Name": "AZURE_STORAGE_TIMEOUT",
-                "Value": "30"
-              },
-              {
-                "Name": "AZURE_STORAGE_CONNECT_TIMEOUT",
-                "Value": "60"
-              },
-              {
-                "Name": "AZURE_RESOURCE_GROUP_NAME",
-                "Value": "__CommonRG__"
-              },
-              {
-                "Name": "PYTHONPATH",
-                "Value": "/app/src"
-              },
-              {
-                "Name": "PYTHON_UNBUFFERED",
-                "Value": "1"
-              },
-              {
-                "Name": "LOG_LEVEL",
-                "Value": "INFO"
-              },
-              {
-                "Name": "ENABLE_PERFORMANCE_LOGGING",
-                "Value": "true"
-              },
-              {
-                "Name": "AZURE_AI_PROJECT_ID",
-                "Value": "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
-              },
-              {
-                "Name": "EVAL_CONFIG_ENDPOINT",
-                "Value": "/api/v1/eval/configurations/"
-              },
-              {
-                "Name": "STATUS_UPDATE_ENDPOINT",
-                "Value": "/api/v1/eval/runs/"
-              },
-              {
-                "Name": "ENRICHED_DATASET_ENDPOINT",
-                "Value": "/api/v1/eval/runs/"
-              },
-              {
-                "Name": "FORCE_RESTART",
-                "Value": "11/19/2025 19:46:16"
-              },
-              {
-                "Name": "AZURE_SUCCESS_QUEUE_NAME",
-                "Value": "eval-processing-requests-completed"
-              },
-              {
-                "Name": "AZURE_FAILURE_QUEUE_NAME",
-                "Value": "eval-processing-requests-failed"
-              },
-              {
-                "Name": "RUNTIME_ENVIRONMENT",
-                "Value": "__AppEnvironment__"
-              },
-              {
-                "Name": "AZURE_STORAGE_QUEUE_NAME",
-                "Value": "eval-processing-requests"
-              },
-              {
-                "Name": "API_ENRICHED_DATASET_ENDPOINT",
-                "Value": "api/v1/eval/runs/{EvalRunId}/enriched-dataset"
-              },
-              {
-                "Name": "API_METRICS_CONFIG_ENDPOINT",
-                "Value": "api/v1/eval/configurations/{MetricsConfigurationId}"
-              },
-              {
-                "Name": "API_POST_RESULTS_ENDPOINT",
+                "Name": "ApiEndpoints__PostResultsEndpoint",
                 "Value": "/api/v1/eval/runs/{evalRunId}/results"
               },
               {
-                "Name": "API_UPDATE_STATUS_ENDPOINT",
+                "Name": "ApiEndpoints__UpdateStatus",
                 "Value": "/api/v1/eval/runs/{evalRunId}/status"
               },
               {
-                "Name": "AZURE_OPENAI_SUBSCRIPTION_ID",
-                "Value": "__SubscriptionId__"
+                "Name": "ApiEndpoints__UpdateStatusEndpoint",
+                "Value": "/api/v1/eval/runs/{evalRunId}/status"
               },
               {
-                "Name": "AZURE_OPENAI_RESOURCE_GROUP",
-                "Value": "__RunRG__"
+                "Name": "ApplicationInsights__ConnectionString",
+                "Value": "__InstrumentationKey__"
               },
               {
-                "Name": "AZURE_OPENAI_RESOURCE_NAME",
-                "Value": "evalplatformproject__Environment____Region__"
-              },
-              {
-                "Name": "AZURE_OPENAI_TENANT_ID",
-                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
-              },
-              {
-                "Name": "AZURE_AI_SUBSCRIPTION_ID",
-                "Value": "__SubscriptionId__"
-              },
-              {
-                "Name": "AZURE_AI_RESOURCE_GROUP",
-                "Value": "__CommonRG__"
-              },
-              {
-                "Name": "AZURE_AI_TENANT_ID",
-                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
-              },
-              {
-                "Name": "EVAL_MAX_PARALLEL_PROMPTS",
-                "Value": "8"
-              },
-              {
-                "Name": "EVAL_MAX_PARALLEL_METRICS",
-                "Value": "4"
-              },
-              {
-                "Name": "EVAL_TIMEOUT_SECONDS",
-                "Value": "300"
-              },
-              {
-                "Name": "EVAL_RETRY_ATTEMPTS",
-                "Value": "2"
-              },
-              {
-                "Name": "EVAL_QUEUE_POLLING_INTERVAL",
-                "Value": "30"
-              },
-              {
-                "Name": "EVAL_QUEUE_VISIBILITY_TIMEOUT",
-                "Value": "300"
-              },
-              {
-                "Name": "APPINSIGHTS_ENABLE_TELEMETRY",
-                "Value": "True"
-              },
-              {
-                "Name": "APPINSIGHTS_ENABLE_CONSOLE_LOGGING",
-                "Value": "True"
-              },
-              {
-                "Name": "APPINSIGHTS_DISABLE_CONFIG_UPDATES",
+                "Name": "ApplicationInsights__DisableConfigurationUpdates",
                 "Value": "True"
               },
               {
@@ -267,196 +111,148 @@
                 "Value": "True"
               },
               {
-                "Name": "ApplicationInsights__LogLevel__Default",
-                "Value": "Information"
-              },
-              {
-                "Name": "Evaluation__MaxParallelMetrics",
-                "Value": "2"
-              },
-              {
-                "Name": "Logging__LogLevel__Default",
-                "Value": "Information"
-              },
-              {
-                "Name": "ApiEndpoints__BaseUrl",
-                "Value": "https://sxgevalapi__Environment____Region__.azurewebsites.net"
-              },
-              {
                 "Name": "ApplicationInsights__EnableTelemetry",
                 "Value": "True"
               },
               {
-                "Name": "AzureOpenAI__DeploymentName",
-                "Value": "gpt-4.1"
-              },
-              {
-                "Name": "Evaluation__RetryAttempts",
-                "Value": "3"
-              },
-              {
-                "Name": "AzureAI__ResourceName",
-                "Value": "evalplatformproject__Environment____Region__"
-              },
-              {
-                "Name": "Evaluation__QueuePollingIntervalSeconds",
-                "Value": "30"
-              },
-              {
-                "Name": "AzureOpenAI__ResourceGroupName",
-                "Value": "__CommonRG__"
-              },
-              {
-                "Name": "AzureOpenAI__TenantId",
-                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
-              },
-              {
-                "Name": "Evaluation__QueueVisibilityTimeoutSeconds",
-                "Value": "300"
-              },
-              {
-                "Name": "AzureAI__ProjectName",
-                "Value": "evalplatformproject__Environment____Region__"
-              },
-              {
-                "Name": "AzureStorage__QueueName",
-                "Value": "eval-processing-requests"
-              },
-              {
-                "Name": "AzureOpenAI__ApiVersion",
-                "Value": "2025-01-01-preview"
-              },
-              {
-                "Name": "AzureAI__ResourceGroupName",
-                "Value": "__CommonRG__"
-              },
-              {
-                "Name": "ApiEndpoints__EnrichedDatasetEndpoint",
-                "Value": "/api/v1/eval/runs/{EvalRunId}/enriched-dataset"
-              },
-              {
-                "Name": "Logging__LogLevel__eval_runner",
+                "Name": "ApplicationInsights__LogLevel__Default",
                 "Value": "Information"
-              },
-              {
-                "Name": "AzureOpenAI__SubscriptionId",
-                "Value": "__SubscriptionId__"
-              },
-              {
-                "Name": "AzureOpenAI__ResourceName",
-                "Value": "evalplatform__Environment____Region__"
-              },
-              {
-                "Name": "AzureOpenAI__Endpoint",
-                "Value": "https://evalplatform__Environment____Region__.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
-              },
-              {
-                "Name": "Evaluation__MaxParallelPrompts",
-                "Value": "2"
-              },
-              {
-                "Name": "AzureStorage__AccountName",
-                "Value": "sxgcommonstore__Environment__"
-              },
-              {
-                "Name": "Logging__LogLevel__System",
-                "Value": "Warning"
-              },
-              {
-                "Name": "ApplicationInsights__DisableConfigurationUpdates",
-                "Value": "True"
-              },
-              {
-                "Name": "Evaluation__TimeoutSeconds",
-                "Value": "300"
               },
               {
                 "Name": "ApplicationInsights__LogLevel__Microsoft",
                 "Value": "Warning"
               },
               {
-                "Name": "ApiEndpoints__UpdateStatus",
-                "Value": "/api/v1/eval/runs/{evalRunId}/status"
-              },
-              {
-                "Name": "AzureAI__SubscriptionId",
-                "Value": "__SubscriptionId__"
-              },
-              {
                 "Name": "ApplicationInsights__LogLevel__System",
                 "Value": "Warning"
-              },
-              {
-                "Name": "AzureAI__TenantId",
-                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
-              },
-              {
-                "Name": "ApiEndpoints__PostResultsEndpoint",
-                "Value": "/api/v1/eval/runs/{evalRunId}/results"
-              },
-              {
-                "Name": "ApplicationInsights__ConnectionString",
-                "Value": "__InstrumentationKey__"
-              },
-              {
-                "Name": "ApiEndpoints__MetricsConfigurationEndpoint",
-                "Value": "/api/v1/eval/configurations/{MetricsConfigurationId}"
-              },
-              {
-                "Name": "Logging__LogLevel__Microsoft",
-                "Value": "Warning"
-              },
-              {
-                "Name": "ApiEndpoints__UpdateStatusEndpoint",
-                "Value": "/api/v1/eval/runs/{evalRunId}/status"
               },
               {
                 "Name": "AzureAI__ProjectId",
                 "Value": "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.CognitiveServices/accounts/evalplatform/projects/evalplatformproject__Environment____Region__"
               },
               {
-                "Name": "properties.template.scale.maxReplicas",
-                "Value": "10"
+                "Name": "AzureAI__ProjectName",
+                "Value": "evalplatformproject__Environment____Region__"
               },
               {
-                "Name": "ApiAuthentication__Scope",
-                "Value": "api://__AuthenticationResourceId__/.default"
+                "Name": "AzureAI__ResourceGroupName",
+                "Value": "__CommonRG__"
               },
               {
-                "Name": "ApiAuthentication__TokenRefreshBufferSeconds",
-                "Value": "300"
+                "Name": "AzureAI__ResourceName",
+                "Value": "evalplatformproject__Environment____Region__"
               },
               {
-                "Name": "ApiAuthentication__EnableTokenCaching",
-                "Value": "True"
+                "Name": "AzureAI__SubscriptionId",
+                "Value": "__SubscriptionId__"
               },
               {
-                "Name": "Logging__LogLevel__azure.identity",
-                "Value": "Warning"
-              },
-              {
-                "Name": "ApiAuthentication__ResourceAppId",
-                "Value": "__AuthenticationResourceId__"
-              },
-              {
-                "Name": "ApiAuthentication__TenantId",
+                "Name": "AzureAI__TenantId",
                 "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
               },
               {
-                "Name": "Logging__LogLevel__azure.monitor.opentelemetry.exporter",
+                "Name": "AzureOpenAI__ApiVersion",
+                "Value": "2025-01-01-preview"
+              },
+              {
+                "Name": "AzureOpenAI__DeploymentName",
+                "Value": "gpt-4.1"
+              },
+              {
+                "Name": "AzureOpenAI__Endpoint",
+                "Value": "https://evalplatform__Environment____Region__.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
+              },
+              {
+                "Name": "AzureOpenAI__ResourceGroupName",
+                "Value": "__CommonRG__"
+              },
+              {
+                "Name": "AzureOpenAI__ResourceName",
+                "Value": "evalplatform__Environment____Region__"
+              },
+              {
+                "Name": "AzureOpenAI__SubscriptionId",
+                "Value": "__SubscriptionId__"
+              },
+              {
+                "Name": "AzureOpenAI__TenantId",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "AzureStorage__AccountName",
+                "Value": "sxgcommonstore__Environment__"
+              },
+              {
+                "Name": "AzureStorage__QueueName",
+                "Value": "eval-processing-requests"
+              },
+              {
+                "Name": "Evaluation__MaxParallelMetrics",
+                "Value": "2"
+              },
+              {
+                "Name": "Evaluation__MaxParallelPrompts",
+                "Value": "2"
+              },
+              {
+                "Name": "Evaluation__QueuePollingIntervalSeconds",
+                "Value": "30"
+              },
+              {
+                "Name": "Evaluation__QueueVisibilityTimeoutSeconds",
+                "Value": "300"
+              },
+              {
+                "Name": "Evaluation__RetryAttempts",
+                "Value": "3"
+              },
+              {
+                "Name": "Evaluation__TimeoutSeconds",
+                "Value": "300"
+              },
+              {
+                "Name": "Logging__LogLevel__Default",
+                "Value": "Information"
+              },
+              {
+                "Name": "Logging__LogLevel__Microsoft",
                 "Value": "Warning"
               },
               {
-                "Name": "ApiAuthentication__ClientId",
-                "Value": "5ab8b0f2-f000-4b86-ac8d-46fa6e58b197"
+                "Name": "Logging__LogLevel__System",
+                "Value": "Warning"
               },
               {
                 "Name": "Logging__LogLevel__azure.core.pipeline.policies.http_logging_policy",
                 "Value": "Warning"
               },
               {
-                "Name": "ApiAuthentication__EnableAuthentication",
+                "Name": "Logging__LogLevel__azure.identity",
+                "Value": "Warning"
+              },
+              {
+                "Name": "Logging__LogLevel__azure.monitor.opentelemetry.exporter",
+                "Value": "Warning"
+              },
+              {
+                "Name": "Logging__LogLevel__eval_runner",
+                "Value": "Information"
+              },
+              {
+                "Name": "ManagedIdentity__ClientId",
+                "Value": "__ManagedIdentityClientId__"
+              },
+              {
+                "Name": "ManagedIdentity__UseDefaultAzureCredentials",
                 "Value": "False"
+              },
+              {
+                "Name": "ManagedIdentity__UseManagedIdentity",
+                "Value": "True"
+              },
+              {
+                "Name": "properties.template.scale.maxReplicas",
+                "Value": "10"
               }
             ],
             "Image": "__RegistryUrl__/eval-runner-app:EV2Build_Version",
