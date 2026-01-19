@@ -127,7 +127,9 @@ namespace Sxg.EvalPlatform.API.Storage.Extensions
             var cacheName = host.Split('.')[0];
 
             // Get credential
-            var credential = CommonUtils.GetTokenCredential(configHelper.GetASPNetCoreEnvironment());
+            var environment = configHelper.GetASPNetCoreEnvironment();
+            var managedIdentityClientId = configHelper.GetManagedIdentityClientId();
+            var credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
             // Only set username for PPE and Production (Managed Identity environments)
             var requiresUsername = configHelper.GetASPNetCoreEnvironment().Equals("PPE", StringComparison.OrdinalIgnoreCase) ||
