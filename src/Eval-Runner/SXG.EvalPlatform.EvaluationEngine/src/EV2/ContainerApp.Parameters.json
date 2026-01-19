@@ -64,7 +64,7 @@
               },
               {
                 "Name": "AZURE_STORAGE_ACCOUNT_NAME",
-                "Value": "sxgagenteval__Environment____Region__"
+                "Value": "sxgcommonstore__Environment__"
               },
               {
                 "Name": "AZURE_QUEUE_NAME",
@@ -176,7 +176,7 @@
               },
               {
                 "Name": "RUNTIME_ENVIRONMENT",
-                "Value": "Production__Location__"
+                "Value": "__AppEnvironment__"
               },
               {
                 "Name": "AZURE_STORAGE_QUEUE_NAME",
@@ -356,7 +356,7 @@
               },
               {
                 "Name": "AzureStorage__AccountName",
-                "Value": "sxgagenteval__Environment__"
+                "Value": "sxgcommonstore__Environment__"
               },
               {
                 "Name": "Logging__LogLevel__System",
@@ -396,7 +396,7 @@
               },
               {
                 "Name": "ApplicationInsights__ConnectionString",
-                "Value": "InstrumentationKey=11aea68a-d038-460d-9ffc-5531760d8df7;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ef2ddea1-6869-4590-8d30-682ab0824cee"
+                "Value": "__InstrumentationKey__"
               },
               {
                 "Name": "ApiEndpoints__MetricsConfigurationEndpoint",
@@ -420,7 +420,7 @@
               },
               {
                 "Name": "ApiAuthentication__Scope",
-                "Value": "api://dafa5810-9bba-4c5b-b443-abe1a40aa240/.default"
+                "Value": "api://__AuthenticationResourceId__/.default"
               },
               {
                 "Name": "ApiAuthentication__TokenRefreshBufferSeconds",
@@ -436,7 +436,7 @@
               },
               {
                 "Name": "ApiAuthentication__ResourceAppId",
-                "Value": "dafa5810-9bba-4c5b-b443-abe1a40aa240"
+                "Value": "__AuthenticationResourceId__"
               },
               {
                 "Name": "ApiAuthentication__TenantId",

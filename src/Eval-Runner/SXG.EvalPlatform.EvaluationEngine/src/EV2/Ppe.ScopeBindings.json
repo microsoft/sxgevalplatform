@@ -14,6 +14,10 @@
           "replaceWith": "ppe"
         },
         {
+          "find": "__AppEnvironment__",
+          "replaceWith": "PPE"
+        },
+        {
           "find": "__Location__",
           "replaceWith": "$location()"
         },
@@ -40,6 +44,10 @@
         {
           "find": "__ManagedIdentityClientId__",
           "replaceWith": "8c429f46-ed4d-4714-a5fc-13edc015e93f"
+        },
+        {
+          "find": "__AuthenticationResourceId__",
+          "replaceWith": "ac2b08ba-4232-438f-b333-0300df1de14d"
         }
       ]
     }

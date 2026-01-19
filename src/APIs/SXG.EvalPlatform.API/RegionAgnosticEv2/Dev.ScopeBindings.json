@@ -32,10 +32,6 @@
         {
           "find": "__StorageAccountName__",
           "replaceWith": "sxgagentevaldev"
-        },
-        {
-          "find": "__ManagedIdentityClientId__",
-          "replaceWith": ""
         }
       ]
     }

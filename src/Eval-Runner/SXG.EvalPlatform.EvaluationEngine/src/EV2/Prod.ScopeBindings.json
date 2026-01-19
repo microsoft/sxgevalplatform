@@ -14,6 +14,10 @@
           "replaceWith": "prod"
         },
         {
+          "find": "__AppEnvironment__",
+          "replaceWith": "Production"
+        },
+        {
           "find": "__Location__",
           "replaceWith": "$location()"
         },
@@ -40,6 +44,10 @@
         {
           "find": "__ManagedIdentityClientId__",
           "replaceWith": "719d20f8-888b-4c84-ac1d-e6237ce59131"
+        },
+        {
+          "find": "__AuthenticationResourceId__",
+          "replaceWith": "dafa5810-9bba-4c5b-b443-abe1a40aa240"
         }
       ]
     }
