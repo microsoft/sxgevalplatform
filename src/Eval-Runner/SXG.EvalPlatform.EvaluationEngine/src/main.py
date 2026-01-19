@@ -429,7 +429,7 @@ def _validate_configuration() -> bool:
     errors = []
     
     # Check Azure Storage configuration
-    if app_settings.azure_storage.use_managed_identity:
+    if app_settings.managed_identity.use_managed_identity:
         if not app_settings.azure_storage.account_name:
             errors.append("Azure Storage account name is required for Managed Identity")
     else:

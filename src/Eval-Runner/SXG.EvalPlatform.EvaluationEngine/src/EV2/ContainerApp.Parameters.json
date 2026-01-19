@@ -51,6 +51,18 @@
                 "Value": "__InstrumentationKey__"
               },
               {
+                "Name": "ManagedIdentity__ClientId",
+                "Value": "__ManagedIdentityClientId__"
+              },
+              {
+                "Name": "ManagedIdentity__UseManagedIdentity",
+                "Value": "True"
+              },
+              {
+                "Name": "ManagedIdentity__UseDefaultAzureCredentials",
+                "Value": "False"
+              },
+              {
                 "Name": "AZURE_STORAGE_ACCOUNT_NAME",
                 "Value": "sxgcommonstore__Environment__"
               },
@@ -115,16 +127,8 @@
                 "Value": "60"
               },
               {
-                "Name": "AZURE_USE_MANAGED_IDENTITY",
-                "Value": "true"
-              },
-              {
                 "Name": "AZURE_RESOURCE_GROUP_NAME",
                 "Value": "__CommonRG__"
-              },
-              {
-                "Name": "AZURE_OPENAI_USE_MANAGED_IDENTITY",
-                "Value": "True"
               },
               {
                 "Name": "PYTHONPATH",
@@ -179,14 +183,6 @@
                 "Value": "eval-processing-requests"
               },
               {
-                "Name": "AZURE_STORAGE_USE_MANAGED_IDENTITY",
-                "Value": "True"
-              },
-              {
-                "Name": "AZURE_STORAGE_USE_DEFAULT_CREDENTIAL",
-                "Value": "True"
-              },
-              {
                 "Name": "API_ENRICHED_DATASET_ENDPOINT",
                 "Value": "api/v1/eval/runs/{EvalRunId}/enriched-dataset"
               },
@@ -201,10 +197,6 @@
               {
                 "Name": "API_UPDATE_STATUS_ENDPOINT",
                 "Value": "/api/v1/eval/runs/{evalRunId}/status"
-              },
-              {
-                "Name": "AZURE_OPENAI_USE_DEFAULT_CREDENTIAL",
-                "Value": "True"
               },
               {
                 "Name": "AZURE_OPENAI_SUBSCRIPTION_ID",
@@ -235,10 +227,6 @@
                 "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
               },
               {
-                "Name": "AZURE_AI_USE_DEFAULT_CREDENTIAL",
-                "Value": "True"
-              },
-              {
                 "Name": "EVAL_MAX_PARALLEL_PROMPTS",
                 "Value": "8"
               },
@@ -261,10 +249,6 @@
               {
                 "Name": "EVAL_QUEUE_VISIBILITY_TIMEOUT",
                 "Value": "300"
-              },
-              {
-                "Name": "APPINSIGHTS_USE_DEFAULT_CREDENTIAL",
-                "Value": "True"
               },
               {
                 "Name": "APPINSIGHTS_ENABLE_TELEMETRY",
@@ -299,10 +283,6 @@
                 "Value": "https://sxgevalapi__Environment____Region__.azurewebsites.net"
               },
               {
-                "Name": "AzureStorage__UseManagedIdentity",
-                "Value": "True"
-              },
-              {
                 "Name": "ApplicationInsights__EnableTelemetry",
                 "Value": "True"
               },
@@ -313,10 +293,6 @@
               {
                 "Name": "Evaluation__RetryAttempts",
                 "Value": "3"
-              },
-              {
-                "Name": "AzureOpenAI__UseManagedIdentity",
-                "Value": "True"
               },
               {
                 "Name": "AzureAI__ResourceName",
@@ -383,14 +359,6 @@
                 "Value": "sxgcommonstore__Environment__"
               },
               {
-                "name": "AzureAI__UseManagedIdentity",
-                "value": "True"
-              },
-              {
-                "name": "AzureAI__UseDefaultAzureCredential",
-                "value": "False"
-              },
-              {
                 "Name": "Logging__LogLevel__System",
                 "Value": "Warning"
               },
@@ -411,20 +379,12 @@
                 "Value": "/api/v1/eval/runs/{evalRunId}/status"
               },
               {
-                "Name": "ApplicationInsights__UseDefaultAzureCredential",
-                "Value": "True"
-              },
-              {
                 "Name": "AzureAI__SubscriptionId",
                 "Value": "__SubscriptionId__"
               },
               {
                 "Name": "ApplicationInsights__LogLevel__System",
                 "Value": "Warning"
-              },
-              {
-                "Name": "AzureStorage__UseDefaultAzureCredential",
-                "Value": "True"
               },
               {
                 "Name": "AzureAI__TenantId",
@@ -441,10 +401,6 @@
               {
                 "Name": "ApiEndpoints__MetricsConfigurationEndpoint",
                 "Value": "/api/v1/eval/configurations/{MetricsConfigurationId}"
-              },
-              {
-                "Name": "AzureOpenAI__UseDefaultAzureCredential",
-                "Value": "True"
               },
               {
                 "Name": "Logging__LogLevel__Microsoft",
@@ -485,10 +441,6 @@
               {
                 "Name": "ApiAuthentication__TenantId",
                 "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
-              },
-              {
-                "Name": "ApiAuthentication__UseManagedIdentity",
-                "Value": "True"
               },
               {
                 "Name": "Logging__LogLevel__azure.monitor.opentelemetry.exporter",

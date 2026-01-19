@@ -26,6 +26,18 @@
                             "value": "Production"
                         },
                         {
+                            "name": "ManagedIdentity__ClientId",
+                            "value": "719d20f8-888b-4c84-ac1d-e6237ce59131"
+                        },
+                        {
+                            "name": "ManagedIdentity__UseManagedIdentity",
+                            "value": "True"
+                        },
+                        {
+                            "name": "ManagedIdentity__UseDefaultAzureCredentials",
+                            "value": "False"
+                        },
+                        {
                             "name": "AzureStorage__AccountName",
                             "value": "sxgagentevalprod"
                         },
@@ -66,10 +78,6 @@
                             "value": "https://sxgevalapi-bsdhaxe9faghc8ep.b01.azurefd.net"
                         },
                         {
-                            "name": "AzureStorage__UseManagedIdentity",
-                            "value": "True"
-                        },
-                        {
                             "name": "ApiEndpoints__PostResultsEndpoint",
                             "value": "/api/v1/eval/runs/{evalRunId}/results"
                         },
@@ -84,10 +92,6 @@
                         {
                             "name": "Evaluation__RetryAttempts",
                             "value": "3"
-                        },
-                        {
-                            "name": "AzureOpenAI__UseManagedIdentity",
-                            "value": "True"
                         },
                         {
                             "name": "Evaluation__QueuePollingIntervalSeconds",
@@ -118,10 +122,6 @@
                             "value": "/api/v1/eval/runs/{EvalRunId}/enriched-dataset"
                         },
                         {
-                            "name": "AzureOpenAI__UseDefaultAzureCredential",
-                            "value": "True"
-                        },
-                        {
                             "name": "Logging__LogLevel__eval_runner",
                             "value": "Information"
                         },
@@ -132,14 +132,6 @@
                         {
                             "name": "Evaluation__MaxParallelPrompts",
                             "value": "2"
-                        },
-                        {
-                            "name": "AzureAI__UseManagedIdentity",
-                            "value": "True"
-                        },                        
-                        {
-                            "name": "AzureAI__UseDefaultAzureCredential",
-                            "value": "False"
                         },
                         {
                             "name": "Evaluation__MaxParallelMetrics",
@@ -154,20 +146,12 @@
                             "value": "/api/v1/eval/runs/{evalRunId}/status"
                         },
                         {
-                            "name": "ApplicationInsights__UseDefaultAzureCredential",
-                            "value": "True"
-                        },
-                        {
                             "name": "AzureAI__SubscriptionId",
                             "value": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f"
                         },
                         {
                             "name": "ApplicationInsights__LogLevel__System",
                             "value": "Warning"
-                        },
-                        {
-                            "name": "AzureStorage__UseDefaultAzureCredential",
-                            "value": "True"
                         },
                         {
                             "name": "AzureAI__TenantId",
@@ -204,10 +188,6 @@
                         {
                             "name": "Logging__LogLevel__azure.core.pipeline.policies.http_logging_policy",
                             "value": "Warning"
-                        },
-                        {
-                            "name": "ApiAuthentication__UseManagedIdentity",
-                            "value": "True"
                         },
                         {
                             "name": "Logging__LogLevel__azure.identity",

@@ -39,7 +39,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             var blobUri = $"https://{_accountName}.blob.core.windows.net";
 
             var environment = configHelper.GetASPNetCoreEnvironment();
-            TokenCredential credential = CommonUtils.GetTokenCredential(environment);
+            var managedIdentityClientId = configHelper.GetManagedIdentityClientId();
+            TokenCredential credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
             // Use DefaultAzureCredential for managed identity
             _blobServiceClient = new BlobServiceClient(new Uri(blobUri), credential);

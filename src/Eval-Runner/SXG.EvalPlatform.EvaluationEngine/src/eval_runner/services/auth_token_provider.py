@@ -12,6 +12,8 @@ from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
 from azure.core.credentials import AccessToken
 from azure.core.exceptions import ClientAuthenticationError
 
+from ..config.settings import app_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +36,7 @@ class AuthTokenProvider:
             client_id: Client application ID (SXG-EvalPlatform-EvalRunnerApp)
             tenant_id: Azure AD tenant ID
             scope: API scope (e.g., api://ac2b08ba-4232-438f-b333-0300df1de14d/.default)
-            use_managed_identity: Use managed identity (True) or DefaultAzureCredential (False)
+            use_managed_identity: Use managed identity (True) or connection string (False)
             enable_caching: Enable token caching to reduce auth calls
             refresh_buffer_seconds: Refresh token this many seconds before expiry
         """
@@ -64,17 +66,23 @@ class AuthTokenProvider:
     def _get_credential(self) -> Any:
         """Get or create Azure credential instance."""
         if self._credential is None:
-            # Use DefaultAzureCredential for both Azure and local environments
-            # In Azure: Uses managed identity automatically
-            # Locally: Uses Azure CLI, VS Code, or other available credentials
-            self._credential = DefaultAzureCredential(
-                additionally_allowed_tenants=[self.tenant_id] if self.tenant_id else []
-            )
+            # Get managed identity settings from centralized config
+            mi_config = app_settings.managed_identity
             
-            if self.use_managed_identity:
-                logger.info("Created DefaultAzureCredential (will use managed identity in Azure, local creds locally)")
+            if mi_config.use_default_azure_credentials:
+                # Use DefaultAzureCredential for flexible authentication
+                self._credential = DefaultAzureCredential(
+                    additionally_allowed_tenants=[self.tenant_id] if self.tenant_id else []
+                ) # CodeQL [SM05137] justification - Not used in production
+                logger.info("Created DefaultAzureCredential for flexible authentication")
+            elif mi_config.client_id:
+                # Use User-Assigned Managed Identity with specific client_id
+                self._credential = ManagedIdentityCredential(client_id=mi_config.client_id)
+                logger.info(f"Created ManagedIdentityCredential with client_id: {mi_config.client_id}")
             else:
-                logger.info("Created DefaultAzureCredential for local development")
+                # Use System-Assigned Managed Identity (no client_id)
+                self._credential = ManagedIdentityCredential()
+                logger.info("Created ManagedIdentityCredential for system-assigned identity")
         
         return self._credential
     

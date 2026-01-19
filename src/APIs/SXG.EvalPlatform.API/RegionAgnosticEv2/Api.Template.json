@@ -176,6 +176,7 @@
             "Logging__LogLevel__Default": "Information",
             "Logging__LogLevel__Microsoft.ApplicationInsights": "Warning",
             "Logging__LogLevel__Microsoft.AspNetCore": "Warning",
+            "ManagedIdentity__ClientId": "[parameters('azureAdClientId')]",
             "OpenTelemetry__CloudRoleName": "SXG-EvalPlatform-API",
             "OpenTelemetry__EnableApplicationInsights": "True",
             "OpenTelemetry__EnableConsoleExporter": "False",
