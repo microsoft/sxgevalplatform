@@ -56,6 +56,14 @@
         {
           "find": "__ManagedIdentityClientId__",
           "replaceWith": "8c429f46-ed4d-4714-a5fc-13edc015e93f"
+        },
+        {
+          "find": "__DataVerseApiEndpoint__",
+          "replaceWith": "https://sxg-eval-ppe.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun"
+        },
+        {
+          "find": "__DataVerseApiScope__",
+          "replaceWith": "https://sxg-eval-ppe.crm.dynamics.com/.default"
         }
       ]
     }

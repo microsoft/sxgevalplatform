@@ -52,6 +52,12 @@
     },
     "managedIdentityClientId": {
       "value": "__ManagedIdentityClientId__"
+    },
+    "dataVerseApiEndpoint": {
+      "value": "__DataVerseApiEndpoint__"
+    },
+    "dataVerseApiScope": {
+      "value": "__DataVerseApiScope__"
     }
   }
 }
