@@ -1,5 +1,6 @@
 # Multi-stage Dockerfile for SXG Evaluation Platform
-FROM python:3.11-slim as builder
+# Using Azure Linux base Python image
+FROM mcr.microsoft.com/azurelinux/base/python:3 as builder
 
 # Accept build arguments for encoding (can be overridden at build time)
 ARG LANG=C.UTF-8
@@ -18,13 +19,12 @@ ENV LANG=${LANG} \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Azure Linux uses tdnf package manager and different package names
+RUN tdnf install -y \
     gcc \
-    g++ \
-    locales \
-    && rm -rf /var/lib/apt/lists/* \
-    && locale-gen C.UTF-8 \
-    && /usr/sbin/update-locale LANG=C.UTF-8
+    gcc-c++ \
+    glibc-lang \
+    && tdnf clean all
 
 # Upgrade pip to latest version (with quiet output to avoid encoding issues)
 RUN python -m pip install --upgrade --quiet pip setuptools wheel
@@ -39,8 +39,8 @@ RUN export PYTHONIOENCODING=utf-8 && \
     pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
     (echo "Pip install failed. Log contents:" && cat /tmp/pip-install.log && exit 1)
 
-# Production stage
-FROM python:3.11-slim
+# Production stage - Azure Linux base Python image
+FROM mcr.microsoft.com/azurelinux/base/python:3
 
 # Set UTF-8 locale and encoding environment variables
 ENV LANG=C.UTF-8 \
@@ -52,7 +52,10 @@ ENV LANG=C.UTF-8 \
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd -r evaluser && useradd -r -g evaluser evaluser
+RUN tdnf install -y shadow-utils && \
+    groupadd -r evaluser && \
+    useradd -r -g evaluser evaluser && \
+    tdnf clean all
 
 # Copy installed packages from builder stage
 COPY --from=builder /root/.local /home/evaluser/.local
