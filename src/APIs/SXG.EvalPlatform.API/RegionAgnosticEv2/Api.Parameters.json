@@ -49,6 +49,9 @@
     },
     "azureAdClientId": {
       "value": "__AzureAdClientId__"
+    },
+    "managedIdentityClientId": {
+      "value": "__ManagedIdentityClientId__"
     }
   }
 }
