@@ -89,6 +89,18 @@
       "metadata": {
         "description": "Client ID of the User Assigned Managed Identity"
       }
+    },
+    "dataVerseApiEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "DataVerse API endpoint for dataset enrichment"
+      }
+    },
+    "dataVerseApiScope": {
+      "type": "string",
+      "metadata": {
+        "description": "DataVerse API scope for authentication"
+      }
     }
   },
   "resources": [
@@ -125,7 +137,7 @@
             "APPLICATIONINSIGHTS_CONNECTION_STRING": "[parameters('appInsightsConnectionString')]",
             "APPLICATIONINSIGHTS_ENABLESQLQUERYCOLLECTION": "disabled",
             "ApplicationInsightsAgent_EXTENSION_VERSION": "~3",
-            "ASPNETCORE_ENVIRONMENT": "Production",
+            "ASPNETCORE_ENVIRONMENT": "[parameters('environmentName')]",
             "Authentication__ClockSkewMinutes": "5",
             "Authentication__MISE__AllowStandardBearerTokens": "True",
             "Authentication__MISE__EnableEventLogging": "True",
@@ -169,8 +181,8 @@
             "Cache__Redis__Retry__MaxRetryAttempts": "2",
             "Cache__Redis__UseManagedIdentity": "True",
             "Cache__Redis__UseSsl": "True",
-            "DataVerseAPI__DatasetEnrichmentRequestAPIEndPoint": "https://sxg-eval-prod.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun",
-            "DataVerseAPI__Scope": "https://sxg-eval-prod.crm.dynamics.com/.default",
+            "DataVerseAPI__DatasetEnrichmentRequestAPIEndPoint": "[parameters('dataVerseApiEndpoint')]",
+            "DataVerseAPI__Scope": "[parameters('dataVerseApiScope')]",
             "DiagnosticServices_EXTENSION_VERSION": "~3",
             "DISABLE_APPINSIGHTS_SDK": "disabled",
             "FeatureFlags__EnableAuthentication": "True",

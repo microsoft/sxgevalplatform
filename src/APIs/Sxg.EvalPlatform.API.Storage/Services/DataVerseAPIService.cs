@@ -37,7 +37,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             {
                 var scope = _configHelper.GetDataVerseAPIScope();
                 var environment = _configHelper.GetASPNetCoreEnvironment();
-                var credential = CommonUtils.GetTokenCredential(environment);
+                var managedIdentityClientId = _configHelper.GetManagedIdentityClientId();
+                var credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
                 var tokenRequestContext = new TokenRequestContext(new[] { scope });
                 var token = await credential.GetTokenAsync(tokenRequestContext, CancellationToken.None);

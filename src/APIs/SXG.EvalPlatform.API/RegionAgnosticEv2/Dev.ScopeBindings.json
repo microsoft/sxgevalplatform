@@ -32,6 +32,18 @@
         {
           "find": "__StorageAccountName__",
           "replaceWith": "sxgagentevaldev"
+        },
+        {
+          "find": "__ManagedIdentityClientId__",
+          "replaceWith": ""
+        },
+        {
+          "find": "__DataVerseApiEndpoint__",
+          "replaceWith": "https://sxg-eval-dev.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun"
+        },
+        {
+          "find": "__DataVerseApiScope__",
+          "replaceWith": "https://sxg-eval-dev.crm.dynamics.com/.default"
         }
       ]
     }
