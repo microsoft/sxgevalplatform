@@ -35,9 +35,6 @@ namespace SxgEvalPlatformApi.Models
         [JsonPropertyName("context")]
         public string Context { get; set; } = string.Empty;
 
-        [JsonPropertyName("expectedResponse")]
-        public string? ExpectedResponse { get; set; }
-
         [JsonPropertyName("conversationId")]
         public string? ConversationId { get; set; }
 
