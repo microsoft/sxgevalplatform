@@ -27,11 +27,8 @@ RUN tdnf install -y \
     python3-pip \
     && tdnf clean all
 
-# Verify Python and pip are available
-RUN python3 --version && python3 -m pip --version
-
 # Upgrade pip to latest version using ASCII-only output
-RUN python3 -m pip install --no-input --disable-pip-version-check --upgrade pip setuptools wheel
+RUN python3 -m pip install --quiet --upgrade pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
