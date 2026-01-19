@@ -27,7 +27,7 @@ RUN tdnf install -y \
     && tdnf clean all
 
 # Upgrade pip to latest version (with quiet output to avoid encoding issues)
-RUN python -m pip install --upgrade --quiet pip setuptools wheel
+RUN python3 -m pip install --upgrade --quiet pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -36,7 +36,7 @@ COPY requirements.txt .
 RUN export PYTHONIOENCODING=utf-8 && \
     export LC_ALL=C.UTF-8 && \
     export LANG=C.UTF-8 && \
-    pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
+    python3 -m pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
     (echo "Pip install failed. Log contents:" && cat /tmp/pip-install.log && exit 1)
 
 # Production stage - Azure Linux base Python image
@@ -76,10 +76,10 @@ USER evaluser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD python3 -c "import sys; sys.exit(0)" || exit 1
 
 # Expose port (if needed for health checks)
 EXPOSE 8080
 
 # Command to run the application
-CMD ["python", "src/main.py"]
+CMD ["python3", "src/main.py"]
