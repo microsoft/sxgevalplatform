@@ -1,5 +1,22 @@
 # Development dependencies for SXG Evaluation Platform
 
+# Production dependencies (from requirements.txt)
+azure-storage-queue
+azure-storage-blob
+azure-identity
+azure-ai-evaluation
+aiohttp
+structlog
+python-json-logger
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-logging
+opentelemetry-instrumentation-aiohttp-client
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-urllib3
+opentelemetry-instrumentation-httpx
+azure-monitor-opentelemetry-exporter
+
 # Testing frameworks
 pytest==7.4.3
 pytest-asyncio==0.21.1
