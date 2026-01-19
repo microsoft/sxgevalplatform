@@ -26,18 +26,16 @@ RUN tdnf install -y \
     glibc-lang \
     && tdnf clean all
 
-# Upgrade pip to latest version (with quiet output to avoid encoding issues)
-RUN python3 -m pip install --upgrade --quiet pip setuptools wheel
+# Upgrade pip to latest version (suppress output to avoid encoding issues)
+RUN python3 -m pip install --upgrade pip setuptools wheel > /dev/null 2>&1
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies with explicit UTF-8 encoding and quiet output to avoid encoding issues
-RUN export PYTHONIOENCODING=utf-8 && \
-    export LC_ALL=C.UTF-8 && \
-    export LANG=C.UTF-8 && \
-    python3 -m pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1 | tee /tmp/pip-install.log || \
-    (echo "Pip install failed. Log contents:" && cat /tmp/pip-install.log && exit 1)
+# Install Python dependencies (suppress verbose output to avoid encoding issues)
+RUN python3 -m pip install --no-cache-dir --user -r requirements.txt > /dev/null 2>&1 || \
+    (echo "Pip install failed. Retrying with verbose output..." && \
+     python3 -m pip install --no-cache-dir --user -r requirements.txt)
 
 # Production stage - Azure Linux base Python image
 FROM mcr.microsoft.com/azurelinux/base/python:3
