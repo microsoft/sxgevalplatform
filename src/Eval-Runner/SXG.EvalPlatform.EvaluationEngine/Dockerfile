@@ -27,14 +27,16 @@ RUN tdnf install -y \
     python3-pip \
     && tdnf clean all
 
-# Upgrade pip to latest version using ASCII-only output
-RUN python3 -m pip install --quiet --upgrade pip setuptools wheel
+# Upgrade pip to latest version (quiet mode + output redirection for ADO pipeline compatibility)
+RUN python3 -m pip install --quiet --upgrade pip setuptools wheel >/dev/null 2>&1 || \
+    { echo "ERROR: Failed to upgrade pip"; exit 1; }
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies with progress bar disabled
-RUN python3 -m pip install --no-cache-dir --user --progress-bar off -r requirements.txt
+# Install Python dependencies (quiet mode + output redirection for ADO pipeline compatibility)
+RUN python3 -m pip install --quiet --no-cache-dir --user -r requirements.txt >/dev/null 2>&1 || \
+    { echo "ERROR: Failed to install requirements. Contents of requirements.txt:"; cat requirements.txt; exit 1; }
 
 # Production stage - Azure Linux base Python image
 FROM mcr.microsoft.com/azurelinux/base/python:3
