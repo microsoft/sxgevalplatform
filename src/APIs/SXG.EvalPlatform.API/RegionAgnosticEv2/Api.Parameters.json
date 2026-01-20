@@ -46,6 +46,18 @@
     },
     "userAssignedIdentity_resourceId": {
       "value": "__Identity__"
+    },
+    "azureAdClientId": {
+      "value": "__AzureAdClientId__"
+    },
+    "managedIdentityClientId": {
+      "value": "__ManagedIdentityClientId__"
+    },
+    "dataVerseApiEndpoint": {
+      "value": "__DataVerseApiEndpoint__"
+    },
+    "dataVerseApiScope": {
+      "value": "__DataVerseApiScope__"
     }
   }
 }

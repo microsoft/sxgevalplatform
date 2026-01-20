@@ -22,7 +22,8 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             var queueUri = $"https://{accountName}.queue.core.windows.net";
 
             var environment = configHelper.GetASPNetCoreEnvironment();
-            TokenCredential credential = CommonUtils.GetTokenCredential(environment);
+            var managedIdentityClientId = configHelper.GetManagedIdentityClientId();
+            TokenCredential credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
 
             // Use managed identity for authentication
             _queueServiceClient = new QueueServiceClient(new Uri(queueUri), credential);

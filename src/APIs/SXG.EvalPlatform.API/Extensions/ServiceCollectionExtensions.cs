@@ -1,5 +1,5 @@
 using AutoMapper;
-using Azure.Identity;
+using Azure.Messaging.ServiceBus.Administration;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Azure;
@@ -290,19 +290,25 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddServiceBus(this IServiceCollection services,
         IConfiguration configuration)
     {
+        var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
+        var managedIdentityClientId = configuration["ManagedIdentity:ClientId"];
+        var serviceBusNamespace = configuration.GetSection("ServiceBus")
+            .GetValue<string>("EventBusConnection");
+
+        Azure.Core.TokenCredential credential = CommonUtils.GetTokenCredential(environment, managedIdentityClientId);
+
         services.AddAzureClients(clients =>
         {
-            var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
-
-            Azure.Core.TokenCredential credential = CommonUtils.GetTokenCredential(environment);
-
-            _ = clients.AddServiceBusClientWithNamespace(configuration.GetSection("ServiceBus")
-                .GetValue<string>("EventBusConnection"))
+            // Register ServiceBusClient
+            _ = clients.AddServiceBusClientWithNamespace(serviceBusNamespace)
                 .WithCredential(credential);
+            
             _ = clients.ConfigureDefaults(configuration.GetSection("AzureDefaults"));
         });
-        _ = services.AddScoped<IMessagePublisher, MessagePublisher>();
-
+        
+        // Register ServiceBusAdministrationClient separately
+        services.AddSingleton(sp => new ServiceBusAdministrationClient(serviceBusNamespace, credential));
+        services.AddScoped<IMessagePublisher, MessagePublisher>();
 
         return services;
     }

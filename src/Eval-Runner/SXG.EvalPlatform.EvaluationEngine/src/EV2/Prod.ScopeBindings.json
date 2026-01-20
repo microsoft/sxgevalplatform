@@ -14,6 +14,10 @@
           "replaceWith": "prod"
         },
         {
+          "find": "__AppEnvironment__",
+          "replaceWith": "Production"
+        },
+        {
           "find": "__Location__",
           "replaceWith": "$location()"
         },
@@ -36,7 +40,23 @@
         {
           "find": "__InstrumentationKey__",
           "replaceWith": "InstrumentationKey=d64b9892-a0ad-49fa-ac85-7e89ad18deed;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=b583fa1d-de33-4113-9209-1a74d5c1277f"
-        }
+        },
+        {
+          "find": "__ManagedIdentityClientId__",
+          "replaceWith": "719d20f8-888b-4c84-ac1d-e6237ce59131"
+        },
+        {
+          "find": "__AuthenticationResourceId__",
+          "replaceWith": "dafa5810-9bba-4c5b-b443-abe1a40aa240"
+        },
+        {
+          "find": "__AuthenticationClientId__",
+          "replaceWith": "5ab8b0f2-f000-4b86-ac8d-46fa6e58b197"
+        },
+        {
+          "find": "__ApiAuthenticationEnable__",
+          "replaceWith": "True"
+        }        
       ]
     }
   ]

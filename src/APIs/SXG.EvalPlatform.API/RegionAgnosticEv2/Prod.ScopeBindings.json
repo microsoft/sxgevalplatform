@@ -48,6 +48,22 @@
         {
           "find": "__Identity__",
           "replaceWith": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourcegroups/EvalCommonRg-UsEast2/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapiprod-id"
+        },
+        {
+          "find": "__AzureAdClientId__",
+          "replaceWith": "dafa5810-9bba-4c5b-b443-abe1a40aa240"
+        },
+        {
+          "find": "__ManagedIdentityClientId__",
+          "replaceWith": "719d20f8-888b-4c84-ac1d-e6237ce59131"
+        },
+        {
+          "find": "__DataVerseApiEndpoint__",
+          "replaceWith": "https://sxg-eval-prod.crm.dynamics.com/api/data/v9.2/cr890_PostEvalRun"
+        },
+        {
+          "find": "__DataVerseApiScope__",
+          "replaceWith": "https://sxg-eval-prod.crm.dynamics.com/.default"
         }
       ]
     }
