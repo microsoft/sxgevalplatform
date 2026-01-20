@@ -48,7 +48,15 @@
         {
           "find": "__AuthenticationResourceId__",
           "replaceWith": "ac2b08ba-4232-438f-b333-0300df1de14d"
-        }
+        },
+        {
+          "find": "__AuthenticationClientId__",
+          "replaceWith": "17bf598d-3033-4395-ae51-4799394c84c7"
+        },
+        {
+          "find": "__ApiAuthenticationEnable__",
+          "replaceWith": "True"
+        } 
       ]
     }
   ]
