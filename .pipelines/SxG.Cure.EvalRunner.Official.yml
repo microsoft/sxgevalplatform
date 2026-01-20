@@ -124,62 +124,100 @@ extends:
           # Alternative to Docker@2 - Use buildah for container builds
           
           - task: AzureCLI@2
-            displayName: Build image in ACR (ppe)
+            displayName: Build and Push image to ACR (ppe)
             inputs:
               azureSubscription: 'SxGCore_Eval_Prod'
               scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
-                $registry = "evalcontainerregistryppe"
+                $registry = "evalcontainerregistryppe.azurecr.io"
                 $imageRepo = "eval-runner-app"
-                $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
+                $tag      = "$(Build.BuildNumber)"
                 $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
                 $context    = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine"
 
-                # Build with explicit encoding build arguments
-                az acr build `
-                  --registry $registry `
-                  --image "${imageRepo}:${tag}" `
-                  --image "${imageRepo}:latest" `
-                  --file $dockerfile `
+                # Login to ACR
+                az acr login --name evalcontainerregistryppe
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "ACR login failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                # Build the Docker image with explicit encoding build arguments
+                docker build `
                   --build-arg LANG=C.UTF-8 `
                   --build-arg LC_ALL=C.UTF-8 `
                   --build-arg PYTHONIOENCODING=utf-8 `
                   --platform linux/amd64 `
+                  --file $dockerfile `
+                  --tag "${registry}/${imageRepo}:${tag}" `
+                  --tag "${registry}/${imageRepo}:latest" `
                   $context
                 
                 if ($LASTEXITCODE -ne 0) {
-                  Write-Error "ACR build failed with exit code $LASTEXITCODE"
+                  Write-Error "Docker build failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                # Push both tags to ACR
+                docker push "${registry}/${imageRepo}:${tag}"
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Docker push failed for tag ${tag} with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                docker push "${registry}/${imageRepo}:latest"
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Docker push failed for tag latest with exit code $LASTEXITCODE"
                   exit $LASTEXITCODE
                 }
 
           - task: AzureCLI@2
-            displayName: Build image in ACR (prod)
+            displayName: Build and Push image to ACR (prod)
             inputs:
               azureSubscription: 'SxGCore_Eval_Prod'
               scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
-                $registry = "evalplatformregistryprod"
+                $registry = "evalplatformregistryprod.azurecr.io"
                 $imageRepo = "eval-runner-app"
-                $tag      = "$(Build.BuildNumber)"  # or 'latest' etc.
+                $tag      = "$(Build.BuildNumber)"
                 $dockerfile = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile"
                 $context    = "$(Build.SourcesDirectory)\src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine"
 
-                # Build with explicit encoding build arguments
-                az acr build `
-                  --registry $registry `
-                  --image "${imageRepo}:${tag}" `
-                  --image "${imageRepo}:latest" `
-                  --file $dockerfile `
+                # Login to ACR
+                az acr login --name evalplatformregistryprod
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "ACR login failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                # Build the Docker image with explicit encoding build arguments
+                docker build `
                   --build-arg LANG=C.UTF-8 `
                   --build-arg LC_ALL=C.UTF-8 `
                   --build-arg PYTHONIOENCODING=utf-8 `
                   --platform linux/amd64 `
+                  --file $dockerfile `
+                  --tag "${registry}/${imageRepo}:${tag}" `
+                  --tag "${registry}/${imageRepo}:latest" `
                   $context
                 
                 if ($LASTEXITCODE -ne 0) {
-                  Write-Error "ACR build failed with exit code $LASTEXITCODE"
+                  Write-Error "Docker build failed with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                # Push both tags to ACR
+                docker push "${registry}/${imageRepo}:${tag}"
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Docker push failed for tag ${tag} with exit code $LASTEXITCODE"
+                  exit $LASTEXITCODE
+                }
+
+                docker push "${registry}/${imageRepo}:latest"
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Docker push failed for tag latest with exit code $LASTEXITCODE"
                   exit $LASTEXITCODE
                 }
 
@@ -209,7 +247,7 @@ extends:
                 # Inject Docker image tag in EvalRunner templates
                 $evalRunnerTemplateFiles = Get-ChildItem -Recurse -Include *.json -File -Path $(Build.SourcesDirectory)\out\EvalRunner\EV2\RegionAgnosticEv2
                 foreach ($file in $evalRunnerTemplateFiles) {
-                    Write-Host "Replacing Docker image tag in " $file.PSPath
+                    Write-host "Replacing Docker image tag in " $file.PSPath
                     (Get-Content $file.PSPath) |
                     Foreach-Object { $_ -replace "DOCKER_IMAGE_TAG", "$(Build.BuildNumber)" } |
                     Set-Content $file.PSPath
