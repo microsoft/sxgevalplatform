@@ -129,8 +129,7 @@ extends:
             displayName: 'Login to ACR (PPE)'
             inputs:
               command: 'login'
-              azureSubscription: 'SxGCore_Eval_Prod'
-              containerRegistry: 'evalcontainerregistryppe.azurecr.io'
+              endpoint: 'SxGCore_Eval_Prod'
 
           # Build and push image to ACR (PPE)
           - task: onebranch.pipeline.imagebuildinfo@1
@@ -138,25 +137,24 @@ extends:
             inputs:
               dockerFileRelPath: 'src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile'
               dockerFileContextPath: 'src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine'
-              repositoryName: 'evalcontainerregistryppe.azurecr.io/eval-runner-app'
-              dockerTags: |
+              repositoryName: 'eval-runner-app'
+              registry: 'evalcontainerregistryppe.azurecr.io'
+              build_tag: |
                 $(Build.BuildNumber)
                 latest
-              dockerBuildArgs: |
+              arguments: |
                 LANG=C.UTF-8
                 LC_ALL=C.UTF-8
                 PYTHONIOENCODING=utf-8
-              targetPlatform: 'linux/amd64'
               enable_network: true
-              enable_exports: true
+              enable_acr_push: true
 
           # Login to ACR (Prod)
           - task: onebranch.pipeline.containercontrol@1
             displayName: 'Login to ACR (Prod)'
             inputs:
               command: 'login'
-              azureSubscription: 'SxGCore_Eval_Prod'
-              containerRegistry: 'evalplatformregistryprod.azurecr.io'
+              endpoint: 'SxGCore_Eval_Prod'
 
           # Build and push image to ACR (Prod)
           - task: onebranch.pipeline.imagebuildinfo@1
@@ -164,17 +162,17 @@ extends:
             inputs:
               dockerFileRelPath: 'src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine\Dockerfile'
               dockerFileContextPath: 'src\Eval-Runner\SxG.EvalPlatform.EvaluationEngine'
-              repositoryName: 'evalplatformregistryprod.azurecr.io/eval-runner-app'
-              dockerTags: |
+              repositoryName: 'eval-runner-app'
+              registry: 'evalcontainerregistryppe.azurecr.io'
+              build_tag: |
                 $(Build.BuildNumber)
                 latest
-              dockerBuildArgs: |
+              arguments: |
                 LANG=C.UTF-8
                 LC_ALL=C.UTF-8
                 PYTHONIOENCODING=utf-8
-              targetPlatform: 'linux/amd64'
               enable_network: true
-              enable_exports: true
+              enable_acr_push: true
 
           # Copy Evaluation Runner EV2 files to region agnostic structure
           - task: CopyFiles@2
