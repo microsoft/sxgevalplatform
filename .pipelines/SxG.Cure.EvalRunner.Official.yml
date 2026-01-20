@@ -148,6 +148,7 @@ extends:
                 PYTHONIOENCODING=utf-8
               enable_network: true
               enable_acr_push: true
+              saveImageToPath: 'eval-runner-app.tar'
 
           # Login to ACR (Prod)
           - task: onebranch.pipeline.containercontrol@1
@@ -173,6 +174,7 @@ extends:
                 PYTHONIOENCODING=utf-8
               enable_network: true
               enable_acr_push: true
+              saveImageToPath: 'eval-runner-app.tar'
 
           # Copy Evaluation Runner EV2 files to region agnostic structure
           - task: CopyFiles@2
