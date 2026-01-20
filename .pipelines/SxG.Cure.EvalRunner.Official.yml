@@ -129,7 +129,7 @@ extends:
             displayName: 'Login to ACR (PPE)'
             inputs:
               command: 'login'
-              endpoint: 'SxGCore_Eval_Prod'
+              endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
 
           # Build and push image to ACR (PPE)
           - task: onebranch.pipeline.imagebuildinfo@1
@@ -155,7 +155,7 @@ extends:
             displayName: 'Login to ACR (Prod)'
             inputs:
               command: 'login'
-              endpoint: 'SxGCore_Eval_Prod'
+              endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
 
           # Build and push image to ACR (Prod)
           - task: onebranch.pipeline.imagebuildinfo@1
