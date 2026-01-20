@@ -1,18 +1,14 @@
 #################################################################################
 #                         OneBranch Pipelines - Solution Build                  #
 # This pipeline builds Dataverse solutions and creates importable files        #
-# with ESRP certificate signing support.                                        #
+# with code signing support.                                                    #
 # Documentation:  https://aka.ms/obpipelines                                    #
 # Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
 # Retail Tasks:   https://aka.ms/obpipelines/tasks                              #
 # Support:        https://aka.ms/onebranchsup                                   #
 #################################################################################
 
-trigger: none # Manual trigger only
-
-pr: none # No PR trigger
-
-name: Solution-$(date:yyyyMMdd)$(rev:.r)
+trigger: none
 
 parameters:
   - name: solutionName
@@ -23,419 +19,142 @@ parameters:
       - 'dev'
       # Add more solutions here as they are created
 
-  - name: debug
+  - name: 'debug'
     displayName: 'Enable debug output'
     type: boolean
     default: false
 
-  - name: isOfficialBuild
-    displayName: 'Is Official Build (enables signing)'
-    type: boolean
-    default: false
-
-  - name: solutionType
-    displayName: 'Solution Export Type'
-    type: string
-    default: 'Unmanaged'
-    values:
-      - 'Managed'
-      - 'Unmanaged'
-      - 'Both'
-
 variables:
-  - name: Major
-    value: 1
-  - name: Minor
-    value: 0
-  - name: Build
-    value: $[counter(format('{0}.{1}', variables['Major'], variables['Minor']), 0)]
-  - name: CDP_DEFINITION_BUILD_COUNT
-    value: $[counter('', 0)]
-  - name: system.debug
-    value: ${{ parameters.debug }}
-  - name: REPO_ROOT
-    value: $(Build.SourcesDirectory)
-  - name: SOLUTIONS_PATH
-    value: $(Build.SourcesDirectory)\src\solutions
-  - name: PLUGINS_PATH
-    value: $(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins
-  - name: DROP_FOLDER
-    value: $(Build.ArtifactStagingDirectory)\drop
-  - name: OUTPUT_FOLDER
-    value: $(Build.ArtifactStagingDirectory)\output
-  - name: WindowsContainerImage
-    value: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
-  - name: BuildConfiguration
-    value: 'Release'
-  - name: BuildPlatform
-    value: 'Any CPU'
-  # ESRP Signing variables
-  - name: EsrpCodeSigningServiceConnection
-    value: 'ESRPCodeSigningConnection'
-  - name: SigningCertName
-    value: 'Microsoft400'
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)]
+  system.debug: ${{ parameters.debug }}
+  ENABLE_PRS_DELAYSIGN: 1
+  ROOT: $(Build.SourcesDirectory)
+  REPOROOT: $(Build.SourcesDirectory)
+  OUTPUTROOT: $(REPOROOT)\out
+  NUGET_XMLDOC_MODE: none
+  WindowsContainerImage: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
 
 resources:
-  repositories:
-    - repository: self
+  repositories: 
+    - repository: templates
       type: git
+      name: OneBranch.Pipelines/GovernedTemplates
+      ref: refs/heads/main
 
-stages:
-  # ---------------------------
-  # Stage 1: Build
-  # ---------------------------
-  - stage: Build
-    displayName: 'Build Solution'
-    jobs:
-      - job: BuildSolution
-        displayName: 'Build ${{ parameters.solutionName }} Solution'
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates
+  parameters:
+    cloudvault:
+      enabled: false
+    globalSdl:
+      tsa:
+        enabled: false
+      binskim:
+        break: false
+      policheck:
+        break: true
+    featureFlags:
+      WindowsHostVersion: 1ESWindows2022
+
+    stages:
+    - stage: build
+      jobs:
+      - job: main
         pool:
-          vmImage: 'windows-latest'
+          type: windows
+        
+        variables:
+          ob_outputDirectory: '$(REPOROOT)\out'
+          ob_sdl_binskim_break: false
+          ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+            ob_symbolsPublishing_enabled: true
 
         steps:
-          - checkout: self
-            fetchDepth: 0
-
-          # Set the build version
-          - task: PowerShell@2
-            displayName: 'Set Build Version'
+          - task: onebranch.pipeline.version@1
+            displayName: 'Setup BuildNumber'
             inputs:
-              targetType: inline
-              script: |
-                $version = "$(Major).$(Minor).$(Build).0"
-                Write-Host "Setting Build Version to: $version"
-                Write-Host "##vso[build.updatebuildnumber]$version"
-                Write-Host "##vso[task.setvariable variable=SolutionVersion]$version"
-                Write-Host "##vso[task.setvariable variable=BuildNumber]$version"
+              system: 'RevisionCounter'
+              major: '1'
+              minor: '0'
+              exclude_commit: true
 
-          # Install .NET SDK
           - task: UseDotNet@2
-            displayName: 'Install .NET SDK'
+            displayName: 'Use .NET Core sdk 8.0.x'
             inputs:
-              packageType: 'sdk'
-              version: '8.x'
+              version: 8.0.x
+              includePreviewVersions: true
 
-          # Display environment info for debugging
-          - task: PowerShell@2
-            displayName: 'Debug Environment Info'
-            condition: eq(variables['system.debug'], 'true')
+          - task: CmdLine@2
+            displayName: 'Restore Plugins Package'
             inputs:
-              targetType: inline
-              script: |
-                Write-Host "=== Environment Information ==="
-                Write-Host "Solution Name: ${{ parameters.solutionName }}"
-                Write-Host "Is Official Build: ${{ parameters.isOfficialBuild }}"
-                Write-Host "Solution Type: ${{ parameters.solutionType }}"
-                Write-Host "Build.SourcesDirectory: $(Build.SourcesDirectory)"
-                Write-Host "SOLUTIONS_PATH: $(SOLUTIONS_PATH)"
-                Write-Host "PLUGINS_PATH: $(PLUGINS_PATH)"
-                Write-Host ""
-                Write-Host "=== .NET SDK Info ==="
-                dotnet --list-sdks
-                dotnet --list-runtimes
+              script: 'dotnet restore "$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj"'
+              workingDirectory: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins'
 
-          # Create output directories
-          - task: PowerShell@2
-            displayName: 'Create Output Directories'
+          - task: MSBuild@1
+            displayName: "Build Plugins"
             inputs:
-              targetType: inline
-              script: |
-                $dropFolder = "$(DROP_FOLDER)"
-                $outputFolder = "$(OUTPUT_FOLDER)"
-                
-                New-Item -ItemType Directory -Force -Path $dropFolder | Out-Null
-                New-Item -ItemType Directory -Force -Path $outputFolder | Out-Null
-                New-Item -ItemType Directory -Force -Path "$outputFolder\Solutions" | Out-Null
-                New-Item -ItemType Directory -Force -Path "$outputFolder\Plugins" | Out-Null
-                
-                Write-Host "Created directories:"
-                Write-Host "  - $dropFolder"
-                Write-Host "  - $outputFolder"
-
-          # Restore and Build Plugins
-          - task: DotNetCoreCLI@2
-            displayName: 'Restore Plugins NuGet Packages'
-            inputs:
-              command: 'restore'
-              projects: '$(PLUGINS_PATH)\SxG.EvalPlatform.Plugins.csproj'
+                solution: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj'
+                configuration: "Release"
+                msbuildArguments: '/t:rebuild'
+                clean: true
+            env:
+                DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+                DOTNET_CLI_TELEMETRY_OPTOUT: true
+                DOTNET_CORE_SDK_VERSION: 8.0.x
 
           - task: DotNetCoreCLI@2
-            displayName: 'Build Plugins'
+            displayName: "Publish Plugins"
             inputs:
-              command: 'build'
-              projects: '$(PLUGINS_PATH)\SxG.EvalPlatform.Plugins.csproj'
-              arguments: '--configuration $(BuildConfiguration) --output $(OUTPUT_FOLDER)\Plugins --no-restore'
+              command: 'publish'
+              projects: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj'
+              arguments: '--configuration Release --output $(Build.SourcesDirectory)\out\Plugins --no-build --verbosity normal'
+              publishWebProjects: false
+              zipAfterPublish: false
 
-          # Update Solution Version in Solution.xml
+          - task: onebranch.pipeline.signing@1
+            displayName: 'Sign Plugin DLLs'
+            inputs:
+              command: 'sign'
+              signing_environment: 'azure-ado'
+              files_to_sign: '**/*.dll'
+              search_root: '$(Build.SourcesDirectory)\out\Plugins'
+
           - task: PowerShell@2
-            displayName: 'Update Solution Version'
+            displayName: 'Copy Signed Plugins to Solution Folder'
             inputs:
               targetType: inline
               script: |
-                $solutionPath = "$(SOLUTIONS_PATH)\${{ parameters.solutionName }}"
-                $solutionXmlPath = "$solutionPath\Other\Solution.xml"
-                
-                if (Test-Path $solutionXmlPath) {
-                    Write-Host "Updating Solution.xml at: $solutionXmlPath"
-                    
-                    [xml]$solutionXml = Get-Content $solutionXmlPath
-                    $currentVersion = $solutionXml.ImportExportXml.SolutionManifest.Version
-                    Write-Host "Current Version: $currentVersion"
-                    
-                    $solutionXml.ImportExportXml.SolutionManifest.Version = "$(SolutionVersion)"
-                    Write-Host "New Version: $(SolutionVersion)"
-                    
-                    $solutionXml.Save($solutionXmlPath)
-                    Write-Host "Solution.xml updated successfully"
-                } else {
-                    Write-Host "##vso[task.logissue type=warning]Solution.xml not found at: $solutionXmlPath"
-                }
-
-          # Copy Plugin DLLs to Solution PluginAssemblies folder
-          - task: PowerShell@2
-            displayName: 'Copy Plugin Assemblies to Solution'
-            inputs:
-              targetType: inline
-              script: |
-                $pluginOutput = "$(OUTPUT_FOLDER)\Plugins"
-                $solutionPluginPath = "$(SOLUTIONS_PATH)\${{ parameters.solutionName }}\PluginAssemblies"
+                $pluginOutput = "$(Build.SourcesDirectory)\out\Plugins"
+                $solutionPluginPath = "$(Build.SourcesDirectory)\src\solutions\${{ parameters.solutionName }}\PluginAssemblies"
                 
                 if (Test-Path $solutionPluginPath) {
-                    Write-Host "Copying plugin assemblies from: $pluginOutput"
+                    Write-Host "Copying signed plugin assemblies from: $pluginOutput"
                     Write-Host "To: $solutionPluginPath"
                     
-                    $pluginDlls = Get-ChildItem -Path $pluginOutput -Filter "*.Plugins.dll" -Recurse
+                    $pluginDlls = Get-ChildItem -Path $pluginOutput -Filter "*.dll" -Recurse
                     foreach ($dll in $pluginDlls) {
                         Write-Host "Copying: $($dll.Name)"
                         Copy-Item -Path $dll.FullName -Destination $solutionPluginPath -Force
                     }
                 } else {
-                    Write-Host "PluginAssemblies folder not found at: $solutionPluginPath"
-                    Write-Host "Skipping plugin copy step"
+                    Write-Host "##vso[task.logissue type=warning]PluginAssemblies folder not found at: $solutionPluginPath"
                 }
 
-          # Pack Solution into ZIP
           - task: PowerShell@2
-            displayName: 'Pack Solution'
+            displayName: 'Copy Solution Folder to Output'
             inputs:
               targetType: inline
               script: |
-                $solutionPath = "$(SOLUTIONS_PATH)\${{ parameters.solutionName }}"
-                $outputPath = "$(OUTPUT_FOLDER)\Solutions"
-                $solutionName = "${{ parameters.solutionName }}"
-                $version = "$(SolutionVersion)"
+                $sourcePath = "$(Build.SourcesDirectory)\src\solutions\${{ parameters.solutionName }}"
+                $destPath = "$(Build.SourcesDirectory)\out\Solutions\${{ parameters.solutionName }}"
                 
-                Write-Host "Packing solution from: $solutionPath"
-                Write-Host "Output path: $outputPath"
+                Write-Host "Copying solution folder from: $sourcePath"
+                Write-Host "To: $destPath"
                 
-                # Create solution ZIP file
-                $zipFileName = "${solutionName}_${version}.zip"
-                $zipFilePath = Join-Path $outputPath $zipFileName
-                
-                Write-Host "Creating ZIP: $zipFilePath"
-                
-                # Compress the solution folder
-                Compress-Archive -Path "$solutionPath\*" -DestinationPath $zipFilePath -Force
-                
-                Write-Host "Solution packed successfully: $zipFilePath"
-                Write-Host "##vso[task.setvariable variable=SolutionZipPath]$zipFilePath"
-
-          # ESRP Code Signing (for Official Builds only)
-          - ${{ if eq(parameters.isOfficialBuild, true) }}:
-            - task: PowerShell@2
-              displayName: 'Prepare Files for Signing'
-              inputs:
-                targetType: inline
-                script: |
-                  $signPath = "$(OUTPUT_FOLDER)\ToSign"
-                  New-Item -ItemType Directory -Force -Path $signPath | Out-Null
-                  
-                  # Copy plugin DLLs for signing
-                  $pluginDlls = Get-ChildItem -Path "$(OUTPUT_FOLDER)\Plugins" -Filter "*.dll" -Recurse
-                  foreach ($dll in $pluginDlls) {
-                      Copy-Item -Path $dll.FullName -Destination $signPath -Force
-                      Write-Host "Prepared for signing: $($dll.Name)"
-                  }
-                  
-                  Write-Host "##vso[task.setvariable variable=SigningInputPath]$signPath"
-
-            - task: EsrpCodeSigning@2
-              displayName: 'ESRP Code Signing - Plugin DLLs'
-              inputs:
-                ConnectedServiceName: '$(EsrpCodeSigningServiceConnection)'
-                FolderPath: '$(SigningInputPath)'
-                Pattern: '*.dll'
-                signConfigType: 'inlineSignParams'
-                inlineOperation: |
-                  [
-                    {
-                      "KeyCode": "CP-230012",
-                      "OperationCode": "SigntoolSign",
-                      "Parameters": {
-                        "OpusName": "Microsoft",
-                        "OpusInfo": "http://www.microsoft.com",
-                        "FileDigest": "/fd \"SHA256\"",
-                        "PageHash": "/NPH",
-                        "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-                      },
-                      "ToolName": "sign",
-                      "ToolVersion": "1.0"
-                    },
-                    {
-                      "KeyCode": "CP-230012",
-                      "OperationCode": "SigntoolVerify",
-                      "Parameters": {},
-                      "ToolName": "sign",
-                      "ToolVersion": "1.0"
-                    }
-                  ]
-                SessionTimeout: '60'
-                MaxConcurrency: '50'
-                MaxRetryAttempts: '5'
-
-            - task: PowerShell@2
-              displayName: 'Copy Signed DLLs Back'
-              inputs:
-                targetType: inline
-                script: |
-                  $signedPath = "$(SigningInputPath)"
-                  $pluginOutput = "$(OUTPUT_FOLDER)\Plugins"
-                  
-                  # Copy signed DLLs back to plugin output
-                  $signedDlls = Get-ChildItem -Path $signedPath -Filter "*.dll"
-                  foreach ($dll in $signedDlls) {
-                      Copy-Item -Path $dll.FullName -Destination $pluginOutput -Force
-                      Write-Host "Copied signed DLL: $($dll.Name)"
-                  }
-
-            # Re-pack solution with signed assemblies
-            - task: PowerShell@2
-              displayName: 'Re-pack Solution with Signed Assemblies'
-              inputs:
-                targetType: inline
-                script: |
-                  $solutionPath = "$(SOLUTIONS_PATH)\${{ parameters.solutionName }}"
-                  $signedPluginPath = "$(OUTPUT_FOLDER)\Plugins"
-                  $solutionPluginPath = "$solutionPath\PluginAssemblies"
-                  $outputPath = "$(OUTPUT_FOLDER)\Solutions"
-                  $solutionName = "${{ parameters.solutionName }}"
-                  $version = "$(SolutionVersion)"
-                  
-                  # Copy signed DLLs to solution folder
-                  if (Test-Path $solutionPluginPath) {
-                      $signedDlls = Get-ChildItem -Path $signedPluginPath -Filter "*.Plugins.dll"
-                      foreach ($dll in $signedDlls) {
-                          Copy-Item -Path $dll.FullName -Destination $solutionPluginPath -Force
-                          Write-Host "Copied signed plugin: $($dll.Name)"
-                      }
-                  }
-                  
-                  # Re-create solution ZIP
-                  $zipFileName = "${solutionName}_${version}_signed.zip"
-                  $zipFilePath = Join-Path $outputPath $zipFileName
-                  
-                  # Remove old ZIP if exists
-                  $oldZip = Join-Path $outputPath "${solutionName}_${version}.zip"
-                  if (Test-Path $oldZip) {
-                      Remove-Item $oldZip -Force
-                  }
-                  
-                  Compress-Archive -Path "$solutionPath\*" -DestinationPath $zipFilePath -Force
-                  
-                  Write-Host "Signed solution packed: $zipFilePath"
-                  Write-Host "##vso[task.setvariable variable=SolutionZipPath]$zipFilePath"
-
-          # Copy final artifacts to drop folder
-          - task: PowerShell@2
-            displayName: 'Prepare Drop Artifacts'
-            inputs:
-              targetType: inline
-              script: |
-                $dropFolder = "$(DROP_FOLDER)"
-                $outputFolder = "$(OUTPUT_FOLDER)"
-                
-                # Copy solutions
-                Copy-Item -Path "$outputFolder\Solutions\*" -Destination $dropFolder -Recurse -Force
-                
-                # Create plugins subfolder and copy
-                $pluginDrop = Join-Path $dropFolder "Plugins"
-                New-Item -ItemType Directory -Force -Path $pluginDrop | Out-Null
-                Copy-Item -Path "$outputFolder\Plugins\*.dll" -Destination $pluginDrop -Force
-                
-                Write-Host "Drop folder contents:"
-                Get-ChildItem -Path $dropFolder -Recurse | ForEach-Object { Write-Host $_.FullName }
-
-          # Publish artifacts
-          - task: PublishPipelineArtifact@1
-            displayName: 'Publish Solution Artifacts'
-            inputs:
-              targetPath: '$(DROP_FOLDER)'
-              artifact: 'SolutionArtifacts_${{ parameters.solutionName }}'
-              publishLocation: 'pipeline'
-
-  # ---------------------------
-  # Stage 2: Validation (Optional)
-  # ---------------------------
-  - stage: Validate
-    displayName: 'Validate Solution'
-    dependsOn: Build
-    condition: succeeded()
-    jobs:
-      - job: ValidateSolution
-        displayName: 'Validate Solution Package'
-        pool:
-          vmImage: 'windows-latest'
-
-        steps:
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download Solution Artifacts'
-            inputs:
-              artifact: 'SolutionArtifacts_${{ parameters.solutionName }}'
-              path: '$(Pipeline.Workspace)\Artifacts'
-
-          - task: PowerShell@2
-            displayName: 'Validate Solution Package'
-            inputs:
-              targetType: inline
-              script: |
-                $artifactPath = "$(Pipeline.Workspace)\Artifacts"
-                
-                Write-Host "=== Validating Solution Package ==="
-                Write-Host "Artifact Path: $artifactPath"
-                
-                # Check for solution ZIP files
-                $zipFiles = Get-ChildItem -Path $artifactPath -Filter "*.zip" -Recurse
-                
-                if ($zipFiles.Count -eq 0) {
-                    Write-Host "##vso[task.logissue type=error]No solution ZIP files found!"
+                if (Test-Path $sourcePath) {
+                    Copy-Item -Path $sourcePath -Destination $destPath -Recurse -Force
+                    Write-Host "Solution folder copied successfully"
+                } else {
+                    Write-Host "##vso[task.logissue type=error]Solution folder not found at: $sourcePath"
                     exit 1
                 }
-                
-                foreach ($zip in $zipFiles) {
-                    Write-Host ""
-                    Write-Host "Validating: $($zip.Name)"
-                    Write-Host "  Size: $([math]::Round($zip.Length / 1KB, 2)) KB"
-                    
-                    # Extract and validate contents
-                    $extractPath = Join-Path $artifactPath "extracted_$($zip.BaseName)"
-                    Expand-Archive -Path $zip.FullName -DestinationPath $extractPath -Force
-                    
-                    # Check for required files
-                    $solutionXml = Join-Path $extractPath "Other\Solution.xml"
-                    if (Test-Path $solutionXml) {
-                        [xml]$xml = Get-Content $solutionXml
-                        $solutionName = $xml.ImportExportXml.SolutionManifest.UniqueName
-                        $version = $xml.ImportExportXml.SolutionManifest.Version
-                        Write-Host "  Solution Name: $solutionName"
-                        Write-Host "  Version: $version"
-                        Write-Host "  Status: VALID"
-                    } else {
-                        Write-Host "##vso[task.logissue type=warning]Solution.xml not found in $($zip.Name)"
-                    }
-                    
-                    # Cleanup extracted folder
-                    Remove-Item -Path $extractPath -Recurse -Force
-                }
-                
-                Write-Host ""
-                Write-Host "=== Validation Complete ==="
