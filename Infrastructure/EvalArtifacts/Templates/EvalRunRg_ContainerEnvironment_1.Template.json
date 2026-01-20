@@ -1,0 +1,76 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('Name')]",
+      "tags": {
+                "ComponentId": "409ab2c3-dafd-4ee4-b158-b405c578bbcd",
+                "Env": "Production"
+            },
+      "identity":{
+	"type": "SystemAssigned"
+      },
+      "properties": {
+        "peerAuthentication": "[parameters('PeerAuthentication')]",
+        "peerTrafficConfiguration": "[parameters('PeerTrafficConfiguration')]",
+        "publicNetworkAccess": "Disabled",
+        "vnetConfiguration": "[parameters('VnetConfiguration')]",
+	"appLogsConfiguration": {
+    		"destination": "log-analytics",
+    		"logAnalyticsConfiguration": {
+        	"customerId": "[reference(parameters('WorkspaceId'), '2020-08-01').customerId]",
+        	"sharedKey": "[listKeys(parameters('WorkspaceId'), '2020-08-01').primarySharedKey]"
+    }
+},
+        "workloadProfiles": [
+                    {
+                        "workloadProfileType": "Consumption",
+                        "name": "Consumption",
+                        "enableFips": false
+                    }
+                ],
+        "zoneRedundant": true,
+	"availabilityZones": [
+                    "1",
+                    "2",
+                    "3"
+                ],
+	"kedaConfiguration": {},
+        "daprConfiguration": {},
+        "customDomainConfiguration": {},
+	"infrastructureResourceGroup": "[parameters('InfrastructureResourceGroup')]",
+      },
+      "type": "Microsoft.App/managedEnvironments",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2025-02-02-preview"
+    }
+  ],
+  "parameters": {
+    "Name": {
+      "type": "string"
+    },
+    "PeerAuthentication": {
+      "type": "object"
+    },
+    "PeerTrafficConfiguration": {
+      "type": "object"
+    },
+    "VnetConfiguration": {
+      "type": "object"
+    },
+   "InfrastructureResourceGroup": {
+      "type": "string"
+    },
+   "WorkspaceId": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

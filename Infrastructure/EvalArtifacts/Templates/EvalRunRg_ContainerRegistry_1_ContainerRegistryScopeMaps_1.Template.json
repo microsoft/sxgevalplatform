@@ -1,0 +1,30 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('Name')]",
+      "properties": {
+        "actions": "[parameters('Actions')]",
+        "description": "[parameters('Description')]"
+      },
+      "type": "Microsoft.ContainerRegistry/registries/scopeMaps",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-11-01-preview"
+    }
+  ],
+  "parameters": {
+    "Name": {
+      "type": "string"
+    },
+    "Actions": {
+      "type": "array"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

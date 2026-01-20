@@ -1,0 +1,27 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ChildL2Name": {
+      "value": "__L1Name__/__ChildL2Name__"
+    },
+    "DefaultAction": {
+      "value": "__DefaultAction__"
+    },
+    "PublicNetworkAccess": {
+      "value": "__PublicNetworkAccess__"
+    },
+    "TrustedServiceAccessEnabled": {
+      "value": "__TrustedServiceAccessEnabled__"
+    },
+    "IpRules": {
+      "value": "__IpRules__"
+    },
+    "VirtualNetworkRules": {
+      "value": "__VirtualNetworkRules__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,24 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "DeleteRetentionEnabled": {
+      "value": "__DeleteRetentionEnabled__"
+    },
+    "CorsRules": {
+      "value": "__CorsRules__"
+    },
+    "DeleteRetentionDays": {
+      "value": "__DeleteRetentionDays__"
+    },
+    "AllowPermanentDelete": {
+      "value": "__AllowPermanentDelete__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

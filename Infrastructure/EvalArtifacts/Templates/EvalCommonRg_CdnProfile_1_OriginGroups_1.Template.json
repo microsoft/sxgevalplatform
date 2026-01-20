@@ -1,0 +1,58 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "healthProbeSettings": {
+          "probeIntervalInSeconds": "[parameters('ProbeIntervalInSeconds')]",
+          "probePath": "[parameters('ProbePath')]",
+          "probeProtocol": "[parameters('ProbeProtocol')]",
+          "probeRequestType": "[parameters('ProbeRequestType')]"
+        },
+        "loadBalancingSettings": {
+          "additionalLatencyInMilliseconds": "[parameters('AdditionalLatencyInMilliseconds')]",
+          "sampleSize": "[parameters('SampleSize')]",
+          "successfulSamplesRequired": "[parameters('SuccessfulSamplesRequired')]"
+        },
+        "sessionAffinityState": "[parameters('SessionAffinityState')]"
+      },
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "ProbeIntervalInSeconds": {
+      "type": "int"
+    },
+    "ProbePath": {
+      "type": "string"
+    },
+    "ProbeProtocol": {
+      "type": "string"
+    },
+    "ProbeRequestType": {
+      "type": "string"
+    },
+    "AdditionalLatencyInMilliseconds": {
+      "type": "int"
+    },
+    "SampleSize": {
+      "type": "int"
+    },
+    "SuccessfulSamplesRequired": {
+      "type": "int"
+    },
+    "SessionAffinityState": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

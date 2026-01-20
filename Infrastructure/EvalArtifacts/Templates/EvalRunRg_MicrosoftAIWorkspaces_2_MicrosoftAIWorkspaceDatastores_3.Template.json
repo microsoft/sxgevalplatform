@@ -1,0 +1,80 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "credentials": "[parameters('properties.credentials')]",
+      "subscriptionId": "[parameters('properties.subscriptionId')]",
+      "resourceGroup": "[parameters('properties.resourceGroup')]",
+      "datastoreType": "[parameters('properties.datastoreType')]",
+      "accountName": "[parameters('properties.accountName')]",
+      "containerName": "[parameters('properties.containerName')]",
+      "fileShareName": "[parameters('properties.fileShareName')]",
+      "storeName": "[parameters('properties.storeName')]",
+      "oneLakeWorkspaceName": "[parameters('properties.oneLakeWorkspaceName')]",
+      "hdfsServerCertificate": "[parameters('properties.hdfsServerCertificate')]",
+      "nameNodeAddress": "[parameters('properties.nameNodeAddress')]",
+      "fileSystem": "[parameters('properties.fileSystem')]",
+      "endpoint": "[parameters('properties.endpoint')]",
+      "protocol": "[parameters('properties.protocol')]",
+      "serviceDataAccessAuthIdentity": "[parameters('properties.serviceDataAccessAuthIdentity')]",
+      "name": "[parameters('name')]",
+      "type": "Microsoft.MachineLearningServices/workspaces/datastores",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-04-01-preview"
+    }
+  ],
+  "parameters": {
+    "name": {
+      "type": "string"
+    },
+    "properties.subscriptionId": {
+      "type": "string"
+    },
+    "properties.resourceGroup": {
+      "type": "string"
+    },
+    "properties.datastoreType": {
+      "type": "string"
+    },
+    "properties.accountName": {
+      "type": "string"
+    },
+    "properties.containerName": {
+      "type": "string"
+    },
+    "properties.fileShareName": {
+      "type": "string"
+    },
+    "properties.storeName": {
+      "type": "string"
+    },
+    "properties.oneLakeWorkspaceName": {
+      "type": "string"
+    },
+    "properties.hdfsServerCertificate": {
+      "type": "string"
+    },
+    "properties.nameNodeAddress": {
+      "type": "string"
+    },
+    "properties.fileSystem": {
+      "type": "string"
+    },
+    "properties.endpoint": {
+      "type": "string"
+    },
+    "properties.protocol": {
+      "type": "string"
+    },
+    "properties.serviceDataAccessAuthIdentity": {
+      "type": "string"
+    },
+    "properties.credentials": {
+      "type": "object"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L3Name": {
+      "value": "__L1Name__/__L2Name__/__L3Name__"
+    },
+    "SupportedProtocols": {
+      "value": "__SupportedProtocols__"
+    },
+    "OriginGroup": {
+      "value": "__OriginGroup__"
+    },
+    "PatternsToMatch": {
+      "value": "__PatternsToMatch__"
+    },
+    "ForwardingProtocol": {
+      "value": "__ForwardingProtocol__"
+    },
+    "LinkToDefaultDomain": {
+      "value": "__LinkToDefaultDomain__"
+    },
+    "HttpsRedirect": {
+      "value": "__HttpsRedirect__"
+    },
+    "EnabledState": {
+      "value": "__EnabledState__"
+    },
+    "CustomDomains": {
+      "value": "__CustomDomains__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

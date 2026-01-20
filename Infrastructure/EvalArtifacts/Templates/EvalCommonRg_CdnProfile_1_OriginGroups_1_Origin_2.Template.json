@@ -1,0 +1,54 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L3Name')]",
+      "properties": {
+        "enabledState": "[parameters('EnabledState')]",
+        "enforceCertificateNameCheck": "[parameters('EnforceCertificateNameCheck')]",
+        "hostName": "[parameters('HostName')]",
+        "httpPort": "[parameters('HttpPort')]",
+        "httpsPort": "[parameters('HttpsPort')]",
+        "originHostHeader": "[parameters('OriginHostHeader')]",
+        "priority": "[parameters('Priority')]",
+        "weight": "[parameters('Weight')]"
+      },
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L3Name": {
+      "type": "string"
+    },
+    "HostName": {
+      "type": "string"
+    },
+    "HttpPort": {
+      "type": "int"
+    },
+    "HttpsPort": {
+      "type": "int"
+    },
+    "OriginHostHeader": {
+      "type": "string"
+    },
+    "Priority": {
+      "type": "int"
+    },
+    "Weight": {
+      "type": "int"
+    },
+    "EnabledState": {
+      "type": "string"
+    },
+    "EnforceCertificateNameCheck": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

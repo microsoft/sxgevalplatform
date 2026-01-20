@@ -1,0 +1,3950 @@
+﻿{
+  "Settings": {
+    "EvalNetworkingRg_VirtualNetwork_1": {
+      "L1Name": "sxgeval$(Environment.Name)$(RegionAbbr)-vnet",
+      "AddressSpace": {
+        "addressPrefixes": [
+          "10.0.0.0/16"
+        ]
+      },
+      "PrivateEndpointVNetPolicies": "Disabled",
+      "EnableDdosProtection": "false",
+      "EnableVmProtection": "",
+      "Subnets": [
+        {
+          "name": "default",
+          "properties": {
+            "addressPrefixes": [
+              "10.0.0.0/24"
+            ],
+            "applicationGatewayIPConfigurations": [],
+            "defaultOutboundAccess": "false",
+            "delegations": [],
+            "ipAllocations": [],
+            "privateEndpointNetworkPolicies": "Disabled",
+            "privateLinkServiceNetworkPolicies": "Enabled",
+            "serviceEndpointPolicies": [],
+            "serviceEndpoints": [
+              {
+                "service": "Microsoft.Storage",
+                "locations": [
+                  "eastus",
+                  "westus",
+                  "westus3"
+                ]
+              }
+            ]
+          },
+          "type": "Microsoft.Network/virtualNetworks/subnets",
+          "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'sxgeval$(Environment.Name)$(RegionAbbr)-vnet', 'default')]"
+        },
+        {
+          "name": "api-app-subnet",
+          "properties": {
+            "addressPrefixes": [
+              "10.0.1.0/24"
+            ],
+            "applicationGatewayIPConfigurations": [],
+            "defaultOutboundAccess": "false",
+            "delegations": [
+              {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks/subnets', 'sxgeval$(Environment.Name)$(RegionAbbr)-vnet', 'api-app-subnet'), '/delegations/Microsoft.Web/serverFarms')]",
+                "name": "Microsoft.Web/serverFarms",
+                "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+                "properties": {
+                  "serviceName": "Microsoft.Web/serverFarms"
+                }
+              }
+            ],
+            "ipAllocations": [],
+            "natGateway": {
+              "id": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/natGateways/sxgeval$(Environment.Name)$(RegionAbbr)-nat"
+            },
+            "privateEndpointNetworkPolicies": "Disabled",
+            "privateLinkServiceNetworkPolicies": "Enabled",
+            "serviceEndpointPolicies": [],
+            "serviceEndpoints": []
+          },
+          "type": "Microsoft.Network/virtualNetworks/subnets",
+          "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'sxgeval$(Environment.Name)$(RegionAbbr)-vnet', 'api-app-subnet')]"
+        },
+        {
+          "name": "container-app-env",
+          "properties": {
+            "addressPrefixes": [
+              "10.0.2.0/23"
+            ],
+            "applicationGatewayIPConfigurations": [],
+            "defaultOutboundAccess": "false",
+            "delegations": [
+              {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks/subnets', 'sxgeval$(Environment.Name)$(RegionAbbr)-vnet', 'container-app-env'), '/delegations/Microsoft.App.environments')]",
+                "name": "Microsoft.App.environments",
+                "type": "Microsoft.Network/virtualNetworks/subnets/delegations",
+                "properties": {
+                  "serviceName": "Microsoft.App/environments"
+                }
+              }
+            ],
+            "ipAllocations": [],
+            "natGateway": {
+              "id":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/natGateways/sxgevalcontainerapp$(Environment.Name)$(RegionAbbr)-nat"
+            },
+            "networkSecurityGroup": {
+              "id":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/networkSecurityGroups/NRMS-$(Environment.Name)$(RegionAbbr)-vnet-container-app-env"
+            },
+            "privateEndpointNetworkPolicies": "Disabled",
+            "privateLinkServiceNetworkPolicies": "Enabled",
+            "serviceEndpointPolicies": [],
+            "serviceEndpoints": []
+          },
+          "type": "Microsoft.Network/virtualNetworks/subnets",
+          "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'sxgeval$(Environment.Name)$(RegionAbbr)-vnet', 'container-app-env')]"
+        }
+      ],
+      "VirtualNetworkPeerings": [],
+      "Encryption": {
+        "enabled": "false",
+        "enforcement": "AllowUnencrypted"
+      }
+    },
+"EvalCommonRg_EventGridsystemTopics_6_EventGridsystemTopicseventSubscription_1": {
+      "eventL2Name": "StorageAntimalwareSubscription",
+      "endpointUrl":"https://eastus.a3.storageav.azure.com:5142/EventCapture/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/foundrystore(Environment.Name)$(RegionAbbr)",
+      "DeadLetterDestinationEndpointType": "",
+      "DeadLetterWithResourceIdentityEndpointType": "",
+      "DeadLetterWithResourceIdentityType": "",
+      "DeadLetterWithResourceIdentityUserAssignedIdentity": "",
+      "DeliveryWithResourceIdentityEndpointType": "",
+      "DeliveryWithResourceIdentityType": "",
+      "DeliveryWithResourceIdentityUserAssignedIdentity": "",
+      "DestinationEndpointType": "WebHook",
+      "EventDeliverySchema": "EventGridSchema",
+      "ExpirationTimeUtc": "",
+      "AdvancedFilterKey": "",
+      "AdvancedFilterOperatorType": "",
+      "EnableAdvancedFilteringOnArrays": "",
+      "IncludedEventTypes": "",
+      "IsSubjectCaseSensitive": "",
+      "SubjectBeginsWith": "",
+      "SubjectEndsWith": "",
+      "Labels": "",
+      "EventTimeToLiveInMinutes": 1440,
+      "MaxDeliveryAttempts": 30
+    },
+    "EvalCommonRg_EventGridsystemTopics_6": {
+      "eventL1Name": "sxgevalaifoundrystore$(Environment.Name)-$(Environment.Name)",
+      "Location": "eastus2",
+      "PrincipalId": "",
+      "TenantId": "",
+      "IdentityType": "",
+      "UserAssignedIdentityClientId": "",
+      "UserAssignedIdentityPrincipalId": "",
+      "Source": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)$(RegionAbbr)",
+      "TopicType": "microsoft.storage.storageaccounts",
+      "Tags": ""
+    },
+    "EvalCommonRg_EventGridsystemTopics_5_EventGridsystemTopicseventSubscription_1": {
+      "eventL2Name": "StorageAntimalwareSubscription",
+      "endpointUrl":"https://eastus.a3.storageav.azure.com:5142/EventCapture/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/sxgevalstore$(Environment.Name)$(RegionAbbr)",
+      "DeadLetterDestinationEndpointType": "",
+      "DeadLetterWithResourceIdentityEndpointType": "",
+      "DeadLetterWithResourceIdentityType": "",
+      "DeadLetterWithResourceIdentityUserAssignedIdentity": "",
+      "DeliveryWithResourceIdentityEndpointType": "",
+      "DeliveryWithResourceIdentityType": "",
+      "DeliveryWithResourceIdentityUserAssignedIdentity": "",
+      "DestinationEndpointType": "WebHook",
+      "EventDeliverySchema": "EventGridSchema",
+      "ExpirationTimeUtc": "",
+      "AdvancedFilterKey": "",
+      "AdvancedFilterOperatorType": "",
+      "EnableAdvancedFilteringOnArrays": "",
+      "IncludedEventTypes": "",
+      "IsSubjectCaseSensitive": "",
+      "SubjectBeginsWith": "",
+      "SubjectEndsWith": "",
+      "Labels": "",
+      "EventTimeToLiveInMinutes": 1440,
+      "MaxDeliveryAttempts": 30
+    },
+    "EvalCommonRg_EventGridsystemTopics_5": {
+      "eventL1Name": "sxgagenteval$(Environment.Name)-bc54a55e-f39a-44c3-a9ad-5655fb881105",
+      "Location": "eastus",
+      "PrincipalId": "",
+      "TenantId": "",
+      "IdentityType": "",
+      "UserAssignedIdentityClientId": "",
+      "UserAssignedIdentityPrincipalId": "",
+      "Source": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/sxgevalstore$(Environment.Name)$(RegionAbbr)",
+      "TopicType": "microsoft.storage.storageaccounts",
+      "Tags": ""
+    },
+    
+    "EvalNetworkingRg_NetworkpublicIPAddresses_2": {
+      "networkL1Name": "sxgevalcontainerapp-$(Environment.Name)$(RegionAbbr)",
+      "Location": "eastus",
+      "ExtendedLocationName": "",
+      "ExtendedLocationType": "",
+      "DdosProtectionPlanId": "",
+      "DdosSettings": {
+        "protectionMode": "VirtualNetworkInherited"
+      },
+      "DeleteOption": "",
+      "IdleTimeoutInMinutes": 4,
+      "IpTags": [
+        {
+          "ipTagType": "FirstPartyUsage",
+          "tag": "/SXGCOREBUE"
+        }
+      ],
+      "MigrationPhase": "",
+      "Locationnat": "",
+      "PublicIpAddressIdnat": "",
+      "PublicIpPrefixIdnat": "",
+      "Namenatsku": "",
+      "PublicIPAddressVersion": "IPv4",
+      "PublicIPAllocationMethod": "Static",
+      "PublicIPPrefixId": "",
+      "SkuName": "Standard",
+      "SkuTier": "Regional",
+      "Tags": "",
+      "Zones": ""
+    },
+    "EvalNetworkingRg_NetworkpublicIPAddresses_1": {
+      "networkL1Name": "sxgevalapi$(Environment.Name)$(RegionAbbr)-ip",
+      "Location": "eastus",
+      "ExtendedLocationName": "",
+      "ExtendedLocationType": "",
+      "DdosProtectionPlanId": "",
+      "DdosSettings": {
+        "protectionMode": "VirtualNetworkInherited"
+      },
+      "DeleteOption": "",
+      "IdleTimeoutInMinutes": 4,
+      "IpTags": [
+        {
+          "ipTagType": "FirstPartyUsage",
+          "tag": "/SXGCOREBUE"
+        }
+      ],
+      "MigrationPhase": "",
+      "Locationnat": "",
+      "PublicIpAddressIdnat": "",
+      "PublicIpPrefixIdnat": "",
+      "Namenatsku": "",
+      "PublicIPAddressVersion": "IPv4",
+      "PublicIPAllocationMethod": "Static",
+      "PublicIPPrefixId": "",
+      "SkuName": "Standard",
+      "SkuTier": "Regional",
+      "Tags": "",
+      "Zones": ""
+    },
+    "EvalNetworkingRg_NatGateway_2": {
+      "L1Name": "sxgeval$(Environment.Name)$(RegionAbbr)-nat",
+      "Location": "eastus2",
+      "IdleTimeoutInMinutes": 4,
+      "PublicIpAddresses": [
+        {
+          "id":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/publicIPAddresses/sxgevalapi$(Environment.Name)$(RegionAbbr)-ip"
+        }
+      ],
+      "SkuName": "Standard",
+      "Tags": "",
+      "Zones": "[\r\n  \"3\"\r\n]\r\n                                    "
+    },
+    "EvalNetworkingRg_NatGateway_1": {
+      "L1Name": "sxgevalcontainerapp$(Environment.Name)$(RegionAbbr)-nat",
+      "Location": "eastus",
+      "IdleTimeoutInMinutes": 4,
+      "PublicIpAddresses": [
+         {
+          "id":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/publicIPAddresses/sxgevalcontainerapp-$(Environment.Name)$(RegionAbbr)"
+        }
+      ],
+      "SkuName": "Standard",
+      "Tags": "",
+      "Zones": "[\r\n  \"3\"\r\n]\r\n                                    "
+    },
+    "EvalNetworkingRg_NetworkTrafficManagerProfile_1": {
+      "trafficmanagerL1Name": "sxgevalapi$(Environment.Name)",
+      "Location": "global",
+      "AllowedEndpointRecordTypes": "",
+      "RelativeName": "sxgevalapi$(Environment.Name)",
+      "Ttl": 60,
+      "Endpoints": [
+        {
+          "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+          "name": "UsEast2 endpoint",
+          "id": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/trafficManagerProfiles/sxgevalapi$(Environment.Name)/azureEndpoints/UsEast2 endpoint",
+          "properties": {
+            "alwaysServe": "Disabled",
+            "endpointLocation": "East US 2",
+            "endpointMonitorStatus": "Online",
+            "endpointStatus": "Enabled",
+            "priority": 1,
+            "target": "apieastus2",
+            "targetResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalApi-useast2Rg/providers/Microsoft.Web/sites/sxgevalapi$(Environment.Name)UsEast2",
+            "weight": 1
+          }
+        },
+	{
+          "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+          "name": "uswest2 endpoint",
+          "id": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/trafficManagerProfiles/sxgevalapi$(Environment.Name)/azureEndpoints/uswest2 endpoint",
+          "properties": {
+            "alwaysServe": "Disabled",
+            "endpointLocation": "West US 2",
+            "endpointMonitorStatus": "Online",
+            "endpointStatus": "Enabled",
+            "priority": 2,
+            "target": "apiuswest2",
+            "targetResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalApi-uswest2Rg/providers/Microsoft.Web/sites/sxgevalapi$(Environment.Name)uswest2",
+            "weight": 1
+          }
+        }
+      ],
+      "MaxReturn": 0,
+      "MonitorCustomHeaderName": "",
+      "MonitorCustomHeaderValue": "",
+      "IntervalInSeconds": 30,
+      "MonitorPath": "/api/v1/Health",
+      "MonitorPort": 443,
+      "ProfileMonitorStatus": "Online",
+      "MonitorProtocol": "HTTPS",
+      "TimeoutInSeconds": 10,
+      "ToleratedNumberOfFailures": 3,
+      "ProfileStatus": "Enabled",
+      "TrafficRoutingMethod": "Priority",
+      "TrafficViewEnrollmentStatus": "Enabled",
+      "Tags": ""
+    },
+    "EvalNetworkingRg_NetworkTrafficManagerProfile_1_TMPEEendpointsentry_1": {
+	"L2Name": "$(RegionAbbr) endpoint",
+	"AlwaysServe": "Disabled",
+	"EndpointLocation": "West US 2",
+	"EndpointMonitorStatus": "Online",
+	"EndpointStatus": "Enabled",
+	"Priority": 1,
+	"Target": "sxgevalapi$(Environment.Name)$(RegionAbbr).azurewebsites.net",
+	"TargetResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalApi-$(RegionAbbr)Rg/providers/Microsoft.Web/sites/sxgevalapi$(Environment.Name)$(RegionAbbr)",
+	"Weight": 1
+    },	
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_8": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "119",
+        "137",
+        "138",
+        "139",
+        "161",
+        "162",
+        "389",
+        "636",
+        "2049",
+        "2301",
+        "2381",
+        "3268",
+        "5800",
+        "5900"
+      ],
+      "Priority": 109,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-109",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_7": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "13",
+        "17",
+        "19",
+        "53",
+        "69",
+        "111",
+        "123",
+        "512",
+        "514",
+        "593",
+        "873",
+        "1900",
+        "5353",
+        "11211"
+      ],
+      "Priority": 108,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-108",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_6": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "23",
+        "135",
+        "445",
+        "5985",
+        "5986"
+      ],
+      "Priority": 107,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-107",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_5": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "22",
+        "3389"
+      ],
+      "Priority": 106,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-106",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_4": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "1433",
+        "1434",
+        "3306",
+        "4333",
+        "5432",
+        "6379",
+        "7000",
+        "7001",
+        "7199",
+        "9042",
+        "9160",
+        "9300",
+        "16379",
+        "26379",
+        "27017"
+      ],
+      "Priority": 105,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-105",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_3": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "*",
+      "DestinationPortRanges": [],
+      "Priority": 104,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-104",
+      "SourceAddressPrefix": "CorpNetSaw",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_2": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "*",
+      "DestinationPortRanges": [],
+      "Priority": 103,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-103",
+      "SourceAddressPrefix": "CorpNetPublic",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2_SecurityRules_1": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, placeholder you can delete, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "443",
+      "DestinationPortRanges": [],
+      "Priority": 101,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-101",
+      "SourceAddressPrefix": "VirtualNetwork",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_2": {
+      "L1Name": "NRMS-sxgeval$(Environment.Name)$(RegionAbbr)-vnet-api-app-subnet",
+      "FlushConnection": ""
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_8": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "119",
+        "137",
+        "138",
+        "139",
+        "161",
+        "162",
+        "389",
+        "636",
+        "2049",
+        "2301",
+        "2381",
+        "3268",
+        "5800",
+        "5900"
+      ],
+      "Priority": 109,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-109",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_7": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "13",
+        "17",
+        "19",
+        "53",
+        "69",
+        "111",
+        "123",
+        "512",
+        "514",
+        "593",
+        "873",
+        "1900",
+        "5353",
+        "11211"
+      ],
+      "Priority": 108,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-108",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_6": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "23",
+        "135",
+        "445",
+        "5985",
+        "5986"
+      ],
+      "Priority": 107,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-107",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_5": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "22",
+        "3389"
+      ],
+      "Priority": 106,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-106",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_4": {
+      "Access": "Deny",
+      "Direction": "Inbound",
+      "Description": "DO NOT DELETE - Will result in ICM Sev 2 - Azure Core Security, see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "",
+      "DestinationPortRanges": [
+        "1433",
+        "1434",
+        "3306",
+        "4333",
+        "5432",
+        "6379",
+        "7000",
+        "7001",
+        "7199",
+        "9042",
+        "9160",
+        "9300",
+        "16379",
+        "26379",
+        "27017"
+      ],
+      "Priority": 105,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-105",
+      "SourceAddressPrefix": "Internet",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_3": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "*",
+      "DestinationPortRanges": [],
+      "Priority": 104,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-104",
+      "SourceAddressPrefix": "CorpNetSaw",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_2": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, rule can be deleted but do not change source ips, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "*",
+      "DestinationPortRanges": [],
+      "Priority": 103,
+      "Protocol": "*",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-103",
+      "SourceAddressPrefix": "CorpNetPublic",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1_SecurityRules_1": {
+      "Access": "Allow",
+      "Direction": "Inbound",
+      "Description": "Created by Azure Core Security managed policy, placeholder you can delete, please see aka.ms/cainsgpolicy",
+      "DestinationPortRange": "443",
+      "DestinationPortRanges": [],
+      "Priority": 101,
+      "Protocol": "Tcp",
+      "SourceAddressPrefixes": [],
+      "L2Name": "NRMS-Rule-101",
+      "SourceAddressPrefix": "VirtualNetwork",
+      "DestinationAddressPrefix": "*",
+      "DestinationAddressPrefixes": [],
+      "SourcePortRange": "*",
+      "SourcePortRanges": []
+    },
+    "EvalNetworkingRg_NetworkSecurityGroup_1": {
+      "L1Name": "NRMS-$(Environment.Name)$(RegionAbbr)-vnet-container-app-env",
+      "FlushConnection": ""
+    },
+    "EvalApiRg_AppService_1_HostNameBindings_1": {
+      "SiteName": "sxgevalapi$(Environment.Name)$(RegionAbbr)",
+      "Certificate": "",
+      "SslState": "",
+      "L2Name": "sxgevalapi$(Environment.Name)$(RegionAbbr).azurewebsites.net",
+      "HostNameType": "Verified"
+    },
+    "EvalApiRg_AppService_1_Configs_1": {
+      "AlwaysOn": "false",
+      "DefaultDocuments": [
+        "Default.htm",
+        "Default.html",
+        "Default.asp",
+        "index.htm",
+        "index.html",
+        "iisstart.htm",
+        "default.aspx",
+        "index.php",
+        "hostingstart.html"
+      ],
+      "DetailedErrorLoggingEnabled": "false",
+      "FtpsState": "FtpsOnly",
+      "HttpLoggingEnabled": "false",
+      "LogsDirectorySizeLimit": 35,
+      "PublishingUsername": "REDACTED",
+      "RemoteDebuggingVersion": "VS2022",
+      "ScmMinTlsVersion": "1.2",
+      "VirtualApplications": [
+        {
+          "virtualPath": "/",
+          "physicalPath": "site\\wwwroot",
+          "preloadEnabled": "false"
+        }
+      ],
+      "AcrUseManagedIdentityCreds": "false",
+      "AutoHealEnabled": "false",
+      "ElasticWebAppScaleLimit": 0,
+      "FunctionsRuntimeScaleMonitoringEnabled": "false",
+      "Http20Enabled": "true",
+      "ScmIpSecurityRestrictions": [
+        {
+          "ipAddress": "Any",
+          "action": "Allow",
+          "priority": "2147483647",
+          "name": "Allow all",
+          "description": "Allow all access"
+        }
+      ],
+      "IpSecurityRestrictions": [
+            {
+                "ipAddress": "20.237.181.23/32,20.237.181.49/32,20.228.97.254/32,20.228.99.26/32,20.237.179.112/32,104.40.10.200/32,104.40.9.245/32,104.40.14.130/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-2"
+            },
+            {
+                "ipAddress": "104.40.3.249/32,104.40.18.254/32,104.40.18.248/32,104.40.19.30/32,104.40.19.50/32,104.40.19.52/32,104.40.19.72/32,104.40.19.176/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-3"
+            },
+            {
+                "ipAddress": "104.40.19.184/32,104.40.0.73/32,104.40.19.213/32,104.40.15.159/32,104.40.20.1/32,104.40.20.22/32,104.40.20.30/32,104.40.20.76/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-4"
+            },
+            {
+                "ipAddress": "104.40.20.149/32,104.40.20.178/32,104.40.20.214/32,104.40.21.159/32,104.40.21.238/32,40.112.243.106/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-5"
+            },
+            {
+                "ipAddress": "104.40.0.73/32,104.40.19.213/32,104.40.15.159/32,104.40.20.1/32,104.40.20.22/32,104.40.20.30/32,40.112.243.106/32,20.237.180.234/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-1"
+            },
+            {
+                "ipAddress": "172.178.7.112/29,172.178.7.128/26,4.151.99.19/32,4.151.99.80/28,4.151.99.96/27,4.150.35.122/31,20.159.0.164/30,52.188.249.170/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "URSA-1"
+            },
+            {
+                "ipAddress": "52.188.249.172/30,20.141.15.0/30,52.233.105.152/32,52.233.105.84/30,52.233.105.144/29,52.233.105.192/26",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "URSA-2"
+            },
+            {
+                "ipAddress": "172.171.125.133/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 100,
+                "name": "AICatalog-StaticIP"
+            },
+            {
+                "ipAddress": "CorpNetPublic",
+                "action": "Allow",
+                "tag": "ServiceTag",
+                "priority": 200,
+                "name": "AllowCorpNetUsers"
+            },
+            {
+                "ipAddress": "48.194.0.49/32",
+                "action": "Allow",
+                "tag": "Default",
+                "priority": 300,
+                "name": "AllowContainerApp"
+            },
+            {
+                "ipAddress": "PowerPlatformPlex",
+                "action": "Allow",
+                "tag": "ServiceTag",
+                "priority": 400,
+                "name": "AllowPoerPlatformPlugins"
+            },
+            {
+                "ipAddress": "1ESResourceManager",
+                "action": "Allow",
+                "tag": "ServiceTag",
+                "priority": 500,
+                "name": "OneBranchAgentPool"
+            },
+            {
+                "ipAddress": "Any",
+                "action": "Deny",
+                "priority": 2147483647,
+                "name": "Deny all",
+                "description": "Deny all access"
+            }
+      ],
+      "ipSecurityRestrictionsDefaultAction": "Deny",
+      "scmIpSecurityRestrictions": [
+          {
+              "ipAddress": "Any",
+              "action": "Deny",
+              "priority": 2147483647,
+              "name": "Deny all",
+              "description": "Deny all access"
+          }
+      ],
+      "LoadBalancing": "LeastRequests",
+      "LocalMySqlEnabled": "false",
+      "ManagedPipelineMode": "Integrated",
+      "MinimumElasticInstanceCount": 1,
+      "MinTlsVersion": "1.2",
+      "NetFrameworkVersion": "v4.0",
+      "NumberOfWorkers": 1,
+      "PreWarmedInstanceCount": 0,
+      "RemoteDebuggingEnabled": "false",
+      "RequestTracingEnabled": "false",
+      "ScmIpSecurityRestrictionsUseMain": "false",
+      "ScmType": "",
+      "Use32BitWorkerProcess": "true",
+      "VnetPrivatePortsCount": 0,
+      "VnetRouteAllEnabled": "false",
+      "WebSocketsEnabled": "false"
+    },
+    "EvalApiRg_AppService_1_PublishingCredentials_2": {
+      "L2Name": "scm",
+      "Allow": "false"
+    },
+    "EvalApiRg_AppService_1_PublishingCredentials_1": {
+      "L2Name": "ftp",
+      "Allow": "false"
+    },
+    "EvalApiRg_AppService_1": {
+      "Kind": "app,linux",
+      "ClientAffinityEnabled": "true",
+      "ContainerSize": 0,
+      "ServerFarmId": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalApi-$(RegionAbbr)Rg/providers/Microsoft.Web/serverfarms/sxgevalapi$(Environment.Name)$(RegionAbbr)-plan",
+      "AlwaysOn": "false",
+      "VnetContentShareEnabled": "",
+      "VnetImagePullEnabled": "",
+      "L1Name": "sxgevalapi$(Environment.Name)$(RegionAbbr)",
+      "DailyMemoryTimeQuota": 0,
+      "ClientCertEnabled": "false",
+      "ClientCertMode": "Required",
+      "Enabled": "true",
+      "HostNamesDisabled": "false",
+      "HttpsOnly": "true",
+      "HyperV": "false",
+      "IsXenon": "false",
+      "KeyVaultReferenceIdentity": "SystemAssigned",
+      "RedundancyMode": "None",
+      "Reserved": "true",
+      "ScmSiteAlsoStopped": "false",
+      "StorageAccountRequired": "false",
+      "VnetRouteAllEnabled": "",
+      "Identity": {
+        "type": "SystemAssigned, UserAssigned",
+        "userAssignedIdentities": "{\"/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi$(Environment.Name)-id\":{}}"
+      },
+      "HostNameSslStates": [
+        {
+          "hostType": "Standard",
+          "name": "sxgevalapi$(Environment.Name)$(RegionAbbr).azurewebsites.net",
+          "sslState": "Disabled"
+        },
+        {
+          "hostType": "Repository",
+          "name": "sxgevalapi$(Environment.Name)$(RegionAbbr).scm.azurewebsites.net",
+          "sslState": "Disabled"
+        }
+      ]
+    },
+    "EvalApiRg_AppServicePlan_1": {
+      "Kind": "linux",
+      "MaximumElasticWorkerCount": 1,
+      "ZoneRedundant": "false",
+      "Capacity": 1,
+      "Family": "Pv3",
+      "SkuName": "P0v3",
+      "Size": "P0v3",
+      "Tier": "Premium0v3",
+      "L1Name": "sxgevalapi$(Environment.Name)$(RegionAbbr)-plan",
+      "ElasticScaleEnabled": "false",
+      "HyperV": "false",
+      "IsXenon": "false",
+      "IsSpot": "false",
+      "PerSiteScaling": "false",
+      "Reserved": "true",
+      "TargetWorkerCount": 0,
+      "TargetWorkerSizeId": 0
+    },
+    "EvalApiRg_Cacheredis_1_RedisCachePolicyAssignment_3": {
+      "Name": "da3404e2-2f3f-482d-9cf0-289d7414b8b6",
+      "AccessPolicyName": "Data Owner",
+      "ObjectId": "da3404e2-2f3f-482d-9cf0-289d7414b8b6",
+      "ObjectIdAlias": "Himanshu Kumar Gupta (NON EA SC ALT)"
+    },
+    "EvalApiRg_Cacheredis_1_RedisCachePolicyAssignment_2": {
+      "Name": "b970d763-d7db-4d12-81cb-96391a4595af",
+      "AccessPolicyName": "Data Owner",
+      "ObjectId": "b970d763-d7db-4d12-81cb-96391a4595af",
+      "ObjectIdAlias": "sxgevalapi$(Environment.Name)$(RegionAbbr)"
+    },
+    "EvalApiRg_Cacheredis_1_RedisCachePolicyAssignment_1": {
+      "Name": "8c4f18d9-f83d-4d0f-b6da-3137fb3e85a2",
+      "AccessPolicyName": "Data Owner",
+      "ObjectId": "8c4f18d9-f83d-4d0f-b6da-3137fb3e85a2",
+      "ObjectIdAlias": "sxgevalapi$(Environment.Name)$(RegionAbbr)"
+    },
+    "EvalApiRg_Cacheredis_1": {
+      "L1Name": "evalplatformcache$(Environment.Name)",
+      "IdentityType": "",
+      "UserAssignedIdentities": "",
+      "Location": "East US",
+      "DisableAccessKeyAuthentication": "true",
+      "EnableNonSslPort": "false",
+      "MinimumTlsVersion": "1.2",
+      "PublicNetworkAccess": "Disabled",
+      "Aadenabled": "true",
+      "Aofbackupenabled": "",
+      "Aofstorageconnectionstring0": "",
+      "Aofstorageconnectionstring1": "",
+      "Authnotrequired": "",
+      "Maxfragmentationmemoryreserved": "125",
+      "Maxmemorydelta": "125",
+      "Maxmemorypolicy": "",
+      "Maxmemoryreserved": "125",
+      "NotifyKeyspaceEvents": "",
+      "Preferreddatapersistenceauthmethod": "",
+      "Rdbbackupenabled": "",
+      "Rdbbackupfrequency": "",
+      "Rdbbackupmaxsnapshotcount": "",
+      "Rdbstorageconnectionstring": "",
+      "Storagesubscriptionid": "",
+      "RedisVersion": "6.0",
+      "Capacity": 1,
+      "SkewFamily": "C",
+      "SkewName": "Standard",
+      "StaticIP": "",
+      "SubnetId": "",
+      "UpdateChannel": "Stable",
+      "ZonalAllocationPolicy": "Automatic",
+      "Tags": "",
+      "Zones": ""
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceDatastores_3": {
+      "name": "workspaceworkingdirectory",
+      "credentials": {"credentialsType":"None"},
+      "subscriptionId": "$(Environment.SubscriptionId)",
+      "resourceGroup": "",
+      "datastoreType": "AzureFile",
+      "accountName": "stevalplatform$(Environment.Name)",
+      "containerName": "",
+      "fileShareName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-code",
+      "storeName": "",
+      "oneLakeWorkspaceName": "",
+      "hdfsServerCertificate": "",
+      "nameNodeAddress": "",
+      "fileSystem": "",
+      "endpoint": "core.windows.net",
+      "protocol": "https",
+      "serviceDataAccessAuthIdentity": "None"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceDatastores_2": {
+      "name": "workspaceblobstore",
+      "properties.credentials": "{\"credentialsType\":\"Sas\",\"secrets\":null}",
+      "properties.subscriptionId": "$(Environment.SubscriptionId)",
+      "properties.resourceGroup": "$(Environment.Name)-EvalCommon-UsEast2Rg",
+      "properties.datastoreType": "AzureBlob",
+      "properties.accountName": "stevalplatform$(Environment.Name)",
+      "properties.containerName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml-blobstore",
+      "properties.fileShareName": "",
+      "properties.storeName": "",
+      "properties.oneLakeWorkspaceName": "",
+      "properties.hdfsServerCertificate": "",
+      "properties.nameNodeAddress": "",
+      "properties.fileSystem": "",
+      "properties.endpoint": "core.windows.net",
+      "properties.protocol": "https",
+      "properties.serviceDataAccessAuthIdentity": "WorkspaceSystemAssignedIdentity"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceDatastores_1": {
+      "name": "workspaceartifactstore",
+      "properties.credentials": "{\"credentialsType\":\"Sas\",\"secrets\":null}",
+      "properties.subscriptionId": "",
+      "properties.resourceGroup": "",
+      "properties.datastoreType": "AzureBlob",
+      "properties.accountName": "stevalplatform$(Environment.Name)",
+      "properties.containerName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml",
+      "properties.fileShareName": "",
+      "properties.storeName": "",
+      "properties.oneLakeWorkspaceName": "",
+      "properties.hdfsServerCertificate": "",
+      "properties.nameNodeAddress": "",
+      "properties.fileSystem": "",
+      "properties.endpoint": "core.windows.net",
+      "properties.protocol": "https",
+      "properties.serviceDataAccessAuthIdentity": "None"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_4": {
+      "L3Name": "Microsoft.DefaultV4",
+      "BasePolicyName": "",
+      "ContentFilters": [],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_3": {
+      "L3Name": "Microsoft.DefaultV3",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_2": {
+      "L3Name": "Microsoft.DefaultV2",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Jailbreak",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Protected Material Text",
+          "source": "Completion"
+        },
+        {
+          "blocking": "false",
+          "enabled": "true",
+          "name": "Protected Material Code",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_1": {
+      "L3Name": "Microsoft.Default",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceConnectionDeployments_1": {
+      "name": "gpt-4.1"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_4": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)_aoai",
+      "category": "AzureOpenAI",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.CognitiveServices/accounts/evalplatform$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalplatform$(Environment.Name)$(RegionAbbr).openai.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_4": {
+      "L3Name": "Microsoft.DefaultV4",
+      "BasePolicyName": "",
+      "ContentFilters": [],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_3": {
+      "L3Name": "Microsoft.DefaultV3",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_2": {
+      "L3Name": "Microsoft.DefaultV2",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Jailbreak",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Protected Material Text",
+          "source": "Completion"
+        },
+        {
+          "blocking": "false",
+          "enabled": "true",
+          "name": "Protected Material Code",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_1": {
+      "L3Name": "Microsoft.Default",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceConnectionDeployments_1": {
+      "name": "gpt-4.1"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_3": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)",
+      "category": "AIServices",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.CognitiveServices/accounts/evalplatform$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalplatform$(Environment.Name)$(RegionAbbr).cognitiveservices.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_2": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)_aoai",
+      "category": "AzureOpenAI",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalfoundry$(Environment.Name)$(RegionAbbr).openai.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2_MicrosoftAIWorkspaceConnections_1": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)",
+      "category": "AIServices",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "$(RegionName)"
+      },
+      "target": "https://evalfoundry$(Environment.Name)$(RegionAbbr).cognitiveservices.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_2": {
+      "L1Name": "evalplatformproject$(Environment.Name)$(RegionAbbr)",
+      "Kind": "Project",
+      "Identity": {
+        "type": "SystemAssigned"
+      },
+      "FriendlyName": "evalplatformproject$(Environment.Name)$(RegionAbbr)",
+      "Sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "KeyVault": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.KeyVault/vaults/CA-EvalInvoke-$(Environment.Name)",
+      "StorageAccount": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)$(RegionAbbr)",
+      "AllowPublicAccessWhenBehindVnet": "",
+      "ContainerRegistry": "",
+      "HbiWorkspace": "false",
+      "ManagedNetwork": {
+        "isolationMode": "Disabled"
+      },
+      "V1LegacyMode": "false",
+      "PublicNetworkAccess": "Enabled",
+      "DiscoveryUrl": "https://eastus2.api.azureml.ms/discovery",
+      "HubResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.MachineLearningServices/workspaces/evalplatformproject$(Environment.Name)$(RegionAbbr)hub",
+      "EnableDataIsolation": "true",
+      "SystemDatastoresAuthMode": "accesskey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceDatastores_3": {
+      "name": "workspaceworkingdirectory",
+      "properties.credentials": "{\"credentialsType\":\"AccountKey\",\"secrets\":null}",
+      "properties.subscriptionId": "",
+      "properties.resourceGroup": "",
+      "properties.datastoreType": "AzureFile",
+      "properties.accountName": "stevalplatform$(Environment.Name)",
+      "properties.containerName": "",
+      "properties.fileShareName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-code",
+      "properties.storeName": "",
+      "properties.oneLakeWorkspaceName": "",
+      "properties.hdfsServerCertificate": "",
+      "properties.nameNodeAddress": "",
+      "properties.fileSystem": "",
+      "properties.endpoint": "core.windows.net",
+      "properties.protocol": "https",
+      "properties.serviceDataAccessAuthIdentity": "None"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceDatastores_2": {
+      "name": "workspaceblobstore",
+      "properties.credentials": "{\"credentialsType\":\"Sas\",\"secrets\":null}",
+      "properties.subscriptionId": "$(Environment.SubscriptionId)",
+      "properties.resourceGroup": "$(Environment.Name)-EvalCommon-UsEast2Rg",
+      "properties.datastoreType": "AzureBlob",
+      "properties.accountName": "stevalplatform$(Environment.Name)",
+      "properties.containerName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml-blobstore",
+      "properties.fileShareName": "",
+      "properties.storeName": "",
+      "properties.oneLakeWorkspaceName": "",
+      "properties.hdfsServerCertificate": "",
+      "properties.nameNodeAddress": "",
+      "properties.fileSystem": "",
+      "properties.endpoint": "core.windows.net",
+      "properties.protocol": "https",
+      "properties.serviceDataAccessAuthIdentity": "WorkspaceSystemAssignedIdentity"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceDatastores_1": {
+      "name": "workspaceartifactstore",
+      "properties.credentials": "{\"credentialsType\":\"Sas\",\"secrets\":null}",
+      "properties.subscriptionId": "",
+      "properties.resourceGroup": "",
+      "properties.datastoreType": "AzureBlob",
+      "properties.accountName": "stevalplatform$(Environment.Name)",
+      "properties.containerName": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml",
+      "properties.fileShareName": "",
+      "properties.storeName": "",
+      "properties.oneLakeWorkspaceName": "",
+      "properties.hdfsServerCertificate": "",
+      "properties.nameNodeAddress": "",
+      "properties.fileSystem": "",
+      "properties.endpoint": "core.windows.net",
+      "properties.protocol": "https",
+      "properties.serviceDataAccessAuthIdentity": "None"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_4": {
+      "L3Name": "Microsoft.DefaultV4",
+      "BasePolicyName": "",
+      "ContentFilters": [],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_3": {
+      "L3Name": "Microsoft.DefaultV3",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_2": {
+      "L3Name": "Microsoft.DefaultV2",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Jailbreak",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Protected Material Text",
+          "source": "Completion"
+        },
+        {
+          "blocking": "false",
+          "enabled": "true",
+          "name": "Protected Material Code",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceRAIPolicies_1": {
+      "L3Name": "Microsoft.Default",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4_MicrosoftAIWorkspaceConnectionDeployments_1": {
+      "name": "gpt-4.1"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_4": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)_aoai",
+      "category": "AzureOpenAI",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.CognitiveServices/accounts/evalplatform$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalplatform$(Environment.Name)$(RegionAbbr).openai.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_4": {
+      "L3Name": "Microsoft.DefaultV4",
+      "BasePolicyName": "",
+      "ContentFilters": [],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_3": {
+      "L3Name": "Microsoft.DefaultV3",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_2": {
+      "L3Name": "Microsoft.DefaultV2",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Jailbreak",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Protected Material Text",
+          "source": "Completion"
+        },
+        {
+          "blocking": "false",
+          "enabled": "true",
+          "name": "Protected Material Code",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceRAIPolicies_1": {
+      "L3Name": "Microsoft.Default",
+      "BasePolicyName": "",
+      "ContentFilters": [
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Hate",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Sexual",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Violence",
+          "source": "Completion"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Prompt"
+        },
+        {
+          "blocking": "true",
+          "enabled": "true",
+          "name": "Selfharm",
+          "source": "Completion"
+        }
+      ],
+      "Mode": "Blocking",
+      "Type": "SystemManaged"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3_MicrosoftAIWorkspaceConnectionDeployments_1": {
+      "name": "gpt-4.1"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_3": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)",
+      "category": "AIServices",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.CognitiveServices/accounts/evalplatform$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalplatform$(Environment.Name)$(RegionAbbr).cognitiveservices.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_2": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)_aoai",
+      "category": "AzureOpenAI",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalfoundry$(Environment.Name)$(RegionAbbr).openai.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1_MicrosoftAIWorkspaceConnections_1": {
+      "name": "evalplatform$(Environment.Name)$(RegionAbbr)",
+      "category": "AIServices",
+      "metadata": {
+        "resourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)",
+        "apiType": "Azure",
+        "apiVersion": "2023-07-01-preview",
+        "deploymentApiVersion": "2023-10-01-preview",
+        "location": "eastus2"
+      },
+      "target": "https://evalfoundry$(Environment.Name)$(RegionAbbr).cognitiveservices.azure.com/",
+      "sharedUserList": [],
+      "isSharedToAll": "true",
+      "authType": "ApiKey"
+    },
+    "EvalRunRg_MicrosoftAIWorkspaces_1": {
+      "L1Name": "evalplatformproject$(Environment.Name)$(RegionAbbr)hub",
+      "Kind": "Hub",
+      "Identity": {
+        "type": "SystemAssigned"
+      },
+      "FriendlyName": "evalplatformproject$(Environment.Name)$(RegionAbbr)hub",
+      "Sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "KeyVault": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.KeyVault/vaults/CA-EvalInvoke-$(Environment.Name)",
+      "StorageAccount": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)$(RegionAbbr)",
+      "AllowPublicAccessWhenBehindVnet": "",
+      "WorkspaceHubConfig": {
+    "defaultWorkspaceResourceGroup": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg"
+      },
+      "ContainerRegistry": "",
+      "HbiWorkspace": "false",
+      "ManagedNetwork": {
+        "isolationMode": "Disabled"
+      },
+      "V1LegacyMode": "false",
+      "PublicNetworkAccess": "Enabled",
+      "DiscoveryUrl": "https://eastus2.api.azureml.ms/discovery",
+      "EnableDataIsolation": "true",
+      "SystemDatastoresAuthMode": "accesskey"
+    },
+    "EvalRunRg_ContainerRegistry_1_ContainerRegistryScopeMaps_5": {
+      "Name": "_repositories_push_metadata_write",
+      "Actions": [
+        "repositories/*/metadata/read",
+        "repositories/*/metadata/write",
+        "repositories/*/content/read",
+        "repositories/*/content/write"
+      ],
+      "Description": "Can perform all read and write operations on the registry"
+    },
+    "EvalRunRg_ContainerRegistry_1_ContainerRegistryScopeMaps_4": {
+      "Name": "_repositories_push",
+      "Actions": [
+        "repositories/*/content/read",
+        "repositories/*/content/write"
+      ],
+      "Description": "Can push to any repository of the registry"
+    },
+    "EvalRunRg_ContainerRegistry_1_ContainerRegistryScopeMaps_3": {
+      "Name": "_repositories_pull_metadata_read",
+      "Actions": [
+        "repositories/*/content/read",
+        "repositories/*/metadata/read"
+      ],
+      "Description": "Can perform all read operations on the registry"
+    },
+    "EvalRunRg_ContainerRegistry_1_ContainerRegistryScopeMaps_2": {
+      "Name": "_repositories_pull",
+      "Actions": [
+        "repositories/*/content/read"
+      ],
+      "Description": "Can pull any repository of the registry"
+    },
+    "EvalRunRg_ContainerRegistry_1_ContainerRegistryScopeMaps_1": {
+      "Name": "_repositories_admin",
+      "Actions": [
+        "repositories/*/metadata/read",
+        "repositories/*/metadata/write",
+        "repositories/*/content/read",
+        "repositories/*/content/write",
+        "repositories/*/content/delete"
+      ],
+      "Description": "Can perform all read, write and delete operations on the registry"
+    },
+    "EvalRunRg_ContainerRegistry_1": {
+      "Name": "evalplatformregistry$(Environment.Name)",
+      "SkuName": {"name": "Standard","tier": "Standard"},
+      "AdminUserEnabled": "false",
+      "Policies": {
+        "quarantinePolicy": {
+          "status": "disabled"
+        },
+        "retentionPolicy": {
+          "status": "disabled",
+          "days": 7
+        },
+        "trustPolicy": {
+          "status": "disabled",
+          "type": "Notary"
+        },
+        "azureADAuthenticationAsArmPolicy": {
+          "status": "enabled"
+        },
+        "softDeletePolicy": {
+          "status": "disabled",
+          "days": 0
+        }
+      },
+      "AutoGeneratedDomainNameLabelScope": "Unsecure",
+      "MetadataSearch": "Disabled",
+      "AnonymousPullEnabled": "false",
+      "ZoneRedundancy": "Disabled",
+      "NetworkRuleBypassOptions": "AzureServices",
+      "Encryption": {
+        "status": "disabled"
+      },
+      "DataEndpointEnabled": "false",
+      "PublicNetworkAccess": "Enabled"
+    },
+    "EvalRunRg_ContainerApp_1": {
+      "Name": "eval-framework-app-$(Environment.Name)$(RegionAbbr)",
+      "EnvironmentId": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.App/managedEnvironments/eval-framework-env-$(Environment.Name)$(RegionAbbr)",
+      "Configuration": {
+                    "activeRevisionsMode": "Single",
+                    "ingress": {
+                        "external": false,
+                        "targetPort": 0,
+                        "exposedPort": 0,
+                        "transport": "Auto",
+                        "traffic": [
+                            {
+                                "weight": 100,
+                                "latestRevision": true
+                            }
+                        ],
+                        "allowInsecure": false,
+                        "stickySessions": {
+                            "affinity": "none"
+                        }
+                    },
+                    "registries": [
+                        {
+                            "server": "evalplatformregistry$(Environment.Name).azurecr.io",
+                            "identity": "system"
+                        }
+                    ],
+                    "identitySettings": []
+                },
+      "Template": {
+        "Containers": [
+          {
+            "Args": [],
+            "Command": [],
+            "Env": [
+              {
+                "Name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "Value": "InstrumentationKey=11aea68a-d038-460d-9ffc-5531760d8df7;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ef2ddea1-6869-4590-8d30-682ab0824cee"
+              },
+              {
+                "Name": "AZURE_STORAGE_ACCOUNT_NAME",
+                "Value": "sxgagenteval$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "AZURE_QUEUE_NAME",
+                "Value": "eval-processing-requests"
+              },
+              {
+                "Name": "AZURE_OPENAI_ENDPOINT",
+                "Value": "https://evalplatform$(Environment.Name)$(RegionAbbr).openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
+              },
+              {
+                "Name": "AZURE_OPENAI_API_VERSION",
+                "Value": "2025-01-01-preview"
+              },
+              {
+                "Name": "AZURE_OPENAI_DEPLOYMENT_NAME",
+                "Value": "gpt-4.1"
+              },
+              {
+                "Name": "AZURE_TENANT_ID",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "AZURE_SUBSCRIPTION_ID",
+                "Value": "$(Environment.SubscriptionId)"
+              },
+              {
+                "Name": "AZURE_AI_PROJECT_NAME",
+                "Value": "evalplatformproject"
+              },
+              {
+                "Name": "MAX_DATASET_CONCURRENCY",
+                "Value": "3"
+              },
+              {
+                "Name": "MAX_METRICS_CONCURRENCY",
+                "Value": "8"
+              },
+              {
+                "Name": "EVALUATION_TIMEOUT",
+                "Value": "30"
+              },
+              {
+                "Name": "HTTP_POOL_CONNECTIONS",
+                "Value": "20"
+              },
+              {
+                "Name": "HTTP_POOL_MAXSIZE",
+                "Value": "10"
+              },
+              {
+                "Name": "HTTP_SESSION_LIFETIME",
+                "Value": "3600"
+              },
+              {
+                "Name": "AZURE_STORAGE_TIMEOUT",
+                "Value": "30"
+              },
+              {
+                "Name": "AZURE_STORAGE_CONNECT_TIMEOUT",
+                "Value": "60"
+              },
+              {
+                "Name": "AZURE_USE_MANAGED_IDENTITY",
+                "Value": "true"
+              },
+              {
+                "Name": "AZURE_RESOURCE_GROUP_NAME",
+                "Value": "$(Environment.Name)-EvalCommon-UsEast2Rg"
+              },
+              {
+                "Name": "AZURE_OPENAI_USE_MANAGED_IDENTITY",
+                "Value": "True"
+              },
+              {
+                "Name": "PYTHONPATH",
+                "Value": "/app/src"
+              },
+              {
+                "Name": "PYTHON_UNBUFFERED",
+                "Value": "1"
+              },
+              {
+                "Name": "LOG_LEVEL",
+                "Value": "INFO"
+              },
+              {
+                "Name": "ENABLE_PERFORMANCE_LOGGING",
+                "Value": "true"
+              },
+              {
+                "Name": "AZURE_AI_PROJECT_ID",
+                "Value": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)/projects/evalfoundryproject$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "EVAL_CONFIG_ENDPOINT",
+                "Value": "/api/v1/eval/configurations/"
+              },
+              {
+                "Name": "STATUS_UPDATE_ENDPOINT",
+                "Value": "/api/v1/eval/runs/"
+              },
+              {
+                "Name": "ENRICHED_DATASET_ENDPOINT",
+                "Value": "/api/v1/eval/runs/"
+              },
+              {
+                "Name": "FORCE_RESTART",
+                "Value": "11/19/2025 19:46:16"
+              },
+              {
+                "Name": "AZURE_SUCCESS_QUEUE_NAME",
+                "Value": "eval-processing-requests-completed"
+              },
+              {
+                "Name": "AZURE_FAILURE_QUEUE_NAME",
+                "Value": "eval-processing-requests-failed"
+              },
+              {
+                "Name": "RUNTIME_ENVIRONMENT",
+                "Value": "$(Environment.Name)$(RegionAbbr)elopment"
+              },
+              {
+                "Name": "AZURE_STORAGE_QUEUE_NAME",
+                "Value": "eval-processing-requests"
+              },
+              {
+                "Name": "AZURE_STORAGE_USE_MANAGED_IDENTITY",
+                "Value": "True"
+              },
+              {
+                "Name": "AZURE_STORAGE_USE_DEFAULT_CREDENTIAL",
+                "Value": "True"
+              },
+              {
+                "Name": "API_ENRICHED_DATASET_ENDPOINT",
+                "Value": "api/v1/eval/runs/{EvalRunId}/enriched-dataset"
+              },
+              {
+                "Name": "API_METRICS_CONFIG_ENDPOINT",
+                "Value": "api/v1/eval/configurations/{MetricsConfigurationId}"
+              },
+              {
+                "Name": "API_POST_RESULTS_ENDPOINT",
+                "Value": "/api/v1/eval/runs/{evalRunId}/results"
+              },
+              {
+                "Name": "API_UPDATE_STATUS_ENDPOINT",
+                "Value": "/api/v1/eval/runs/{evalRunId}/status"
+              },
+              {
+                "Name": "AZURE_OPENAI_USE_DEFAULT_CREDENTIAL",
+                "Value": "True"
+              },
+              {
+                "Name": "AZURE_OPENAI_SUBSCRIPTION_ID",
+                "Value": "$(Environment.SubscriptionId)"
+              },
+              {
+                "Name": "AZURE_OPENAI_RESOURCE_GROUP",
+                "Value": "$(Environment.Name)-EvalCommon-UsEast2Rg"
+              },
+              {
+                "Name": "AZURE_OPENAI_RESOURCE_NAME",
+                "Value": "evalplatformproject"
+              },
+              {
+                "Name": "AZURE_OPENAI_TENANT_ID",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "AZURE_AI_SUBSCRIPTION_ID",
+                "Value": "$(Environment.SubscriptionId)"
+              },
+              {
+                "Name": "AZURE_AI_RESOURCE_GROUP",
+                "Value": "$(Environment.Name)-EvalCommon-UsEast2Rg"
+              },
+              {
+                "Name": "AZURE_AI_TENANT_ID",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "AZURE_AI_USE_DEFAULT_CREDENTIAL",
+                "Value": "True"
+              },
+              {
+                "Name": "EVAL_MAX_PARALLEL_PROMPTS",
+                "Value": "8"
+              },
+              {
+                "Name": "EVAL_MAX_PARALLEL_METRICS",
+                "Value": "4"
+              },
+              {
+                "Name": "EVAL_TIMEOUT_SECONDS",
+                "Value": "300"
+              },
+              {
+                "Name": "EVAL_RETRY_ATTEMPTS",
+                "Value": "2"
+              },
+              {
+                "Name": "EVAL_QUEUE_POLLING_INTERVAL",
+                "Value": "30"
+              },
+              {
+                "Name": "EVAL_QUEUE_VISIBILITY_TIMEOUT",
+                "Value": "300"
+              },
+              {
+                "Name": "APPINSIGHTS_USE_DEFAULT_CREDENTIAL",
+                "Value": "True"
+              },
+              {
+                "Name": "APPINSIGHTS_ENABLE_TELEMETRY",
+                "Value": "True"
+              },
+              {
+                "Name": "APPINSIGHTS_ENABLE_CONSOLE_LOGGING",
+                "Value": "True"
+              },
+              {
+                "Name": "APPINSIGHTS_DISABLE_CONFIG_UPDATES",
+                "Value": "True"
+              },
+              {
+                "Name": "ApplicationInsights__EnableConsoleLogging",
+                "Value": "True"
+              },
+              {
+                "Name": "ApplicationInsights__LogLevel__Default",
+                "Value": "Information"
+              },
+              {
+                "Name": "Evaluation__MaxParallelMetrics",
+                "Value": "2"
+              },
+              {
+                "Name": "Logging__LogLevel__Default",
+                "Value": "Information"
+              },
+              {
+                "Name": "ApiEndpoints__BaseUrl",
+                "Value": "https://sxgevalapi$(Environment.Name)$(RegionAbbr).azurewebsites.net"
+              },
+              {
+                "Name": "AzureStorage__UseManagedIdentity",
+                "Value": "True"
+              },
+              {
+                "Name": "ApplicationInsights__EnableTelemetry",
+                "Value": "True"
+              },
+              {
+                "Name": "AzureOpenAI__DeploymentName",
+                "Value": "gpt-4.1"
+              },
+              {
+                "Name": "Evaluation__RetryAttempts",
+                "Value": "3"
+              },
+              {
+                "Name": "AzureOpenAI__UseManagedIdentity",
+                "Value": "True"
+              },
+              {
+                "Name": "AzureAI__ResourceName",
+                "Value": "evalplatformproject$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "Evaluation__QueuePollingIntervalSeconds",
+                "Value": "30"
+              },
+              {
+                "Name": "AzureOpenAI__ResourceGroupName",
+                "Value": "$(Environment.Name)-EvalCommon-UsEast2Rg"
+              },
+              {
+                "Name": "AzureOpenAI__TenantId",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "Evaluation__QueueVisibilityTimeoutSeconds",
+                "Value": "300"
+              },
+              {
+                "Name": "AzureAI__ProjectName",
+                "Value": "evalplatformproject$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "AzureStorage__QueueName",
+                "Value": "eval-processing-requests"
+              },
+              {
+                "Name": "AzureOpenAI__ApiVersion",
+                "Value": "2025-01-01-preview"
+              },
+              {
+                "Name": "AzureAI__ResourceGroupName",
+                "Value": "$(Environment.Name)-EvalCommon-UsEast2Rg"
+              },
+              {
+                "Name": "ApiEndpoints__EnrichedDatasetEndpoint",
+                "Value": "/api/v1/eval/runs/{EvalRunId}/enriched-dataset"
+              },
+              {
+                "Name": "Logging__LogLevel__eval_runner",
+                "Value": "Information"
+              },
+              {
+                "Name": "AzureOpenAI__SubscriptionId",
+                "Value": "$(Environment.SubscriptionId)"
+              },
+              {
+                "Name": "AzureOpenAI__ResourceName",
+                "Value": "evalplatform$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "AzureOpenAI__Endpoint",
+                "Value": "https://evalplatform$(Environment.Name)$(RegionAbbr).openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview"
+              },
+              {
+                "Name": "Evaluation__MaxParallelPrompts",
+                "Value": "2"
+              },
+              {
+                "Name": "AzureStorage__AccountName",
+                "Value": "sxgagenteval$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "AzureAI__UseDefaultAzureCredential",
+                "Value": "True"
+              },
+              {
+                "Name": "Logging__LogLevel__System",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApplicationInsights__DisableConfigurationUpdates",
+                "Value": "True"
+              },
+              {
+                "Name": "Evaluation__TimeoutSeconds",
+                "Value": "300"
+              },
+              {
+                "Name": "ApplicationInsights__LogLevel__Microsoft",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApiEndpoints__UpdateStatus",
+                "Value": "/api/v1/eval/runs/{evalRunId}/status"
+              },
+              {
+                "Name": "ApplicationInsights__UseDefaultAzureCredential",
+                "Value": "True"
+              },
+              {
+                "Name": "AzureAI__SubscriptionId",
+                "Value": "$(Environment.SubscriptionId)"
+              },
+              {
+                "Name": "ApplicationInsights__LogLevel__System",
+                "Value": "Warning"
+              },
+              {
+                "Name": "AzureStorage__UseDefaultAzureCredential",
+                "Value": "True"
+              },
+              {
+                "Name": "AzureAI__TenantId",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "ApiEndpoints__PostResultsEndpoint",
+                "Value": "/api/v1/eval/runs/{evalRunId}/results"
+              },
+              {
+                "Name": "ApplicationInsights__ConnectionString",
+                "Value": "InstrumentationKey=11aea68a-d038-460d-9ffc-5531760d8df7;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=ef2ddea1-6869-4590-8d30-682ab0824cee"
+              },
+              {
+                "Name": "ApiEndpoints__MetricsConfigurationEndpoint",
+                "Value": "/api/v1/eval/configurations/{MetricsConfigurationId}"
+              },
+              {
+                "Name": "AzureOpenAI__UseDefaultAzureCredential",
+                "Value": "True"
+              },
+              {
+                "Name": "Logging__LogLevel__Microsoft",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApiEndpoints__UpdateStatusEndpoint",
+                "Value": "/api/v1/eval/runs/{evalRunId}/status"
+              },
+              {
+                "Name": "AzureAI__ProjectId",
+                "Value": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.CognitiveServices/accounts/evalfoundry$(Environment.Name)$(RegionAbbr)/projects/evalfoundryproject$(Environment.Name)$(RegionAbbr)"
+              },
+              {
+                "Name": "properties.template.scale.maxReplicas",
+                "Value": "10"
+              },
+              {
+                "Name": "ApiAuthentication__Scope",
+                "Value": "api://ac2b08ba-4232-438f-b333-0300df1de14d/.default"
+              },
+              {
+                "Name": "ApiAuthentication__TokenRefreshBufferSeconds",
+                "Value": "300"
+              },
+              {
+                "Name": "ApiAuthentication__EnableTokenCaching",
+                "Value": "True"
+              },
+              {
+                "Name": "Logging__LogLevel__azure.identity",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApiAuthentication__ResourceAppId",
+                "Value": "ac2b08ba-4232-438f-b333-0300df1de14d"
+              },
+              {
+                "Name": "ApiAuthentication__TenantId",
+                "Value": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+              },
+              {
+                "Name": "ApiAuthentication__UseManagedIdentity",
+                "Value": "True"
+              },
+              {
+                "Name": "Logging__LogLevel__azure.monitor.opentelemetry.exporter",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApiAuthentication__ClientId",
+                "Value": "17bf598d-3033-4395-ae51-4799394c84c7"
+              },
+              {
+                "Name": "Logging__LogLevel__azure.core.pipeline.policies.http_logging_policy",
+                "Value": "Warning"
+              },
+              {
+                "Name": "ApiAuthentication__EnableAuthentication",
+                "Value": "False"
+              }
+            ],
+            "Image": "evalplatformregistry$(Environment.Name).azurecr.io/eval-runner-app:latest",
+            "ImageType": "ContainerImage",
+            "Name": "eval-framework-app-$(Environment.Name)$(RegionAbbr)",
+            "Probes": [],
+            "VolumeMounts": []
+          }
+        ],
+	"scale": {
+			"minReplicas": 1,
+                        "maxReplicas": 10,
+                        "cooldownPeriod": 300,
+                        "pollingInterval": 30
+                    },
+        "InitContainers": [],
+        "ServiceBinds": [],
+        "Volumes": []
+      },
+      "WorkloadProfileName": "Consumption",
+      "ManagedEnvironmentId": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.App/managedEnvironments/eval-framework-env-$(Environment.Name)$(RegionAbbr)",
+      "Identity": {
+        "type": "SystemAssigned"
+      },
+      "Mode": ""
+    },
+    "EvalRunRg_ContainerEnvironment_1": {
+      "Name": "eval-framework-env-$(Environment.Name)$(RegionAbbr)",
+      "AppInsightsConfiguration": "",
+      "ZoneRedundant": "true",
+      "PublicNetworkAccess": "Disabled",
+      "WorkspaceId":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.OperationalInsights/workspaces/eval-platform-logs-test",
+      "WorkloadProfiles": [
+                    {
+                        "workloadProfileType": "Consumption",
+                        "name": "Consumption",
+                        "enableFips": "false",
+			"minimunCount": 0,
+			"maximumCount": 0
+                    }
+                ],
+      "VnetConfiguration": {
+                    "internal": false,
+                    "infrastructureSubnetId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/virtualNetworks/sxgeval$(Environment.Name)$(RegionAbbr)-vnet/subnets/container-app-env"
+                },
+      "PeerTrafficConfiguration": {
+        "encryption": {
+          "enabled": false
+        }
+      },
+      "PeerAuthentication": {
+        "mtls": {
+          "enabled": false
+        }
+      },
+      "OpenTelemetryConfiguration": "",
+      "KedaConfiguration": {},
+      "InfrastructureResourceGroup": "$(Environment.Name)-EvalContainerEnv-$(RegionAbbr)Rg",
+      "DaprConfiguration": {},
+      "DaprAIInstrumentationKey": "",
+      "AppLogsConfiguration": {
+        "destination": "log-analytics",
+        "logAnalyticsConfiguration": {
+          "customerId": "e5eaf4ac-2327-49b3-9415-0412739a7e83",
+          "dynamicJsonColumns": "false"
+        }
+      },
+      "CustomDomainConfiguration": {}
+    },
+    "EvalCommonRg_SmartDetectorAlertRules_5": {
+      "L1Name": "failure anomalies-$(Environment.Name) - EVAL-API-$(Environment.Name)",
+      "AlertScope": [
+        "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/microsoft.insights/components/EVAL-API-$(Environment.Name)$(RegionAbbr)"
+      ],
+      "Id": "FailureAnomaliesDetector",
+      "Severity": "Sev3",
+      "State": "Enabled",
+      "GroupIds": [
+        "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/microsoft.insights/actiongroups/application insights smart detection"
+      ],
+      "Frequency": "PT1M",
+      "Description": "failure anomalies-$(Environment.Name)$(RegionAbbr) notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls."
+    },
+    "EvalCommonRg_StorageAccount_6_TableService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_6_QueueService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_6_FileService_1": {
+      "L2Name": "default",
+      "CorsRules": [],
+      "AllowPermanentDelete": "",
+      "DeleteRetentionDays": 7,
+      "DeleteRetentionEnabled": "true"
+    },
+    "EvalCommonRg_StorageAccount_6_BlobService_1": {
+      "CorsRules": [],
+      "L2Name": "default",
+      "AllowPermanentDelete": "false",
+      "DeleteRetentionDays": 7,
+      "DeleteRetentionEnabled": "true"
+    },
+    "EvalCommonRg_StorageAccount_6": {
+      "Kind": "StorageV2",
+      "AllowBlobPublicAccess": "false",
+      "SupportsHttpsTrafficOnly": "true",
+      "SkuName": "Standard_LRS",
+      "SkuTier": "Standard",
+      "L1Name": "foundrystore$(Environment.Name)$(RegionAbbr)",
+      "MinimumTlsVersion": "TLS1_2",
+      "KeySource": "Microsoft.Storage",
+      "Blob": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "File": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "DefaultAction": "Allow",
+      "Bypass": "AzureServices",
+      "IpRules": [],
+      "VirtualNetworkRules": []
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_6": {
+      "L3Name": "MetricsConfigurationsTable",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_5": {
+      "L3Name": "MetricsConfigurations",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_4": {
+      "L3Name": "EvalRunsTable",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_3": {
+      "L3Name": "EvalRun",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_2": {
+      "L3Name": "DataSetsTable",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1_TableServiceTable_1": {
+      "L3Name": "DataSets",
+      "Mode": ""
+    },
+    "EvalCommonRg_StorageAccount_5_TableService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_5_QueueService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_5_FileService_1": {
+      "L2Name": "default",
+      "CorsRules": [],
+      "AllowPermanentDelete": "",
+      "DeleteRetentionDays": 7,
+      "DeleteRetentionEnabled": "true"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_28": {
+      "PublicAccess": "None",
+      "L3Name": "testserajagagentid",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_27": {
+      "PublicAccess": "None",
+      "L3Name": "testserajagagent5",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_26": {
+      "PublicAccess": "None",
+      "L3Name": "testserajagagent4",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_25": {
+      "PublicAccess": "None",
+      "L3Name": "testserajagagent3",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_24": {
+      "PublicAccess": "None",
+      "L3Name": "testserajag2",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_23": {
+      "PublicAccess": "None",
+      "L3Name": "temp",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_22": {
+      "PublicAccess": "None",
+      "L3Name": "surface-agent",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_21": {
+      "PublicAccess": "None",
+      "L3Name": "string",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_20": {
+      "PublicAccess": "None",
+      "L3Name": "platform-configurations",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_19": {
+      "PublicAccess": "None",
+      "L3Name": "msdfm-surfacerepairorderagent",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_18": {
+      "PublicAccess": "None",
+      "L3Name": "insights-metrics-pt1m",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_17": {
+      "PublicAccess": "None",
+      "L3Name": "insights-logs-operationallogs",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_16": {
+      "PublicAccess": "None",
+      "L3Name": "insights-logs-diagnosticerrorlogs",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_15": {
+      "PublicAccess": "None",
+      "L3Name": "eval-metrics-configuration",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_14": {
+      "PublicAccess": "None",
+      "L3Name": "dummy-4e5f6g7h8i9j0k1l2m3n4o5p",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_13": {
+      "PublicAccess": "None",
+      "L3Name": "dri-agent",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_12": {
+      "PublicAccess": "None",
+      "L3Name": "dri-agen",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_11": {
+      "PublicAccess": "None",
+      "L3Name": "ddef2576-defe-472f-8227-7d39f4ef052c",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_10": {
+      "PublicAccess": "None",
+      "L3Name": "dd9cce79-e713-4aef-9732-a3e9a6bb00ae",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_9": {
+      "PublicAccess": "None",
+      "L3Name": "asst-wrwseguisghaztstzqfrxec4",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_8": {
+      "PublicAccess": "None",
+      "L3Name": "agent-dri-agent",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_7": {
+      "PublicAccess": "None",
+      "L3Name": "agent007",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_6": {
+      "PublicAccess": "None",
+      "L3Name": "a6993119-5956-4085-8ea0-88a9d0c70cb5",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_5": {
+      "PublicAccess": "None",
+      "L3Name": "a001",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_4": {
+      "PublicAccess": "None",
+      "L3Name": "83cf3355-f035-49c6-bc47-9841e20dfe55",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_3": {
+      "PublicAccess": "None",
+      "L3Name": "4c4cd616-0285-4c1a-9865-6fbd04c47af3",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_2": {
+      "PublicAccess": "None",
+      "L3Name": "0cf7986f-4b8c-4207-a8bb-d9bd4a74a170",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1_BlobServiceContainer_1": {
+      "PublicAccess": "None",
+      "L3Name": "05a0d200-51e9-475b-8c28-9e56f7735172",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_5_BlobService_1": {
+      "CorsRules": [],
+      "L2Name": "default",
+      "AllowPermanentDelete": "false",
+      "DeleteRetentionDays": 7,
+      "DeleteRetentionEnabled": "true"
+    },
+    "EvalCommonRg_StorageAccount_5": {
+      "Kind": "StorageV2",
+      "AllowBlobPublicAccess": "false",
+      "SupportsHttpsTrafficOnly": "true",
+      "SkuName": "Standard_GRS",
+      "SkuTier": "Standard",
+      "L1Name": "sxgevalstore$(Environment.Name)$(RegionAbbr)",
+      "MinimumTlsVersion": "TLS1_2",
+      "KeySource": "Microsoft.Storage",
+      "Blob": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "File": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "DefaultAction": "Allow",
+      "Bypass": "AzureServices",
+      "IpRules": [],
+      "VirtualNetworkRules": []
+    },
+    "EvalCommonRg_StorageAccount_4_TableService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_4_QueueService_1": {
+      "L2Name": "default",
+      "CorsRules": []
+    },
+    "EvalCommonRg_StorageAccount_4_FileService_1_FileServiceShare_1": {
+      "L3Name": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-code",
+      "AccessTier": "TransactionOptimized",
+      "EnabledProtocols": "SMB",
+      "ShareQuota": 102400
+    },
+    "EvalCommonRg_StorageAccount_4_FileService_1": {
+      "L2Name": "default",
+      "CorsRules": [
+        {
+          "allowedHeaders": [
+            "*"
+          ],
+          "allowedMethods": [
+            "GET",
+            "HEAD",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "POST"
+          ],
+          "allowedOrigins": [
+            "https://mlworkspace.azure.ai",
+            "https://ml.azure.com",
+            "https://*.ml.azure.com",
+            "https://ai.azure.com",
+            "https://*.ai.azure.com",
+            "https://mlworkspacecanary.azure.ai",
+            "https://mlworkspace.azureml-test.net"
+          ],
+          "exposedHeaders": [
+            "*"
+          ],
+          "maxAgeInSeconds": 1800
+        }
+      ],
+      "AllowPermanentDelete": "",
+      "DeleteRetentionDays": 7,
+      "DeleteRetentionEnabled": "true"
+    },
+    "EvalCommonRg_StorageAccount_4_BlobService_1_BlobServiceContainer_4": {
+      "PublicAccess": "None",
+      "L3Name": "insights-metrics-pt1m",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_4_BlobService_1_BlobServiceContainer_3": {
+      "PublicAccess": "None",
+      "L3Name": "insights-logs-auditevent",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_4_BlobService_1_BlobServiceContainer_2": {
+      "PublicAccess": "None",
+      "L3Name": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml-blobstore",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_4_BlobService_1_BlobServiceContainer_1": {
+      "PublicAccess": "None",
+      "L3Name": "fceb16cb-70fa-40d8-8014-9908bfbe82b2-azureml",
+      "DefaultEncryptionScope": "$account-encryption-key",
+      "DenyEncryptionScopeOverride": "false",
+      "Enabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_4_BlobService_1": {
+      "CorsRules": [
+        {
+          "allowedHeaders": [
+            "*"
+          ],
+          "allowedMethods": [
+            "GET",
+            "HEAD",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "POST",
+            "PATCH"
+          ],
+          "allowedOrigins": [
+            "https://mlworkspace.azure.ai",
+            "https://ml.azure.com",
+            "https://*.ml.azure.com",
+            "https://ai.azure.com",
+            "https://*.ai.azure.com",
+            "https://mlworkspacecanary.azure.ai",
+            "https://mlworkspace.azureml-test.net"
+          ],
+          "exposedHeaders": [
+            "*"
+          ],
+          "maxAgeInSeconds": 1800
+        }
+      ],
+      "L2Name": "default",
+      "AllowPermanentDelete": "false",
+      "DeleteRetentionEnabled": "false"
+    },
+    "EvalCommonRg_StorageAccount_4": {
+      "Kind": "StorageV2",
+      "AllowBlobPublicAccess": "false",
+      "SupportsHttpsTrafficOnly": "true",
+      "SkuName": "Standard_RAGRS",
+      "SkuTier": "Standard",
+      "L1Name": "sxgagenteval$(Environment.Name)",
+      "MinimumTlsVersion": "TLS1_2",
+      "KeySource": "Microsoft.Storage",
+      "Blob": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "File": {
+        "Enabled": "true",
+        "KeyType": "Account"
+      },
+      "DefaultAction": "Allow",
+      "Bypass": "AzureServices",
+      "IpRules": [],
+      "VirtualNetworkRules": []
+    },
+    "EvalCommonRg_ServiceBusNamespace_2_NetworkRuleSets_1": {
+      "ChildL2Name": "default",
+      "DefaultAction": "Allow",
+      "IpRules": [],
+      "PublicNetworkAccess": "Enabled",
+      "TrustedServiceAccessEnabled": "false",
+      "VirtualNetworkRules": []
+    },
+    "EvalCommonRg_ServiceBusNamespace_2_AuthorizationRules_1": {
+      "ChildL2Name": "RootManageSharedAccessKey",
+      "Rights": [
+        "Listen",
+        "Manage",
+        "Send"
+      ]
+    },
+    "EvalCommonRg_ServiceBusNamespace_2": {
+      "L1Name": "sxgevalplatformsb$(Environment.Name)",
+      "DisableLocalAuth": "true",
+      "MinimumTlsVersion": "1.2",
+      "PremiumMessagingPartitions": "0",
+      "PublicNetworkAccess": "Enabled",
+      "ZoneRedundant": "true",
+      "SkuName": "Basic",
+      "SkuTier": "Basic"
+    },
+    "EvalCommonRg_LogAnalyticWorkspace_4": {
+      "L1Name": "workspace-sxgevalplatform-$(Environment.Name)",
+      "PublicNetworkAccessForIngestion": "Enabled",
+      "PublicNetworkAccessForQuery": "Enabled",
+      "RetentionInDays": 30,
+      "DisableLocalAuth": "",
+      "EnableDataExport": "",
+      "ImmediatePurgeDataOn30Days": "",
+      "EnableLogAccessUsingOnlyResourcePermissions": "true",
+      "DailyQuotaGb": "-1",
+      "SkuName": "PerGB2018"
+    },
+    "EvalCommonRg_LogAnalyticWorkspace_3": {
+      "L1Name": "eval-platform-logs-$(Environment.Name)",
+      "PublicNetworkAccessForIngestion": "Enabled",
+      "PublicNetworkAccessForQuery": "Enabled",
+      "RetentionInDays": 30,
+      "DisableLocalAuth": "",
+      "EnableDataExport": "",
+      "ImmediatePurgeDataOn30Days": "",
+      "EnableLogAccessUsingOnlyResourcePermissions": "true",
+      "DailyQuotaGb": "-1",
+      "SkuName": "PerGB2018"
+    },
+    "EvalCommonRg_UserAssignedManagedIdentity_2": {
+      "L1Name": "sxgevalapi$(Environment.Name)-id"
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultSecret_3": {
+      "L2Name": "Test",
+      "Enabled": "true",
+      "ContentType": "application/x-pkcs12",
+      "Nbf": 1763722378,
+      "Exp": 1779274378,
+      "Value": "",
+      "Location": "eastus"
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultSecret_2": {
+      "L2Name": "DataverseSignToolPublic",
+      "Enabled": "false",
+      "ContentType": "application/x-pkcs12",
+      "Nbf": 1763721762,
+      "Exp": 1779360762,
+      "Value": "",
+      "Location": "eastus"
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultSecret_1": {
+      "L2Name": "DataverseSignTool",
+      "Enabled": "true",
+      "ContentType": "application/x-pkcs12",
+      "Nbf": 1763695948,
+      "Exp": 1778923948,
+      "Value": "",
+      "Location": "eastus"
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultKey_3": {
+      "L2Name": "Test",
+      "Enabled": "true",
+      "Nbf": 1763722378,
+      "Exp": 1779274378,
+      "KeyType": ""
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultKey_2": {
+      "L2Name": "DataverseSignToolPublic",
+      "Enabled": "false",
+      "Nbf": 1763721762,
+      "Exp": 1779360762,
+      "KeyType": ""
+    },
+    "EvalCommonRg_KeyVault_2_KeyVaultKey_1": {
+      "L2Name": "DataverseSignTool",
+      "Enabled": "true",
+      "Nbf": 1763695948,
+      "Exp": 1778923948,
+      "KeyType": ""
+    },
+    "EvalCommonRg_KeyVault_2": {
+      "L1Name": "CA-EvalInvoke-$(Environment.Name)",
+      "SkuName": "Standard",
+      "SkuFamily": "A",
+      "EnabledForDeployment": "false",
+      "EnabledForDiskEncryption": "false",
+      "EnabledForTemplateDeployment": "false",
+      "EnableSoftDelete": "true",
+      "SoftDeleteRetentionInDays": 90,
+      "PublicNetworkAccess": "Enabled"
+    },
+    "EvalCommonRg_ActionGroups_2": {
+      "L1Name": "Application Insights Smart Detection",
+      "GroupShortName": "SmartDetect",
+      "ArmRoleReceiversStr": "[\r\n  {\r\n    \"name\": \"Monitoring Contributor\",\r\n    \"roleId\": \"749f88d5-cbae-40b8-bcfc-e573ddc772fa\",\r\n    \"useCommonAlertSchema\": true\r\n  },\r\n  {\r\n    \"name\": \"Monitoring Reader\",\r\n    \"roleId\": \"43d0d8ad-25c7-4714-9337-8ba259a9fe05\",\r\n    \"useCommonAlertSchema\": true\r\n  }\r\n]\r\n                                    ",
+      "EmailReceivers": [],
+      "ArmRoleReceivers": [
+        {
+          "Name": "Monitoring Contributor",
+          "RoleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa"
+        },
+        {
+          "Name": "Monitoring Reader",
+          "RoleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05"
+        }
+      ],
+      "WebhookReceivers": []
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_13": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Slow server response time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "slowserverresponsetime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "slowserverresponsetime"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_12": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Slow page load time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "slowpageloadtime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "slowpageloadtime"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_11": {
+      "Enabled": "false",
+      "Description": "A configuration that controls the migration state of Smart Detection to Smart Alerts",
+      "CustomEmails": [],
+      "DisplayName": "Migration To Alert Rules Completed",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "false",
+      "IsHidden": "true",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "migrationToAlertRulesCompleted",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "migrationToAlertRulesCompleted"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_10": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Long dependency duration",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "longdependencyduration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "longdependencyduration"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_9": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the trace logs emitted from your application, and can warn you about unusual patterns in the severity of your trace telemetry.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in trace severity ratio (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/degradation-in-trace-severity-ratio.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_traceseveritydetector",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_traceseveritydetector"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_8": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the telemetry generated by your application and detects potential security issues.",
+      "CustomEmails": [],
+      "DisplayName": "Potential security issue detected (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/application-security-detection-pack.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_securityextensionspackage",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_securityextensionspackage"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_7": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the memory consumption of each process in your application, and can warn you about potential memory leaks or increased memory consumption.",
+      "CustomEmails": [],
+      "DisplayName": "Potential memory leak detected (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/memory-leak.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_memoryleakextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_memoryleakextension"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_6": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the exceptions thrown in your application, and can warn you about unusual patterns in your exception telemetry.",
+      "CustomEmails": [],
+      "DisplayName": "Abnormal rise in exception volume (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/abnormal-rise-in-exception-volume.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_exceptionchangeextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_exceptionchangeextension"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_5": {
+      "Enabled": "true",
+      "Description": "Canary extension",
+      "CustomEmails": [],
+      "DisplayName": "Canary extension",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "true",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_canaryextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_canaryextension"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_4": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the billing data generated by your application, and can warn you about an unusual increase in your application's billing costs",
+      "CustomEmails": [],
+      "DisplayName": "Abnormal rise in daily data volume (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/billing-data-volume-daily-spike.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_billingdatavolumedailyspikeextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_billingdatavolumedailyspikeextension"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_3": {
+      "Enabled": "true",
+      "Description": "This rule describes the digest mail preferences",
+      "CustomEmails": [],
+      "DisplayName": "Digest Mail Configuration",
+      "HelpUrl": "www.homail.com",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "true",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "digestMailConfiguration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "digestMailConfiguration"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_2": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in server response time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "degradationinserverresponsetime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "degradationinserverresponsetime"
+    },
+    "EvalCommonRg_ApplicationInsights_4_AppInsightsProactiveDetectionLogs_1": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in dependency duration",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "degradationindependencyduration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "degradationindependencyduration"
+    },
+    "EvalCommonRg_ApplicationInsights_4": {
+      "L1Name": "eval-runner-$(Environment.Name)-app-insights",
+      "Kind": "web",
+      "IngestionMode": "LogAnalytics",
+      "PublicNetworkAccessForIngestion": "Enabled",
+      "PublicNetworkAccessForQuery": "Enabled",
+      "RetentionInDays": 90,
+      "WorkspaceResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/microsoft.operationalinsights/workspaces/workspace-sxgevalplatform-$(Environment.Name)",
+      "ApplicationType": "web",
+      "FlowType": "Redfield",
+      "DisableIpMasking": "",
+      "DisableLocalAuth": "",
+      "RequestSource": "IbizaAIExtension",
+      "ImmediatePurgeDataOn30Days": ""
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_26": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Slow server response time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "slowserverresponsetime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "slowserverresponsetime"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_25": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Slow page load time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "slowpageloadtime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "slowpageloadtime"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_24": {
+      "Enabled": "false",
+      "Description": "A configuration that controls the migration state of Smart Detection to Smart Alerts",
+      "CustomEmails": [],
+      "DisplayName": "Migration To Alert Rules Completed",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "false",
+      "IsHidden": "true",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "migrationToAlertRulesCompleted",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "migrationToAlertRulesCompleted"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_23": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Long dependency duration",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "longdependencyduration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "longdependencyduration"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_22": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the trace logs emitted from your application, and can warn you about unusual patterns in the severity of your trace telemetry.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in trace severity ratio (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/degradation-in-trace-severity-ratio.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_traceseveritydetector",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_traceseveritydetector"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_21": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the telemetry generated by your application and detects potential security issues.",
+      "CustomEmails": [],
+      "DisplayName": "Potential security issue detected (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/application-security-detection-pack.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_securityextensionspackage",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_securityextensionspackage"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_20": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the memory consumption of each process in your application, and can warn you about potential memory leaks or increased memory consumption.",
+      "CustomEmails": [],
+      "DisplayName": "Potential memory leak detected (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/memory-leak.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_memoryleakextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_memoryleakextension"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_19": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the exceptions thrown in your application, and can warn you about unusual patterns in your exception telemetry.",
+      "CustomEmails": [],
+      "DisplayName": "Abnormal rise in exception volume (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/abnormal-rise-in-exception-volume.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_exceptionchangeextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_exceptionchangeextension"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_18": {
+      "Enabled": "true",
+      "Description": "Canary extension",
+      "CustomEmails": [],
+      "DisplayName": "Canary extension",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "true",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_canaryextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_canaryextension"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_17": {
+      "Enabled": "true",
+      "Description": "This detection rule automatically analyzes the billing data generated by your application, and can warn you about an unusual increase in your application's billing costs",
+      "CustomEmails": [],
+      "DisplayName": "Abnormal rise in daily data volume (preview)",
+      "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/billing-data-volume-daily-spike.md",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "true",
+      "RuleDefinitionsName": "extension_billingdatavolumedailyspikeextension",
+      "SupportsEmailNotifications": "false",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "extension_billingdatavolumedailyspikeextension"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_16": {
+      "Enabled": "true",
+      "Description": "This rule describes the digest mail preferences",
+      "CustomEmails": [],
+      "DisplayName": "Digest Mail Configuration",
+      "HelpUrl": "www.homail.com",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "true",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "digestMailConfiguration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "digestMailConfiguration"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_15": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in server response time",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "degradationinserverresponsetime",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "degradationinserverresponsetime"
+    },
+    "EvalCommonRg_ApplicationInsights_3_AppInsightsProactiveDetectionLogs_14": {
+      "Enabled": "true",
+      "Description": "Smart Detection rules notify you of performance anomaly issues.",
+      "CustomEmails": [],
+      "DisplayName": "Degradation in dependency duration",
+      "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+      "IsEnabledByDefault": "true",
+      "IsHidden": "false",
+      "IsInPreview": "false",
+      "RuleDefinitionsName": "degradationindependencyduration",
+      "SupportsEmailNotifications": "true",
+      "SendEmailsToSubscriptionOwners": "true",
+      "L2Name": "degradationindependencyduration"
+    },
+    "EvalCommonRg_ApplicationInsights_3": {
+      "L1Name": "EVAL-API-$(Environment.Name)-app-insights",
+      "Kind": "web",
+      "IngestionMode": "LogAnalytics",
+      "PublicNetworkAccessForIngestion": "Enabled",
+      "PublicNetworkAccessForQuery": "Enabled",
+      "RetentionInDays": 90,
+      "WorkspaceResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.OperationalInsights/workspaces/eval-platform-logs-$(Environment.Name)",
+      "ApplicationType": "web",
+      "FlowType": "Redfield",
+      "DisableIpMasking": "",
+      "DisableLocalAuth": "",
+      "RequestSource": "IbizaWebAppExtensionCreate",
+      "ImmediatePurgeDataOn30Days": ""
+    },
+    "EvalCommonRg_SmartDetectorAlertRules_4": {
+      "L1Name": "failure anomalies-$(Environment.Name) - eval-runner-$(Environment.Name)-app-insights",
+      "AlertScope": [
+        "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/microsoft.insights/components/eval-runner-$(Environment.Name)$(RegionAbbr)-app-insights"
+      ],
+      "Id": "FailureAnomaliesDetector",
+      "Severity": "Sev3",
+      "State": "Enabled",
+      "GroupIds": [
+        "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/microsoft.insights/actiongroups/application insights smart detection"
+      ],
+      "Frequency": "PT1M",
+      "Description": "failure anomalies-$(Environment.Name)$(RegionAbbr) notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls."
+    },
+    "EvalCommonRg_WAFPolicy_1": {
+      "L2Name": "sxgevalplatformwaf",
+      "EnabledState": "Enabled",
+      "Mode": "Detection",
+      "SkuName": "Premium_AzureFrontDoor",
+      "RequestBodyCheck": "Enabled",
+      "CustomRules": {
+        "rules": [
+          {
+            "name": "DefaultRateLimit",
+            "priority": "100",
+            "ruleType": "RateLimitRule",
+            "rateLimitDurationInMinutes": "1",
+            "rateLimitThreshold": "1000",
+            "matchConditions": [
+              {
+                "matchVariable": "RequestUri",
+                "operator": "Contains",
+                "negateCondition": "false",
+                "matchValue": [
+                  "sxgevalapi-bsdhaxe9faghc8ep.b01.azurefd.net"
+                ],
+                "transforms": [
+                  "Lowercase"
+                ]
+              }
+            ],
+            "action": "Block",
+            "groupBy": [
+              {
+                "variableName": "SocketAddr"
+              }
+            ],
+            "enabledState": "Enabled"
+          }
+        ]
+      },
+      "ManagedRules": {
+        "managedRuleSets": [
+          {
+            "ruleSetType": "Microsoft_DefaultRuleSet",
+            "ruleSetVersion": "2.1",
+            "ruleSetAction": "Block",
+            "ruleGroupOverrides": []
+          },
+          {
+            "ruleSetType": "Microsoft_BotManagerRuleSet",
+            "ruleSetVersion": "1.0",
+            "ruleGroupOverrides": []
+          }
+        ]
+      }
+    },
+    "EvalCommonRg_CdnProfile_1_SecurityPolicies_1": {
+      "L2Name": "sxgevalplatformwaf-817d1482",
+      "Type": "WebApplicationFirewall",
+      "Associations": [
+        {
+          "domains": [
+            {
+              "id": "[resourceId('Microsoft.Cdn/profiles/afdendpoints', 'SxgEvalPlatform', 'sxgevalapi$(Environment.Name)')]"
+            }
+          ],
+          "patternsToMatch": [
+            "/*"
+          ]
+        }
+      ],
+      "WafPolicy": {
+        "id": "/subscriptions/d2ef7484-d847-4ca9-88be-d2d9f2a8a50f/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/frontdoorwebapplicationfirewallpolicies/sxgevalplatformwaf"
+      }
+    },
+    "EvalCommonRg_CdnProfile_1_OriginGroups_1_Origin_2": {
+      "L3Name": "sxgevalapiwestus2",
+      "HostName": "sxgevalapiproduswest2.azurewebsites.net",
+      "HttpPort": 80,
+      "HttpsPort": 443,
+      "OriginHostHeader": "sxgevalapiproduswest2.azurewebsites.net",
+      "Priority": 1,
+      "Weight": 1000,
+      "EnabledState": "Enabled",
+      "EnforceCertificateNameCheck": "true"
+    },
+    "EvalCommonRg_CdnProfile_1_OriginGroups_1_Origin_1": {
+      "L3Name": "sxgevalapieastus2",
+      "HostName": "sxgevalapiproduseast2.azurewebsites.net",
+      "HttpPort": 80,
+      "HttpsPort": 443,
+      "OriginHostHeader": "sxgevalapiproduseast2.azurewebsites.net",
+      "Priority": 1,
+      "Weight": 1000,
+      "EnabledState": "Enabled",
+      "EnforceCertificateNameCheck": "true"
+    },
+    "EvalCommonRg_CdnProfile_1_OriginGroups_1": {
+      "L2Name": "default-origin-group",
+      "SessionAffinityState": "Disabled",
+      "ProbeIntervalInSeconds": 100,
+      "ProbePath": "/api/v1/health",
+      "ProbeProtocol": "Https",
+      "ProbeRequestType": "GET",
+      "AdditionalLatencyInMilliseconds": 50,
+      "SampleSize": 4,
+      "SuccessfulSamplesRequired": 3
+    },
+    "EvalCommonRg_CdnProfile_1_AfdEndpoints_1_Routes_1": {
+      "L3Name": "default-route",
+      "CustomDomains": [],
+      "OriginGroup": {
+        "id": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Cdn/profiles/SxgEvalPlatform/origingroups/default-origin-group"
+      },
+      "ForwardingProtocol": "MatchRequest",
+      "SupportedProtocols": [
+        "Http",
+        "Https"
+      ],
+      "PatternsToMatch": [
+        "/*"
+      ],
+      "LinkToDefaultDomain": "Enabled",
+      "HttpsRedirect": "Enabled",
+      "EnabledState": "Enabled"
+    },
+    "EvalCommonRg_CdnProfile_1_AfdEndpoints_1": {
+      "L2Name": "sxgevalapi$(Environment.Name)",
+      "EnabledState": "Enabled"
+    },
+    "EvalCommonRg_CdnProfile_1": {
+      "L1Name": "SxgEvalPlatform",
+      "OriginResponseTimeoutSeconds": 60,
+      "SkuName": "Premium_AzureFrontDoor"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterProfiles_1": {
+      "L2Name": "sxgeval$(Environment.Name)-nsp-profile",
+      "Location": "eastus2"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1": {
+      "L1Name": "sxgeval$(Environment.Name)-nsp",
+      "Location": "eastus2"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_14": {
+      "L2Name": "sxgevalstore$(Environment.Name)uswest2-0b98e3fe-f9e6-4480-9498-4646f9473e53",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-UsWest2Rg/providers/Microsoft.Storage/storageAccounts/sxgevalstore$(Environment.Name)uswest2",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_13": {
+      "L2Name": "sxgevalstore$(Environment.Name)useast2-63cb591d-1127-4e65-b9e7-7270dc6bb42d",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-useast2Rg/providers/Microsoft.Storage/storageAccounts/sxgevalstore$(Environment.Name)useast2",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_12": {
+      "L2Name": "sxgagenteval$(Environment.Name)-c37a8871-33ba-4dd4-9a2d-d8177e723a6b",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Storage/storageAccounts/sxgagenteval$(Environment.Name)",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_6": {
+      "L2Name": "foundrystore$(Environment.Name)uswest2-de2727c2-8bf6-469d-b002-f3405668f5ff",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-uswest2Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)uswest2",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_5": {
+      "L2Name": "foundrystore$(Environment.Name)useast2-d9cff46c-fb8b-4d85-8c91-3ac5032290f2",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-useast2Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)useast2",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalNetworkingRg_NetworkSecurityPerimeter_1_NetworkSecurityPerimeterResourceAssociations_1": {
+      "L2Name": "CA-EvalInvoke-$(Environment.Name)-133873c9-c3fd-449b-a69f-64e76a19b006",
+      "PrivateLinkResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.KeyVault/vaults/CA-EvalInvoke-$(Environment.Name)",
+      "ProfileId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalCommon-UsEast2Rg/providers/Microsoft.Network/networkSecurityPerimeters/sxgeval$(Environment.Name)-nsp/profiles/sxgeval$(Environment.Name)-nsp-profile",
+      "AccessMode": "Learning"
+    },
+    "EvalRunRg_Foundry_1": {
+      "L1Name": "evalfoundry$(Environment.Name)$(RegionAbbr)",
+      "ResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)$(RegionAbbr)",
+      "Target": "https://foundrystore$(Environment.Name)$(RegionAbbr).blob.core.windows.net/"
+    },
+    "EvalRunRg_Foundry_1_Project_1": {
+      "L2Name": "evalfoundryproject$(Environment.Name)$(RegionAbbr)",
+      "ResourceId": "/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalRunner-$(RegionAbbr)Rg/providers/Microsoft.Storage/storageAccounts/foundrystore$(Environment.Name)$(RegionAbbr)",
+      "Target": "https://foundrystore$(Environment.Name)$(RegionAbbr).blob.core.windows.net/"
+    },
+    "defaultTenant": "$(aad.tenants.Microsoft)",
+    "RegionAbbr": "global",
+    "Environment": {
+      "ServiceTreeId": "a9adb189-d25e-405f-8f6f-ecca2634ac67",
+      "Name": "test",
+      "PrimaryRegions": [
+        "eastus2"
+      ],
+      "ScalingRegions": [
+        "eastus2",
+        "westus2"
+      ],
+      "AdminObjectId": "424c156a-3e43-48b2-8974-3cf70224406e",
+      "TeamObjectIds": [
+        "97d8ebaa-789a-4653-a46c-7fa9e4e13e91",
+        "b0803794-0bb4-4b79-90de-b6a73ac8fcbd",
+        "c2ca532d-2943-46d6-b79f-78a9c7dc4259"
+      ],
+      "TeamObjectIdsArrayStr": "\"97d8ebaa-789a-4653-a46c-7fa9e4e13e91\",\"b0803794-0bb4-4b79-90de-b6a73ac8fcbd\",\"c2ca532d-2943-46d6-b79f-78a9c7dc4259\"",
+      "SubscriptionId": "d2ef7484-d847-4ca9-88be-d2d9f2a8a50f",
+      "BillingCostCategory": "FR",
+      "BillingPCCode": "P10160510",
+      "BillingScope": "/billingAccounts/3984c6f4-2d2a-4b04-93ce-43cf4824b698:c2ff2d7c-162e-4c31-b715-1405de6d9cf3_2019-05-31/billingProfiles/08e977f7-b4dc-41f3-8d69-f6abc4ecbdae/invoiceSections/e550dcfe-f0b8-4c7f-b339-6228ecbc18c9",
+      "BillingAirsRegisteredUserPrincipalId": "75e86441-c442-40a4-b885-ea1afb131d69",
+      "SubscriptionWorkload": "DevTest",
+      "SubscriptionDisplayName": "AdminPortal",
+      "CertificateIssuanceDomainRegistrationProvider": "OneCert",
+      "CertificateIssuanceAllowedDomains": ["eval-prod.support.microsoft.com"],
+      "AllowedDomainsString": "eval-prod.support.microsoft.com"
+    },
+    "AssistedIdentity": {
+      "DisplayName": "EvalAssistedIdentity",
+      "OwnerObjectID": "97d8ebaa-789a-4653-a46c-7fa9e4e13e91",
+      "KeyVaultLocation": "eastus2",
+      "KeyVaultName": "eval-asid-kv",
+      "KeyVaultResourceGroup": "EvalCommonRg-useast2",
+      "CertificateName": "deploymentcert",
+      "SubjectName": "eval-prod.support.microsoft.com",
+      "IssuerName": "OneCert-AME",
+      "IssuerProvider": "OneCertV2-PrivateCA"
+    }
+  },
+  "Geographies": [
+    {
+      "Name": "United States",
+      "Settings": {},
+      "Regions": [
+        {
+          "Name": "westus2",
+          "Settings": {
+            "RegionAbbr": "uswest2",
+	    "RegionName": "westus2",
+	    "EvalNetworkingRg_NetworkTrafficManagerProfile_1_TMPEEendpointsentry_1": {
+		"EndpointLocation": "West US 2",
+		"Priority": 2
+	    }
+          }
+        },
+        {
+          "Name": "eastus2",
+          "Settings": {
+            "RegionAbbr": "useast2",
+	    "RegionName": "eastus2",
+	    "EvalNetworkingRg_NetworkTrafficManagerProfile_1_TMPEEendpointsentry_1": {
+		"EndpointLocation": "East US 2",
+		"Priority": 1
+	     }
+          }
+        }
+      ]
+    }
+  ]
+}

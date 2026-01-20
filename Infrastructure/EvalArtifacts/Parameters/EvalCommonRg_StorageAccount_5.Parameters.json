@@ -1,0 +1,57 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "SkuTier": {
+      "value": "__SkuTier__"
+    },
+    "AllowBlobPublicAccess": {
+      "value": "__AllowBlobPublicAccess__"
+    },
+    "SupportsHttpsTrafficOnly": {
+      "value": "__SupportsHttpsTrafficOnly__"
+    },
+    "KeySource": {
+      "value": "__KeySource__"
+    },
+    "MinimumTlsVersion": {
+      "value": "__MinimumTlsVersion__"
+    },
+    "DefaultAction": {
+      "value": "__DefaultAction__"
+    },
+    "Bypass": {
+      "value": "__Bypass__"
+    },
+    "IpRules": {
+      "value": "__IpRules__"
+    },
+    "VirtualNetworkRules": {
+      "value": "__VirtualNetworkRules__"
+    },
+    "Blob": {
+      "value": "__Blob__"
+    },
+    "File": {
+      "value": "__File__"
+    },
+    "Table": {
+      "value": "__Table__"
+    },
+    "Queue": {
+      "value": "__Queue__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

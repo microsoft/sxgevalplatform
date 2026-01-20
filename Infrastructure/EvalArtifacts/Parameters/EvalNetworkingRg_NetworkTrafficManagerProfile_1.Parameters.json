@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "trafficmanagerL1Name": {
+      "value": "__trafficmanagerL1Name__"
+    },
+    "RelativeName": {
+      "value": "__RelativeName__"
+    },
+    "Ttl": {
+      "value": "__Ttl__"
+    },
+    "Endpoints": {
+      "value": "__Endpoints__"
+    },
+    "IntervalInSeconds": {
+      "value": "__IntervalInSeconds__"
+    },
+    "MonitorPath": {
+      "value": "__MonitorPath__"
+    },
+    "MonitorPort": {
+      "value": "__MonitorPort__"
+    },
+    "TimeoutInSeconds": {
+      "value": "__TimeoutInSeconds__"
+    },
+    "ToleratedNumberOfFailures": {
+      "value": "__ToleratedNumberOfFailures__"
+    },
+    "TrafficRoutingMethod": {
+      "value": "__TrafficRoutingMethod__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

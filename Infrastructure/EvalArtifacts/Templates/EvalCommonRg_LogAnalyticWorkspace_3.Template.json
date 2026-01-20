@@ -1,0 +1,68 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "features": {
+          "disableLocalAuth": "[if(equals(parameters('DisableLocalAuth'),''), 'false', parameters('DisableLocalAuth'))]",
+          "enableDataExport": "[if(equals(parameters('EnableDataExport'),''), 'false', parameters('EnableDataExport'))]",
+          "enableLogAccessUsingOnlyResourcePermissions": "[if(equals(parameters('EnableLogAccessUsingOnlyResourcePermissions'),''), 'false', parameters('EnableLogAccessUsingOnlyResourcePermissions'))]",
+          "immediatePurgeDataOn30Days": "[if(equals(parameters('ImmediatePurgeDataOn30Days'),''), 'false', parameters('ImmediatePurgeDataOn30Days'))]"
+        },
+        "publicNetworkAccessForIngestion": "[parameters('PublicNetworkAccessForIngestion')]",
+        "publicNetworkAccessForQuery": "[parameters('PublicNetworkAccessForQuery')]",
+        "retentionInDays": "[parameters('RetentionInDays')]",
+        "sku": {
+          "name": "[parameters('SkuName')]"
+        },
+        "workspaceCapping": {
+          "dailyQuotaGb": "[parameters('DailyQuotaGb')]"
+        }
+      },
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-09-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "PublicNetworkAccessForIngestion": {
+      "type": "string"
+    },
+    "PublicNetworkAccessForQuery": {
+      "type": "string"
+    },
+    "RetentionInDays": {
+      "type": "int"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "DailyQuotaGb": {
+      "type": "int"
+    },
+    "EnableLogAccessUsingOnlyResourcePermissions": {
+      "type": "string"
+    },
+    "DisableLocalAuth": {
+      "type": "string"
+    },
+    "EnableDataExport": {
+      "type": "string"
+    },
+    "ImmediatePurgeDataOn30Days": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

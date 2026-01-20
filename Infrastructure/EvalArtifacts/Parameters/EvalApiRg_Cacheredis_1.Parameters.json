@@ -1,0 +1,42 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "Capacity": {
+      "value": "__Capacity__"
+    },
+    "SkewFamily": {
+      "value": "__SkewFamily__"
+    },
+    "SkewName": {
+      "value": "__SkewName__"
+    },
+    "EnableNonSslPort": {
+      "value": "__EnableNonSslPort__"
+    },
+    "MinimumTlsVersion": {
+      "value": "__MinimumTlsVersion__"
+    },
+    "Maxfragmentationmemoryreserved": {
+      "value": "__Maxfragmentationmemoryreserved__"
+    },
+    "Maxmemorydelta": {
+      "value": "__Maxmemorydelta__"
+    },
+    "Maxmemoryreserved": {
+      "value": "__Maxmemoryreserved__"
+    },
+    "RedisVersion": {
+      "value": "__RedisVersion__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

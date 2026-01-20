@@ -1,0 +1,47 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "addressSpace": "[parameters('AddressSpace')]",
+        "enableDdosProtection": "[parameters('EnableDdosProtection')]",
+        "enableVmProtection": false,
+        "ipAllocations": "[if(empty(parameters('IpAllocations')), json('null'), json(parameters('IpAllocations')))]",
+        "subnets": "[parameters('Subnets')]",
+        "virtualNetworkPeerings": "[parameters('VirtualNetworkPeerings')]"
+      },
+      "type": "Microsoft.Network/virtualNetworks",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-05-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "AddressSpace": {
+      "type": "object"
+    },
+    "EnableDdosProtection": {
+      "type": "bool"
+    },
+    "Subnets": {
+      "type": "array"
+    },
+    "VirtualNetworkPeerings": {
+      "type": "array"
+    },
+    "IpAllocations": {
+      "type": "array"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

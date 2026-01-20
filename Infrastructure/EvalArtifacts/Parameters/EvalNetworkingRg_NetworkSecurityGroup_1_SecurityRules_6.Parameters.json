@@ -1,0 +1,51 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "Access": {
+      "value": "__Access__"
+    },
+    "Direction": {
+      "value": "__Direction__"
+    },
+    "Priority": {
+      "value": "__Priority__"
+    },
+    "Protocol": {
+      "value": "__Protocol__"
+    },
+    "Description": {
+      "value": "__Description__"
+    },
+    "DestinationAddressPrefixes": {
+      "value": "__DestinationAddressPrefixes__"
+    },
+    "DestinationPortRanges": {
+      "value": "__DestinationPortRanges__"
+    },
+    "SourceAddressPrefixes": {
+      "value": "__SourceAddressPrefixes__"
+    },
+    "SourcePortRanges": {
+      "value": "__SourcePortRanges__"
+    },
+    "SourcePortRange": {
+      "value": "__SourcePortRange__"
+    },
+    "SourceAddressPrefix": {
+      "value": "__SourceAddressPrefix__"
+    },
+    "DestinationPortRange": {
+      "value": "__DestinationPortRange__"
+    },
+    "DestinationAddressPrefix": {
+      "value": "__DestinationAddressPrefix__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

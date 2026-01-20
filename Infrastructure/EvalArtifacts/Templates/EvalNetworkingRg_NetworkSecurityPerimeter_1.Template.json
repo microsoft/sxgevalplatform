@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {},
+      "type": "Microsoft.Network/networkSecurityPerimeters",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-06-01-preview"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

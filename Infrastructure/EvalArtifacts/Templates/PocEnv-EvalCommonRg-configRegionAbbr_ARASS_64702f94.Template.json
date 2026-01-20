@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[guid(parameters('scopeName'), '64702f94-c441-49e6-a78b-ef80e0188fee', parameters('EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1'))]",
+      "properties": {
+        "principalId": "[parameters('EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('scopeName'))]",
+      "apiVersion": "2018-09-01-preview"
+    }
+  ],
+  "parameters": {
+    "scopeName": {
+      "type": "string"
+    },
+    "EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "identity": "[if(empty(parameters('Identity')), json('null'), json(concat('{\"type\":\"', parameters('Identity').type, '\",', if(contains(parameters('Identity'), 'userAssignedIdentities'), concat('\"userAssignedIdentities\":', parameters('Identity').userAssignedIdentities, ','), ''), '}')))]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "originResponseTimeoutSeconds": "[parameters('OriginResponseTimeoutSeconds')]"
+      },
+      "sku": {
+        "name": "[parameters('SkuName')]"
+      },
+      "type": "Microsoft.Cdn/profiles",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "OriginResponseTimeoutSeconds": {
+      "type": "int"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "Identity": {
+      "type": "object"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

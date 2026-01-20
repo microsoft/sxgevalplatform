@@ -1,0 +1,175 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('NameProp')]",
+      "properties": {
+        "acrUseManagedIdentityCreds": "[parameters('AcrUseManagedIdentityCreds')]",
+        "alwaysOn": "[parameters('AlwaysOn')]",
+        "autoHealEnabled": "[parameters('AutoHealEnabled')]",
+        "defaultDocuments": "[parameters('DefaultDocuments')]",
+        "detailedErrorLoggingEnabled": "[parameters('DetailedErrorLoggingEnabled')]",
+        "elasticWebAppScaleLimit": "[if(equals(parameters('ElasticWebAppScaleLimit'),-1), 0, parameters('ElasticWebAppScaleLimit'))]",
+        "experiments": "[if(empty(parameters('Experiments')), json('null'), parameters('Experiments'))]",
+        "ftpsState": "[parameters('FtpsState')]",
+        "functionsRuntimeScaleMonitoringEnabled": "[parameters('FunctionsRuntimeScaleMonitoringEnabled')]",
+        "http20Enabled": "[parameters('Http20Enabled')]",
+        "httpLoggingEnabled": "[parameters('HttpLoggingEnabled')]",
+        "loadBalancing": "[parameters('LoadBalancing')]",
+        "localMySqlEnabled": "[parameters('LocalMySqlEnabled')]",
+        "logsDirectorySizeLimit": "[parameters('LogsDirectorySizeLimit')]",
+        "managedPipelineMode": "[parameters('ManagedPipelineMode')]",
+        "minimumElasticInstanceCount": "[parameters('MinimumElasticInstanceCount')]",
+        "minTlsVersion": "[parameters('MinTlsVersion')]",
+        "netFrameworkVersion": "[parameters('NetFrameworkVersion')]",
+	"linuxFxVersion": "DOTNETCORE|8.0",
+        "numberOfWorkers": "[parameters('NumberOfWorkers')]",
+        "preWarmedInstanceCount": "[parameters('PreWarmedInstanceCount')]",
+        "publishingUsername": "[parameters('PublishingUsername')]",
+        "remoteDebuggingEnabled": "[parameters('RemoteDebuggingEnabled')]",
+        "remoteDebuggingVersion": "[parameters('RemoteDebuggingVersion')]",
+        "requestTracingEnabled": "[parameters('RequestTracingEnabled')]",
+        "scmIpSecurityRestrictionsUseMain": "[parameters('ScmIpSecurityRestrictionsUseMain')]",
+        "scmMinTlsVersion": "[parameters('ScmMinTlsVersion')]",
+        "scmType": "[parameters('ScmType')]",
+        "use32BitWorkerProcess": "[parameters('Use32BitWorkerProcess')]",
+        "vnetPrivatePortsCount": "[parameters('VnetPrivatePortsCount')]",
+        "vnetRouteAllEnabled": "[parameters('VnetRouteAllEnabled')]",
+        "webSocketsEnabled": "[parameters('WebSocketsEnabled')]",
+        "copy": [
+          {
+            "name": "virtualApplications",
+            "count": "[length(parameters('VirtualApplications'))]",
+            "input": {
+              "physicalPath": "[parameters('VirtualApplications')[copyIndex('virtualApplications')].physicalPath]",
+              "preloadEnabled": "[parameters('VirtualApplications')[copyIndex('virtualApplications')].preloadEnabled]",
+              "virtualPath": "[parameters('VirtualApplications')[copyIndex('virtualApplications')].virtualPath]"
+            }
+          },
+          {
+            "name": "scmIpSecurityRestrictions",
+            "count": "[length(parameters('ScmIpSecurityRestrictions'))]",
+            "input": {
+              "action": "[parameters('ScmIpSecurityRestrictions')[copyIndex('scmIpSecurityRestrictions')].action]",
+              "description": "[parameters('ScmIpSecurityRestrictions')[copyIndex('scmIpSecurityRestrictions')].description]",
+              "ipAddress": "[parameters('ScmIpSecurityRestrictions')[copyIndex('scmIpSecurityRestrictions')].ipAddress]",
+              "name": "[parameters('ScmIpSecurityRestrictions')[copyIndex('scmIpSecurityRestrictions')].name]",
+              "priority": "[parameters('ScmIpSecurityRestrictions')[copyIndex('scmIpSecurityRestrictions')].priority]"
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Web/sites/config",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-09-01"
+    }
+  ],
+  "parameters": {
+    "AcrUseManagedIdentityCreds": {
+      "type": "bool"
+    },
+    "AlwaysOn": {
+      "type": "bool"
+    },
+    "AutoHealEnabled": {
+      "type": "bool"
+    },
+    "DefaultDocuments": {
+      "type": "array"
+    },
+    "DetailedErrorLoggingEnabled": {
+      "type": "bool"
+    },
+    "FtpsState": {
+      "type": "string"
+    },
+    "FunctionsRuntimeScaleMonitoringEnabled": {
+      "type": "bool"
+    },
+    "Http20Enabled": {
+      "type": "bool"
+    },
+    "HttpLoggingEnabled": {
+      "type": "bool"
+    },
+    "LoadBalancing": {
+      "type": "string"
+    },
+    "LocalMySqlEnabled": {
+      "type": "bool"
+    },
+    "LogsDirectorySizeLimit": {
+      "type": "int"
+    },
+    "ManagedPipelineMode": {
+      "type": "string"
+    },
+    "MinimumElasticInstanceCount": {
+      "type": "int"
+    },
+    "MinTlsVersion": {
+      "type": "string"
+    },
+    "NetFrameworkVersion": {
+      "type": "string"
+    },
+    "NumberOfWorkers": {
+      "type": "int"
+    },
+    "PreWarmedInstanceCount": {
+      "type": "int"
+    },
+    "PublishingUsername": {
+      "type": "string"
+    },
+    "RemoteDebuggingEnabled": {
+      "type": "bool"
+    },
+    "RemoteDebuggingVersion": {
+      "type": "string"
+    },
+    "RequestTracingEnabled": {
+      "type": "bool"
+    },
+    "ScmIpSecurityRestrictionsUseMain": {
+      "type": "bool"
+    },
+    "ScmMinTlsVersion": {
+      "type": "string"
+    },
+    "ScmType": {
+      "type": "string"
+    },
+    "Use32BitWorkerProcess": {
+      "type": "bool"
+    },
+    "VnetPrivatePortsCount": {
+      "type": "int"
+    },
+    "VnetRouteAllEnabled": {
+      "type": "bool"
+    },
+    "WebSocketsEnabled": {
+      "type": "bool"
+    },
+    "ElasticWebAppScaleLimit": {
+      "type": "int"
+    },
+    "VirtualApplications": {
+      "type": "array"
+    },
+    "ScmIpSecurityRestrictions": {
+      "type": "array"
+    },
+    "Experiments": {
+      "type": "object"
+    },
+    "NameProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

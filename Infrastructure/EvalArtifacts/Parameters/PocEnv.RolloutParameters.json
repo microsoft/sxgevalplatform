@@ -1,0 +1,23 @@
+﻿{
+  "subscriptions": [
+    {
+      "name": "SubscriptionProvisioning",
+      "displayName": "__Environment.SubscriptionDisplayName__",
+      "workload": "__Environment.SubscriptionWorkload__",
+      "billing": {
+        "scope": "__Environment.BillingScope__",
+        "pcCode": "__Environment.BillingPCCode__",
+        "costCategory": "__Environment.BillingCostCategory__",
+        "airsRegisteredUserPrincipalId": "__Environment.BillingAirsRegisteredUserPrincipalId__"
+      },
+      "certificateIssuance": {
+        "allowedDomains": [
+          "__Environment.AllowedDomainsString__"
+        ],
+        "domainRegistrationProvider": "__Environment.CertificateIssuanceDomainRegistrationProvider__"
+      },
+      "isServiceScope": "False",
+      "backfilledSubscriptionId": "__Environment.SubscriptionId__"
+    }
+  ]
+}

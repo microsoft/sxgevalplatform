@@ -1,0 +1,26 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('ChildL2Name')]",
+      "properties": {
+        "rights": "[parameters('Rights')]"
+      },
+      "type": "Microsoft.ServiceBus/namespaces/AuthorizationRules",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-10-01-preview"
+    }
+  ],
+  "parameters": {
+    "ChildL2Name": {
+      "type": "string"
+    },
+    "Rights": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

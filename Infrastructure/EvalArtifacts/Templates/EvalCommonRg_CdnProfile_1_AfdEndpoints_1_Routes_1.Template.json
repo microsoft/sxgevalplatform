@@ -1,0 +1,63 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L3Name')]",
+      "properties": {
+        "enabledState": "[parameters('EnabledState')]",
+        "forwardingProtocol": "[parameters('ForwardingProtocol')]",
+        "httpsRedirect": "[parameters('HttpsRedirect')]",
+        "linkToDefaultDomain": "[parameters('LinkToDefaultDomain')]",
+        "originGroup": "[parameters('OriginGroup')]",
+        "patternsToMatch": "[parameters('PatternsToMatch')]",
+        "ruleSets": [],
+        "supportedProtocols": "[parameters('SupportedProtocols')]",
+        "copy": [
+          {
+            "name": "customDomains",
+            "count": "[length(parameters('CustomDomains'))]",
+            "input": {
+              "id": "[parameters('CustomDomains')[copyIndex('customDomains')].id]"
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L3Name": {
+      "type": "string"
+    },
+    "SupportedProtocols": {
+      "type": "array"
+    },
+    "OriginGroup": {
+      "type": "object"
+    },
+    "PatternsToMatch": {
+      "type": "array"
+    },
+    "ForwardingProtocol": {
+      "type": "string"
+    },
+    "LinkToDefaultDomain": {
+      "type": "string"
+    },
+    "HttpsRedirect": {
+      "type": "string"
+    },
+    "EnabledState": {
+      "type": "string"
+    },
+    "CustomDomains": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "parameters": {
+          "type": "[parameters('Type')]",
+          "wafPolicy": "[parameters('WafPolicy')]",
+          "copy": [
+            {
+              "name": "associations",
+              "count": "[length(parameters('Associations'))]",
+              "input": {
+                "domains": "[parameters('Associations')[copyIndex('associations')].domains]",
+                "patternsToMatch": "[parameters('Associations')[copyIndex('associations')].patternsToMatch]"
+              }
+            }
+          ]
+        }
+      },
+      "type": "Microsoft.Cdn/profiles/securityPolicies",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "Type": {
+      "type": "string"
+    },
+    "WafPolicy": {
+      "type": "object"
+    },
+    "Associations": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

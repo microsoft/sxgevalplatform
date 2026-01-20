@@ -1,0 +1,21 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "eventL1Name": {
+      "value": "__eventL1Name__"
+    },
+    "Source": {
+      "value": "__Source__"
+    },
+    "TopicType": {
+      "value": "__TopicType__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

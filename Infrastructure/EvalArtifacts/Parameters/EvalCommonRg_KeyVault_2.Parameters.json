@@ -1,0 +1,42 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "SkuFamily": {
+      "value": "__SkuFamily__"
+    },
+    "EnabledForDeployment": {
+      "value": "__EnabledForDeployment__"
+    },
+    "EnabledForDiskEncryption": {
+      "value": "__EnabledForDiskEncryption__"
+    },
+    "EnabledForTemplateDeployment": {
+      "value": "__EnabledForTemplateDeployment__"
+    },
+    "EnableSoftDelete": {
+      "value": "__EnableSoftDelete__"
+    },
+    "PublicNetworkAccess": {
+      "value": "__PublicNetworkAccess__"
+    },
+    "SoftDeleteRetentionInDays": {
+      "value": "__SoftDeleteRetentionInDays__"
+    },
+    "TenantId": {
+      "value": "__TenantId__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

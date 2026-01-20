@@ -1,0 +1,92 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "kind": "Storage",
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "allowBlobPublicAccess": "[parameters('AllowBlobPublicAccess')]",
+        "allowSharedKeyAccess": false,
+        "encryption": {
+          "keySource": "[parameters('KeySource')]",
+          "services": {
+            "blob": "[if(empty(parameters('Blob')), json('null'), parameters('Blob'))]",
+            "file": "[if(empty(parameters('File')), json('null'), parameters('File'))]",
+            "queue": "[if(empty(parameters('Queue')), json('null'), parameters('Queue'))]",
+            "table": "[if(empty(parameters('Table')), json('null'), parameters('Table'))]"
+          }
+        },
+        "minimumTlsVersion": "[parameters('MinimumTlsVersion')]",
+        "networkAcls": {
+          "bypass": "[parameters('Bypass')]",
+          "defaultAction": "[parameters('DefaultAction')]",
+          "ipRules": "[parameters('IpRules')]",
+          "virtualNetworkRules": "[parameters('VirtualNetworkRules')]"
+        },
+        "supportsHttpsTrafficOnly": "[parameters('SupportsHttpsTrafficOnly')]"
+      },
+      "sku": {
+        "name": "[parameters('SkuName')]",
+        "tier": "[parameters('SkuTier')]"
+      },
+      "type": "Microsoft.Storage/storageAccounts",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-09-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "SkuTier": {
+      "type": "string"
+    },
+    "AllowBlobPublicAccess": {
+      "type": "bool"
+    },
+    "SupportsHttpsTrafficOnly": {
+      "type": "bool"
+    },
+    "KeySource": {
+      "type": "string"
+    },
+    "MinimumTlsVersion": {
+      "type": "string"
+    },
+    "DefaultAction": {
+      "type": "string"
+    },
+    "Bypass": {
+      "type": "string"
+    },
+    "IpRules": {
+      "type": "array"
+    },
+    "VirtualNetworkRules": {
+      "type": "array"
+    },
+    "Blob": {
+      "type": "object"
+    },
+    "File": {
+      "type": "object"
+    },
+    "Table": {
+      "type": "object"
+    },
+    "Queue": {
+      "type": "object"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "privateLinkResource": {
+          "id": "[parameters('PrivateLinkResourceId')]"
+        },
+        "profile": {
+          "id": "[parameters('ProfileId')]"
+        }
+      },
+      "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-06-01-preview"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "PrivateLinkResourceId": {
+      "type": "string"
+    },
+    "ProfileId": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

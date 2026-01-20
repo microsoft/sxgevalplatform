@@ -1,0 +1,66 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "ElasticScaleEnabled": {
+      "value": "__ElasticScaleEnabled__"
+    },
+    "HyperV": {
+      "value": "__HyperV__"
+    },
+    "IsSpot": {
+      "value": "__IsSpot__"
+    },
+    "IsXenon": {
+      "value": "__IsXenon__"
+    },
+    "MaximumElasticWorkerCount": {
+      "value": "__MaximumElasticWorkerCount__"
+    },
+    "PerSiteScaling": {
+      "value": "__PerSiteScaling__"
+    },
+    "Reserved": {
+      "value": "__Reserved__"
+    },
+    "TargetWorkerCount": {
+      "value": "__TargetWorkerCount__"
+    },
+    "TargetWorkerSizeId": {
+      "value": "__TargetWorkerSizeId__"
+    },
+    "ZoneRedundant": {
+      "value": "__ZoneRedundant__"
+    },
+    "Kind": {
+      "value": "__Kind__"
+    },
+    "Capacity": {
+      "value": "__Capacity__"
+    },
+    "Family": {
+      "value": "__Family__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "Size": {
+      "value": "__Size__"
+    },
+    "Tier": {
+      "value": "__Tier__"
+    },
+    "HostingEnvironmentProfile": {
+      "value": "__HostingEnvironmentProfile__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

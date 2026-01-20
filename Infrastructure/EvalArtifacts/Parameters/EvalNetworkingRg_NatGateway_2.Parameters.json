@@ -1,0 +1,24 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "IdleTimeoutInMinutes": {
+      "value": "__IdleTimeoutInMinutes__"
+    },
+    "PublicIpAddresses": {
+      "value": "__PublicIpAddresses__"
+    },
+    "PublicIpPrefixes": {
+      "value": "__PublicIpPrefixes__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

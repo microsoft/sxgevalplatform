@@ -1,0 +1,33 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L2Name__"
+    },
+    "EnabledState": {
+      "value": "__EnabledState__"
+    },
+    "Mode": {
+      "value": "__Mode__"
+    },
+    "RequestBodyCheck": {
+      "value": "__RequestBodyCheck__"
+    },
+    "CustomRules": {
+      "value": "__CustomRules__"
+    },
+    "ManagedRules": {
+      "value": "__ManagedRules__"
+    },
+    "SkuName": {
+      "value": "__SkuName__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

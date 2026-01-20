@@ -1,0 +1,111 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "AcrUseManagedIdentityCreds": {
+      "value": "__AcrUseManagedIdentityCreds__"
+    },
+    "AlwaysOn": {
+      "value": "__AlwaysOn__"
+    },
+    "AutoHealEnabled": {
+      "value": "__AutoHealEnabled__"
+    },
+    "DefaultDocuments": {
+      "value": "__DefaultDocuments__"
+    },
+    "DetailedErrorLoggingEnabled": {
+      "value": "__DetailedErrorLoggingEnabled__"
+    },
+    "FtpsState": {
+      "value": "__FtpsState__"
+    },
+    "FunctionsRuntimeScaleMonitoringEnabled": {
+      "value": "__FunctionsRuntimeScaleMonitoringEnabled__"
+    },
+    "Http20Enabled": {
+      "value": "__Http20Enabled__"
+    },
+    "HttpLoggingEnabled": {
+      "value": "__HttpLoggingEnabled__"
+    },
+    "LoadBalancing": {
+      "value": "__LoadBalancing__"
+    },
+    "LocalMySqlEnabled": {
+      "value": "__LocalMySqlEnabled__"
+    },
+    "LogsDirectorySizeLimit": {
+      "value": "__LogsDirectorySizeLimit__"
+    },
+    "ManagedPipelineMode": {
+      "value": "__ManagedPipelineMode__"
+    },
+    "MinimumElasticInstanceCount": {
+      "value": "__MinimumElasticInstanceCount__"
+    },
+    "MinTlsVersion": {
+      "value": "__MinTlsVersion__"
+    },
+    "NetFrameworkVersion": {
+      "value": "__NetFrameworkVersion__"
+    },
+    "NumberOfWorkers": {
+      "value": "__NumberOfWorkers__"
+    },
+    "PreWarmedInstanceCount": {
+      "value": "__PreWarmedInstanceCount__"
+    },
+    "PublishingUsername": {
+      "value": "__PublishingUsername__"
+    },
+    "RemoteDebuggingEnabled": {
+      "value": "__RemoteDebuggingEnabled__"
+    },
+    "RemoteDebuggingVersion": {
+      "value": "__RemoteDebuggingVersion__"
+    },
+    "RequestTracingEnabled": {
+      "value": "__RequestTracingEnabled__"
+    },
+    "ScmIpSecurityRestrictionsUseMain": {
+      "value": "__ScmIpSecurityRestrictionsUseMain__"
+    },
+    "ScmMinTlsVersion": {
+      "value": "__ScmMinTlsVersion__"
+    },
+    "ScmType": {
+      "value": "__ScmType__"
+    },
+    "Use32BitWorkerProcess": {
+      "value": "__Use32BitWorkerProcess__"
+    },
+    "VnetPrivatePortsCount": {
+      "value": "__VnetPrivatePortsCount__"
+    },
+    "VnetRouteAllEnabled": {
+      "value": "__VnetRouteAllEnabled__"
+    },
+    "WebSocketsEnabled": {
+      "value": "__WebSocketsEnabled__"
+    },
+    "ElasticWebAppScaleLimit": {
+      "value": "__ElasticWebAppScaleLimit__"
+    },
+    "VirtualApplications": {
+      "value": "__VirtualApplications__"
+    },
+    "ScmIpSecurityRestrictions": {
+      "value": "__ScmIpSecurityRestrictions__"
+    },
+    "Experiments": {
+      "value": "__Experiments__"
+    },
+    "NameProp": {
+      "value": "__L1Name__/web"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

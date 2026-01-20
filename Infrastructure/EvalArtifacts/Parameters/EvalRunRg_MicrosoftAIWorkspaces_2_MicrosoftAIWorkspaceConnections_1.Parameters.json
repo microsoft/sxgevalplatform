@@ -1,0 +1,30 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "value": "__L1Name__/__name__"
+    },
+    "metadata": {
+      "value": "__metadata__"
+    },
+    "category": {
+      "value": "__category__"
+    },
+    "target": {
+      "value": "__target__"
+    },
+    "isSharedToAll": {
+      "value": "__isSharedToAll__"
+    },
+    "sharedUserList": {
+      "value": "__sharedUserList__"
+    },
+    "authType": {
+      "value": "__authType__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

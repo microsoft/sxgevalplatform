@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "name": "[guid(parameters('scopeName'), 'e0f68234-74aa-48ed-b826-c38b57376e17', parameters('EvalCommonRg_Cacheredis_1_EvalApiRg_AppService_1'))]",
+      "properties": {
+        "principalId": "[parameters('EvalCommonRg_Cacheredis_1_EvalApiRg_AppService_1')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'e0f68234-74aa-48ed-b826-c38b57376e17')]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "scope": "[resourceId('Microsoft.Cache/redis', parameters('scopeName'))]",
+      "apiVersion": "2018-09-01-preview"
+    }
+  ],
+  "parameters": {
+    "scopeName": {
+      "type": "string"
+    },
+    "EvalCommonRg_Cacheredis_1_EvalApiRg_AppService_1": {
+      "type": "string"
+    }
+  }
+}

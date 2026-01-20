@@ -1,0 +1,67 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "enableNonSslPort": "[parameters('EnableNonSslPort')]",
+        "minimumTlsVersion": "[parameters('MinimumTlsVersion')]",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxfragmentationmemory-reserved": "[parameters('Maxfragmentationmemoryreserved')]",
+          "maxmemory-delta": "[parameters('Maxmemorydelta')]",
+          "maxmemory-reserved": "[parameters('Maxmemoryreserved')]"
+        },
+        "redisVersion": "[parameters('RedisVersion')]",
+        "sku": {
+          "capacity": "[parameters('Capacity')]",
+          "family": "[parameters('SkewFamily')]",
+          "name": "[parameters('SkewName')]"
+        }
+      },
+      "type": "Microsoft.Cache/redis",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-08-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "Capacity": {
+      "type": "int"
+    },
+    "SkewFamily": {
+      "type": "string"
+    },
+    "SkewName": {
+      "type": "string"
+    },
+    "EnableNonSslPort": {
+      "type": "string"
+    },
+    "MinimumTlsVersion": {
+      "type": "string"
+    },
+    "Maxfragmentationmemoryreserved": {
+      "type": "string"
+    },
+    "Maxmemorydelta": {
+      "type": "string"
+    },
+    "Maxmemoryreserved": {
+      "type": "string"
+    },
+    "RedisVersion": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

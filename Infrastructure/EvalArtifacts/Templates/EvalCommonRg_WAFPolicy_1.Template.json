@@ -1,0 +1,54 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "type": "Microsoft.Network/frontdoorWebApplicationFirewallPolicies",
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "customRules": "[parameters('CustomRules')]",
+        "managedRules": "[parameters('ManagedRules')]",
+        "policySettings": {
+          "requestBodyCheck": "[parameters('RequestBodyCheck')]",
+          "enabledState": "[parameters('EnabledState')]",
+          "mode": "[parameters('Mode')]"
+        }
+      },
+      "sku": {
+        "name": "[parameters('SkuName')]"
+      },
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "EnabledState": {
+      "type": "string"
+    },
+    "Mode": {
+      "type": "string"
+    },
+    "RequestBodyCheck": {
+      "type": "string"
+    },
+    "CustomRules": {
+      "type": "object"
+    },
+    "ManagedRules": {
+      "type": "object"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "actionGroups": {
+          "groupIds": "[parameters('GroupIds')]"
+        },
+        "description": "[parameters('Description')]",
+        "detector": {
+          "id": "[parameters('Id')]"
+        },
+        "frequency": "[parameters('Frequency')]",
+        "scope": "[parameters('AlertScope')]",
+        "severity": "[parameters('Severity')]",
+        "state": "[parameters('State')]"
+      },
+      "type": "microsoft.alertsManagement/smartDetectorAlertRules",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2021-04-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "GroupIds": {
+      "type": "array"
+    },
+    "Id": {
+      "type": "string"
+    },
+    "Frequency": {
+      "type": "string"
+    },
+    "AlertScope": {
+      "type": "array"
+    },
+    "Severity": {
+      "type": "string"
+    },
+    "State": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

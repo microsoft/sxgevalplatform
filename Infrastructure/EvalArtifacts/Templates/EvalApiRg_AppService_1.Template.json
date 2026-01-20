@@ -1,0 +1,138 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "identity": "[if(empty(parameters('Identity')), json('null'), json(concat('{\"type\":\"', parameters('Identity').type, '\",', if(contains(parameters('Identity'), 'userAssignedIdentities'), concat('\"userAssignedIdentities\":', parameters('Identity').userAssignedIdentities, ','), ''), '}')))]",
+      "kind": "[parameters('Kind')]",
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "clientAffinityEnabled": "[parameters('ClientAffinityEnabled')]",
+        "clientCertEnabled": "[parameters('ClientCertEnabled')]",
+        "clientCertMode": "[parameters('ClientCertMode')]",
+        "containerSize": "[parameters('ContainerSize')]",
+        "dailyMemoryTimeQuota": "[parameters('DailyMemoryTimeQuota')]",
+        "enabled": "[parameters('Enabled')]",
+        "hostingEnvironmentProfile": "[if(empty(parameters('HostingEnvironmentProfile')), json('null'), parameters('HostingEnvironmentProfile'))]",
+        "hostNamesDisabled": "[parameters('HostNamesDisabled')]",
+        "httpsOnly": "[parameters('HttpsOnly')]",
+        "hyperV": "[parameters('HyperV')]",
+        "isXenon": "[parameters('IsXenon')]",
+        "keyVaultReferenceIdentity": "[parameters('KeyVaultReferenceIdentity')]",
+        "redundancyMode": "[parameters('RedundancyMode')]",
+        "reserved": "[parameters('Reserved')]",
+        "scmSiteAlsoStopped": "[parameters('ScmSiteAlsoStopped')]",
+        "serverFarmId": "[parameters('ServerFarmId')]",
+        "storageAccountRequired": "[parameters('StorageAccountRequired')]",
+        "virtualNetworkSubnetId":"[parameters('VirtualNetworkSubnetId')]",
+        "vnetContentShareEnabled": "[if(empty(parameters('VnetContentShareEnabled')), 'false', parameters('VnetContentShareEnabled'))]",
+        "vnetImagePullEnabled": "[if(empty(parameters('VnetImagePullEnabled')), 'false', parameters('VnetImagePullEnabled'))]",
+        "vnetRouteAllEnabled": "[if(empty(parameters('VnetRouteAllEnabled')), 'false', parameters('VnetRouteAllEnabled'))]",
+        "copy": [
+          {
+            "name": "hostNameSslStates",
+            "count": "[length(parameters('HostNameSslStates'))]",
+            "input": {
+              "hostType": "[parameters('HostNameSslStates')[copyIndex('hostNameSslStates')].hostType]",
+              "name": "[parameters('HostNameSslStates')[copyIndex('hostNameSslStates')].name]",
+              "sslState": "[parameters('HostNameSslStates')[copyIndex('hostNameSslStates')].sslState]"
+            }
+          }
+        ]
+      },
+      "type": "Microsoft.Web/sites",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-09-01"
+    }
+  ],
+  "outputs": {
+    "principalId": {
+      "type": "string",
+      "value": "[if(and(contains(reference(parameters('L1Name'), '2022-09-01','Full'), 'identity'),contains(reference(parameters('L1Name'), '2022-09-01','Full').identity, 'principalId')), reference (parameters('L1Name'), '2022-09-01','Full').identity.principalId, '')]"
+    }
+  },
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "ClientAffinityEnabled": {
+      "type": "bool"
+    },
+    "ClientCertEnabled": {
+      "type": "bool"
+    },
+    "ClientCertMode": {
+      "type": "string"
+    },
+    "ContainerSize": {
+      "type": "int"
+    },
+    "DailyMemoryTimeQuota": {
+      "type": "int"
+    },
+    "Enabled": {
+      "type": "bool"
+    },
+    "HostNamesDisabled": {
+      "type": "bool"
+    },
+    "HttpsOnly": {
+      "type": "bool"
+    },
+    "HyperV": {
+      "type": "bool"
+    },
+    "IsXenon": {
+      "type": "bool"
+    },
+    "KeyVaultReferenceIdentity": {
+      "type": "string"
+    },
+    "RedundancyMode": {
+      "type": "string"
+    },
+    "Reserved": {
+      "type": "bool"
+    },
+    "ScmSiteAlsoStopped": {
+      "type": "bool"
+    },
+    "ServerFarmId": {
+      "type": "string"
+    },
+    "StorageAccountRequired": {
+      "type": "bool"
+    },
+    "Kind": {
+      "type": "string"
+    },
+    "HostNameSslStates": {
+      "type": "array"
+    },
+    "HostingEnvironmentProfile": {
+      "type": "object"
+    },
+    "Identity": {
+      "type": "object"
+    },
+    "VirtualNetworkSubnetId": {
+      "type": "string"
+    },
+    "VnetContentShareEnabled": {
+      "type": "string"
+    },
+    "VnetImagePullEnabled": {
+      "type": "string"
+    },
+    "VnetRouteAllEnabled": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

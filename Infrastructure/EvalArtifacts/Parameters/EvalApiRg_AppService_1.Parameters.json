@@ -1,0 +1,87 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L1Name": {
+      "value": "__L1Name__"
+    },
+    "ClientAffinityEnabled": {
+      "value": "__ClientAffinityEnabled__"
+    },
+    "ClientCertEnabled": {
+      "value": "__ClientCertEnabled__"
+    },
+    "ClientCertMode": {
+      "value": "__ClientCertMode__"
+    },
+    "ContainerSize": {
+      "value": "__ContainerSize__"
+    },
+    "DailyMemoryTimeQuota": {
+      "value": "__DailyMemoryTimeQuota__"
+    },
+    "Enabled": {
+      "value": "__Enabled__"
+    },
+    "HostNamesDisabled": {
+      "value": "__HostNamesDisabled__"
+    },
+    "HttpsOnly": {
+      "value": "__HttpsOnly__"
+    },
+    "HyperV": {
+      "value": "__HyperV__"
+    },
+    "IsXenon": {
+      "value": "__IsXenon__"
+    },
+    "KeyVaultReferenceIdentity": {
+      "value": "__KeyVaultReferenceIdentity__"
+    },
+    "RedundancyMode": {
+      "value": "__RedundancyMode__"
+    },
+    "Reserved": {
+      "value": "__Reserved__"
+    },
+    "ScmSiteAlsoStopped": {
+      "value": "__ScmSiteAlsoStopped__"
+    },
+    "ServerFarmId": {
+      "value": "__ServerFarmId__"
+    },
+    "StorageAccountRequired": {
+      "value": "__StorageAccountRequired__"
+    },
+    "Kind": {
+      "value": "__Kind__"
+    },
+    "HostNameSslStates": {
+      "value": "__HostNameSslStates__"
+    },
+    "HostingEnvironmentProfile": {
+      "value": "__HostingEnvironmentProfile__"
+    },
+    "Identity": {
+      "value": "__Identity__"
+    },
+    "VirtualNetworkSubnetId": {
+      "value": "__VirtualNetworkSubnetId__"
+    },
+    "VnetContentShareEnabled": {
+      "value": "__VnetContentShareEnabled__"
+    },
+    "VnetImagePullEnabled": {
+      "value": "__VnetImagePullEnabled__"
+    },
+    "VnetRouteAllEnabled": {
+      "value": "__VnetRouteAllEnabled__"
+    },
+    "LocationProp": {
+      "value": "__FriendlyName__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

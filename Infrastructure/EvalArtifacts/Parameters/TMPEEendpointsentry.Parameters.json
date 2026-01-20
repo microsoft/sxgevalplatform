@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "AlwaysServe": {
+      "value": "__AlwaysServe__"
+    },
+    "EndpointLocation": {
+      "value": "__FriendlyName__"
+    },
+    "EndpointMonitorStatus": {
+      "value": "__EndpointMonitorStatus__"
+    },
+    "EndpointStatus": {
+      "value": "__EndpointStatus__"
+    },
+    "Priority": {
+      "value": "__Priority__"
+    },
+    "Target": {
+      "value": "__Target__"
+    },
+    "TargetResourceId": {
+      "value": "__TargetResourceId__"
+    },
+    "Weight": {
+      "value": "__Weight__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

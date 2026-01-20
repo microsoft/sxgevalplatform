@@ -1,0 +1,27 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "name": "[parameters('L2Name')]",
+      "properties": {
+        "enabledState": "[parameters('EnabledState')]"
+      },
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2024-02-01"
+    }
+  ],
+  "parameters": {
+    "L2Name": {
+      "type": "string"
+    },
+    "EnabledState": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "armRoleReceivers": "[parameters('ArmRoleReceivers')]",
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": "[parameters('EmailReceivers')]",
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "[parameters('GroupShortName')]",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": "[parameters('WebhookReceivers')]"
+      },
+      "type": "Microsoft.Insights/actionGroups",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-06-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "GroupShortName": {
+      "type": "string"
+    },
+    "ArmRoleReceivers": {
+      "type": "array"
+    },
+    "EmailReceivers": {
+      "type": "array"
+    },
+    "WebhookReceivers": {
+      "type": "array"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

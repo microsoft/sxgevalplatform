@@ -1,0 +1,41 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "idleTimeoutInMinutes": "[parameters('IdleTimeoutInMinutes')]",
+        "publicIpAddresses": "[if(empty(parameters('PublicIpAddresses')), json('null'), parameters('PublicIpAddresses'))]",
+        "publicIpPrefixes": "[if(empty(parameters('PublicIpPrefixes')), json('null'), parameters('PublicIpPrefixes'))]"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "type": "Microsoft.Network/natGateways",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2021-03-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "IdleTimeoutInMinutes": {
+      "type": "int"
+    },
+    "PublicIpAddresses": {
+      "type": "array"
+    },
+    "PublicIpPrefixes": {
+      "type": "array"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

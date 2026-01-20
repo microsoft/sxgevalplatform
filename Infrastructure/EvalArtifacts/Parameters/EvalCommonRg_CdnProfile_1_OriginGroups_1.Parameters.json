@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L2Name": {
+      "value": "__L1Name__/__L2Name__"
+    },
+    "ProbeIntervalInSeconds": {
+      "value": "__ProbeIntervalInSeconds__"
+    },
+    "ProbePath": {
+      "value": "__ProbePath__"
+    },
+    "ProbeProtocol": {
+      "value": "__ProbeProtocol__"
+    },
+    "ProbeRequestType": {
+      "value": "__ProbeRequestType__"
+    },
+    "AdditionalLatencyInMilliseconds": {
+      "value": "__AdditionalLatencyInMilliseconds__"
+    },
+    "SampleSize": {
+      "value": "__SampleSize__"
+    },
+    "SuccessfulSamplesRequired": {
+      "value": "__SuccessfulSamplesRequired__"
+    },
+    "SessionAffinityState": {
+      "value": "__SessionAffinityState__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "L3Name": {
+      "value": "__L1Name__/__L2Name__/__L3Name__"
+    },
+    "HostName": {
+      "value": "__HostName__"
+    },
+    "HttpPort": {
+      "value": "__HttpPort__"
+    },
+    "HttpsPort": {
+      "value": "__HttpsPort__"
+    },
+    "OriginHostHeader": {
+      "value": "__OriginHostHeader__"
+    },
+    "Priority": {
+      "value": "__Priority__"
+    },
+    "Weight": {
+      "value": "__Weight__"
+    },
+    "EnabledState": {
+      "value": "__EnabledState__"
+    },
+    "EnforceCertificateNameCheck": {
+      "value": "__EnforceCertificateNameCheck__"
+    },
+    "newOrExisting": {
+      "value": true
+    }
+  }
+}

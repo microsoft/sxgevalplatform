@@ -1,0 +1,34 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2023-01-31"
+    }
+  ],
+  "outputs": {
+    "principalId": {
+      "type": "string",
+      "value": "[reference(parameters('L1Name')).principalId]"
+    },
+    "clientId": {
+      "type": "string",
+      "value": "[reference(parameters('L1Name')).clientId]"
+    }
+  },
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

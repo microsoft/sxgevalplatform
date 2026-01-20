@@ -1,0 +1,67 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "location": "global",
+      "name": "[parameters('trafficmanagerL1Name')]",
+      "properties": {
+        "dnsConfig": {
+          "relativeName": "[parameters('RelativeName')]",
+          "ttl": "[parameters('Ttl')]"
+        },
+	"endpoints": "[parameters('Endpoints')]",
+        "monitorConfig": {
+          "intervalInSeconds": "[parameters('IntervalInSeconds')]",
+          "path": "[parameters('MonitorPath')]",
+          "port": "[parameters('MonitorPort')]",
+          "profileMonitorStatus": "Online",
+          "protocol": "HTTPS",
+          "timeoutInSeconds": "[parameters('TimeoutInSeconds')]",
+          "toleratedNumberOfFailures": "[parameters('ToleratedNumberOfFailures')]"
+        },
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "[parameters('TrafficRoutingMethod')]",
+        "trafficViewEnrollmentStatus": "Disabled"
+      },
+      "type": "Microsoft.Network/trafficmanagerprofiles",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-04-01-preview"
+    }
+  ],
+  "parameters": {
+    "trafficmanagerL1Name": {
+      "type": "string"
+    },
+    "RelativeName": {
+      "type": "string"
+    },
+    "Ttl": {
+      "type": "int"
+    },
+    "Endpoints": {
+      "type": "array"
+    },
+    "IntervalInSeconds": {
+      "type": "int"
+    },
+    "MonitorPath": {
+      "type": "string"
+    },
+    "MonitorPort": {
+      "type": "int"
+    },
+    "TimeoutInSeconds": {
+      "type": "int"
+    },
+    "ToleratedNumberOfFailures": {
+      "type": "int"
+    },
+    "TrafficRoutingMethod": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

@@ -1,0 +1,96 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "kind": "[parameters('Kind')]",
+      "location": "[parameters('LocationProp')]",
+      "name": "[parameters('L1Name')]",
+      "properties": {
+        "elasticScaleEnabled": "[parameters('ElasticScaleEnabled')]",
+        "hostingEnvironmentProfile": "[if(empty(parameters('HostingEnvironmentProfile')), json('null'), parameters('HostingEnvironmentProfile'))]",
+        "hyperV": "[parameters('HyperV')]",
+        "isSpot": "[parameters('IsSpot')]",
+        "isXenon": "[parameters('IsXenon')]",
+        "maximumElasticWorkerCount": "[parameters('MaximumElasticWorkerCount')]",
+        "perSiteScaling": "[parameters('PerSiteScaling')]",
+        "reserved": "[parameters('Reserved')]",
+        "targetWorkerCount": "[parameters('TargetWorkerCount')]",
+        "targetWorkerSizeId": "[parameters('TargetWorkerSizeId')]",
+        "zoneRedundant": "[parameters('ZoneRedundant')]"
+      },
+      "sku": {
+        "capacity": "[parameters('Capacity')]",
+        "family": "[parameters('Family')]",
+        "name": "[parameters('SkuName')]",
+        "size": "[parameters('Size')]",
+        "tier": "[parameters('Tier')]"
+      },
+      "type": "Microsoft.Web/serverfarms",
+      "condition": "[parameters('newOrExisting')]",
+      "apiVersion": "2022-09-01"
+    }
+  ],
+  "parameters": {
+    "L1Name": {
+      "type": "string"
+    },
+    "ElasticScaleEnabled": {
+      "type": "bool"
+    },
+    "HyperV": {
+      "type": "bool"
+    },
+    "IsSpot": {
+      "type": "bool"
+    },
+    "IsXenon": {
+      "type": "bool"
+    },
+    "MaximumElasticWorkerCount": {
+      "type": "int"
+    },
+    "PerSiteScaling": {
+      "type": "bool"
+    },
+    "Reserved": {
+      "type": "bool"
+    },
+    "TargetWorkerCount": {
+      "type": "int"
+    },
+    "TargetWorkerSizeId": {
+      "type": "int"
+    },
+    "ZoneRedundant": {
+      "type": "bool"
+    },
+    "Kind": {
+      "type": "string"
+    },
+    "Capacity": {
+      "type": "int"
+    },
+    "Family": {
+      "type": "string"
+    },
+    "SkuName": {
+      "type": "string"
+    },
+    "Size": {
+      "type": "string"
+    },
+    "Tier": {
+      "type": "string"
+    },
+    "HostingEnvironmentProfile": {
+      "type": "object"
+    },
+    "LocationProp": {
+      "type": "string"
+    },
+    "newOrExisting": {
+      "type": "bool"
+    }
+  }
+}

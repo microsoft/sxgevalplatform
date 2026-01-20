@@ -1,0 +1,2439 @@
+﻿{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-04-01/regionAgnosticRolloutSpecification.json",
+  "contentVersion": "1.0.0.0",
+  "rolloutMetadata": {
+    "configuration": {
+      "serviceScope": {
+        "specPath": "ConfigStorePayload\\Poc.ServiceScope.Config.json"
+      }
+    },
+    "serviceModelPath": "ServiceModels\\PocEnv.ServiceModel.Buildout.json",
+    "scopeBindingsPath": "ScopeBindings\\PocEnv.ScopeBindings.json",
+    "name": "PocEnv",
+    "rolloutType": "Minor",
+    "buildSource": {
+      "parameters": {
+        "serviceGroupRoot": "ServiceGroupRoot",
+        "versionFile": "buildver.txt"
+      }
+    }
+  },
+  "orchestratedSteps": [
+    {
+      "name": "EvalApiRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "10fe8e74483-parametersassistedIdentityServicePrincipalObjectId",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "10fe8e74483-parametersassistedIdentityServicePrincipalObjectId",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "12nRg-EventGridsystemTopics-5-EventGridsystemTopicseventSubscription-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "12nRg-EventGridsystemTopics-5-EventGridsystemTopicseventSubscription-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-EventGridsystemTopics-5"
+      ]
+    },
+    {
+      "name": "13nRg-EventGridsystemTopics-6-EventGridsystemTopicseventSubscription-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "13nRg-EventGridsystemTopics-6-EventGridsystemTopicseventSubscription-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-EventGridsystemTopics-6"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-EventGridsystemTopics-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-EventGridsystemTopics-5",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-EventGridsystemTopics-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-EventGridsystemTopics-6",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "155MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "155MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "156MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "156MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "157MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "157MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "158MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "158MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "159MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "159MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "160MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "160MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "161MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "161MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "162MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "162MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "163MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "163MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "164MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "164MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "165MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "165MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "166MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "166MicrosoftAIWorkspaceConnections-3-MicrosoftAIWorkspaceRAIPolicies-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "167MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "167MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "168MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "168MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "169MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "169MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "170MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "170MicrosoftAIWorkspaceConnections-4-MicrosoftAIWorkspaceRAIPolicies-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "177IWorkspaceConnections-3-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "177IWorkspaceConnections-3-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "178IWorkspaceConnections-4-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "178IWorkspaceConnections-4-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "179IWorkspaceConnections-3-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "179IWorkspaceConnections-3-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3"
+      ]
+    },
+    {
+      "name": "180IWorkspaceConnections-4-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "180IWorkspaceConnections-4-MicrosoftAIWorkspaceConnectionDeployments-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2",
+        "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4"
+      ]
+    },
+    {
+      "name": "20lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-14",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "20lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-14",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "21lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-15",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "21lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-15",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "22lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-16",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "22lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-16",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "23lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-17",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "23lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-17",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "24lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-18",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "24lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-18",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "25lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-19",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "25lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-19",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "26lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-20",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "26lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-20",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "27lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-21",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "27lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-21",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "28lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-22",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "28lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-22",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "29lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-23",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "29lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-23",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "30lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-24",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "30lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-24",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "31lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-25",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "31lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-25",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "32lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-26",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "32lCommonRg-ApplicationInsights-3-AppInsightsProactiveDetectionLogs-26",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-3",
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "34lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-10",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "34lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-10",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "35lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-11",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "35lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-11",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "36lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-12",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "36lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-12",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "37lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-13",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "37lCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-13",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppServicePlan-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppService-1-Configs-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppService-1-Configs-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppServicePlan-1",
+        "EvalApiRg-AppService-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppService-1-HostNameBindings-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppService-1-HostNameBindings-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppServicePlan-1",
+        "EvalApiRg-AppService-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppService-1-PublishingCredentials-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppService-1-PublishingCredentials-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppServicePlan-1",
+        "EvalApiRg-AppService-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppService-1-PublishingCredentials-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppService-1-PublishingCredentials-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppServicePlan-1",
+        "EvalApiRg-AppService-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-AppServicePlan-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-AppServicePlan-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalApiRg-Cacheredis-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-Cacheredis-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-Cacheredis-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-Cacheredis-1"
+      ]
+    },
+    {
+      "name": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-Cacheredis-1-RedisCachePolicyAssignment-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-Cacheredis-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ActionGroups-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ActionGroups-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-LogAnalyticWorkspace-3"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-7",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-7",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-8",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-8",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-9",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ApplicationInsights-4-AppInsightsProactiveDetectionLogs-9",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ApplicationInsights-4",
+        "EvalCommonRg-LogAnalyticWorkspace-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultKey-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultKey-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultKey-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultKey-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultKey-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultKey-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultSecret-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultSecret-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultSecret-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultSecret-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-KeyVault-2-KeyVaultSecret-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-KeyVault-2-KeyVaultSecret-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-LogAnalyticWorkspace-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-LogAnalyticWorkspace-3",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-LogAnalyticWorkspace-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-LogAnalyticWorkspace-4",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ServiceBusNamespace-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ServiceBusNamespace-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ServiceBusNamespace-2-AuthorizationRules-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ServiceBusNamespace-2-AuthorizationRules-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ServiceBusNamespace-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-ServiceBusNamespace-2-NetworkRuleSets-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-ServiceBusNamespace-2-NetworkRuleSets-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-ServiceBusNamespace-2"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-SmartDetectorAlertRules-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-SmartDetectorAlertRules-4",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-SmartDetectorAlertRules-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-SmartDetectorAlertRules-5",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-BlobService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-BlobService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4",
+        "EvalCommonRg-StorageAccount-4-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4",
+        "EvalCommonRg-StorageAccount-4-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4",
+        "EvalCommonRg-StorageAccount-4-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-BlobService-1-BlobServiceContainer-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4",
+        "EvalCommonRg-StorageAccount-4-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-FileService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-FileService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-FileService-1-FileServiceShare-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-FileService-1-FileServiceShare-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4",
+        "EvalCommonRg-StorageAccount-4-FileService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-QueueService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-QueueService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-4-TableService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-4-TableService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-10",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-10",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-11",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-11",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-12",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-12",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-13",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-13",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-14",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-14",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-15",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-15",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-16",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-16",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-17",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-17",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-18",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-18",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-19",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-19",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-20",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-20",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-21",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-21",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-22",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-22",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-23",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-23",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-24",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-24",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-25",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-25",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-26",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-26",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-27",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-27",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-28",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-28",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-7",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-7",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-8",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-8",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-9",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-BlobService-1-BlobServiceContainer-9",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-BlobService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-FileService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-FileService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-QueueService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-QueueService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-5-TableService-1-TableServiceTable-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-5",
+        "EvalCommonRg-StorageAccount-5-TableService-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-6",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-6-BlobService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-6-BlobService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-6"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-6-FileService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-6-FileService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-6"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-6-QueueService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-6-QueueService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-6"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-StorageAccount-6-TableService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-StorageAccount-6-TableService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-StorageAccount-6"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-UserAssignedManagedIdentity-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-UserAssignedManagedIdentity-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NatGateway-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NatGateway-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkpublicIPAddresses-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NatGateway-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NatGateway-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkpublicIPAddresses-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkpublicIPAddresses-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkpublicIPAddresses-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkpublicIPAddresses-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkpublicIPAddresses-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-7",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-7",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-8",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-1-SecurityRules-8",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-7",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-7",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-8",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityGroup-2-SecurityRules-8",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityGroup-2"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkTrafficManagerProfile-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkTrafficManagerProfile-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-VirtualNetwork-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-VirtualNetwork-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerEnvironment-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerEnvironment-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerEnvironment-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-ContainerRegistry-1-ContainerRegistryScopeMaps-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceConnections-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-1-MicrosoftAIWorkspaceDatastores-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceConnections-4",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-3",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-MicrosoftAIWorkspaces-2-MicrosoftAIWorkspaceDatastores-3",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-KeyVault-2",
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalRunRg-MicrosoftAIWorkspaces-2"
+      ]
+    },
+    {
+      "name": "1parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "1parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "2metersEvalCommonRg-ApplicationInsights-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "2metersEvalCommonRg-ApplicationInsights-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalCommonRg-ApplicationInsights-3"
+      ]
+    },
+    {
+      "name": "3metersEvalCommonRg-ServiceBusNamespace-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "3metersEvalCommonRg-ServiceBusNamespace-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalCommonRg-ServiceBusNamespace-2"
+      ]
+    },
+    {
+      "name": "4parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "4parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "5parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "5parametersEvalCommonRg-StorageAccount-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "7parametersEvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "7parametersEvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
+      ]
+    },
+    {
+      "name": "5parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "5parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-Foundry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
+      ]
+    },
+    {
+      "name": "6parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "6parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-Foundry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
+      ]
+    },
+    {
+      "name": "617-parametersEvalCommonRg-Cacheredis-1-EvalApiRg-AppService-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "617-parametersEvalCommonRg-Cacheredis-1-EvalApiRg-AppService-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalApiRg-AppService-1",
+        "EvalApiRg-Cacheredis-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-AfdEndpoints-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-AfdEndpoints-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-AfdEndpoints-1-Routes-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-AfdEndpoints-1-Routes-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-CdnProfile-1-AfdEndpoints-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-OriginGroups-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-OriginGroups-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-OriginGroups-1-Origin-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-OriginGroups-1-Origin-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-CdnProfile-1-OriginGroups-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-OriginGroups-1-Origin-2",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-OriginGroups-1-Origin-2",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-CdnProfile-1-OriginGroups-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-CdnProfile-1-SecurityPolicies-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-CdnProfile-1-SecurityPolicies-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalCommonRg-CdnProfile-1",
+        "EvalCommonRg-WAFPolicy-1"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-WAFPolicy-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-WAFPolicy-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "1rkingRg-NetworkSecurityPerimeter-1-NetworkSecurityPerimeterProfiles-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "1rkingRg-NetworkSecurityPerimeter-1-NetworkSecurityPerimeterProfiles-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "7rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-14",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "7rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-14",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "5rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-12",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "5rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-12",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "6rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-13",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "6rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-13",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "2orkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "2orkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "11rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-5",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "11rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-5",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "12rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-6",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "12rkSecurityPerimeter-1-NetworkSecurityPerimeterResourceAssociations-6",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalNetworkingRg-NetworkSecurityPerimeter-1"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-NetworkSecurityPerimeter-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-NetworkSecurityPerimeter-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-Foundry-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-Foundry-1",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-FoundryProject-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-FoundryProject-1",
+      "actions": [
+        "deploy"
+      ]
+    }
+  ]
+}

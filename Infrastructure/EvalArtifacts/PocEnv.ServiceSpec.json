@@ -1,0 +1,8 @@
+﻿{
+  "providerType": "ServiceTree",
+  "identifier": "a9adb189-d25e-405f-8f6f-ecca2634ac67",
+  "description": "Microsoft.POC.Test",
+  "ownerGroupContactEmail": "angaurav@microsoft.com",
+  "policyCheckEnabled": false,
+  "contentVersion": "1.0.0.0"
+}

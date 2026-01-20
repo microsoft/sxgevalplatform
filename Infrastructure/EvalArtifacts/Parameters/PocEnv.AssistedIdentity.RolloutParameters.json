@@ -1,0 +1,68 @@
+﻿{
+  "assistedIdentities": [
+    {
+      "name": "PocAssistedIdentity",
+      "type": "AADApplication",
+      "isServiceScope": false,
+      "properties": {
+        "displayName": "__AssistedIdentity.DisplayName__",
+        "ownerObjectIds": [
+          "__AssistedIdentity.OwnerObjectID__"
+        ],
+        "trustedCertificates": [
+          {
+            "subjectName": "__AssistedIdentity.SubjectName__",
+            "issuer": "AME"
+          }
+        ],
+        "trustedCertificateSecretProvider": {
+          "type": "AzureKeyVault",
+          "properties": {
+            "location": "__AssistedIdentity.KeyVaultLocation__",
+            "subscriptionKey": "Microsoft-POC-subkey",
+            "resourceGroup": "__AssistedIdentity.KeyVaultResourceGroup__",
+            "vaultName": "__AssistedIdentity.KeyVaultName__",
+            "certificateIssuers": [
+              {
+                "issuerName": "__AssistedIdentity.IssuerName__",
+                "issuerProvider": "__AssistedIdentity.IssuerProvider__"
+              }
+            ],
+            "certificates": [
+              {
+                "name": "__AssistedIdentity.CertificateName__",
+                "policy": {
+                  "issuer": {
+                    "name": "__AssistedIdentity.IssuerName__"
+                  },
+                  "key_props": {
+                    "exportable": true,
+                    "kty": "RSA",
+                    "key_size": 2048
+                  },
+                  "lifetime_actions": [
+                    {
+                      "trigger": {
+                        "lifetime_percentage": 49
+                      },
+                      "action": {
+                        "action_type": "AutoRenew"
+                      }
+                    }
+                  ],
+                  "secret_props": {
+                    "contentType": "application/x-pkcs12"
+                  },
+                  "x509_props": {
+                    "subject": "CN=__AssistedIdentity.SubjectName__",
+                    "validity_months": 6
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
