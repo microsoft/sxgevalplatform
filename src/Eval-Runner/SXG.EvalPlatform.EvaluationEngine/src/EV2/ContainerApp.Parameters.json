@@ -27,7 +27,7 @@
                     "registries": [
                         {
                             "server": "evalcontainerregistry__Environment__.azurecr.io",
-                            "identity": "system"
+                            "identity": "/subscriptions/__SubscriptionId__/resourceGroups/__CommonRG__/providers/Microsoft.ManagedIdentity/userAssignedIdentities/sxgevalapi__Environment__-id"
                         }
                     ],
                     "identitySettings": []
@@ -48,11 +48,11 @@
             "Env": [
               {
                 "Name": "ApiAuthentication__ClientId",
-                "Value": "5ab8b0f2-f000-4b86-ac8d-46fa6e58b197"
+                "Value": "__AuthenticationClientId__"
               },
               {
                 "Name": "ApiAuthentication__EnableAuthentication",
-                "Value": "False"
+                "Value": "__ApiAuthenticationEnable__"
               },
               {
                 "Name": "ApiAuthentication__EnableTokenCaching",
