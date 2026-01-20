@@ -3,16 +3,18 @@
   "contentVersion": "1.0.0.0",
   "resources": [
     {
-      "category": "[parameters('category')]",
-      "isSharedToAll": "[parameters('isSharedToAll')]",
-      "authType": "[parameters('authType')]",
-      "metadata": "[parameters('metadata')]",
-      "sharedUserList": "[parameters('sharedUserList')]",
-      "target": "[parameters('target')]",
-      "name": "[parameters('name')]",
       "type": "Microsoft.MachineLearningServices/workspaces/connections",
+      "apiVersion": "2025-06-01",
+      "name": "[parameters('name')]",
       "condition": "[parameters('newOrExisting')]",
-      "apiVersion": "2024-04-01-preview"
+      "properties": {
+        "authType": "[parameters('authType')]",
+        "category": "[parameters('category')]",
+        "target": "[parameters('target')]",
+        "isSharedToAll": "[parameters('isSharedToAll')]",
+        "sharedUserList": "[parameters('sharedUserList')]",
+        "metadata": "[parameters('metadata')]"
+      }
     }
   ],
   "parameters": {

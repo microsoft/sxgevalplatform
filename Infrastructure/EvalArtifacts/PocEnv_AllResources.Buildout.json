@@ -20,6 +20,38 @@
   },
   "orchestratedSteps": [
     {
+      "name": "EvalApiRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalApiRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalCommonRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalCommonRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalNetworkingRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalNetworkingRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
+      "name": "EvalRunRg-RgCannotDeleteLock",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "EvalRunRg-RgCannotDeleteLock",
+      "actions": [
+        "deploy"
+      ]
+    },
+    {
       "name": "10fe8e74483-parametersassistedIdentityServicePrincipalObjectId",
       "targetType": "ServiceResourceDefinition",
       "targetName": "10fe8e74483-parametersassistedIdentityServicePrincipalObjectId",
@@ -2158,6 +2190,42 @@
       "dependsOn": [
         "EvalApiRg-AppService-1",
         "EvalCommonRg-StorageAccount-4"
+      ]
+    },
+    {
+      "name": "7parametersEvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "7parametersEvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-ContainerRegistry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
+      ]
+    },
+    {
+      "name": "5parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "5parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-Foundry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
+      ]
+    },
+    {
+      "name": "6parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "targetType": "ServiceResourceDefinition",
+      "targetName": "6parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+      "actions": [
+        "deploy"
+      ],
+      "dependsOn": [
+        "EvalRunRg-Foundry-1",
+        "EvalCommonRg-UserAssignedManagedIdentity-2"
       ]
     },
     {

@@ -25,6 +25,7 @@
         "scmSiteAlsoStopped": "[parameters('ScmSiteAlsoStopped')]",
         "serverFarmId": "[parameters('ServerFarmId')]",
         "storageAccountRequired": "[parameters('StorageAccountRequired')]",
+        "virtualNetworkSubnetId":"[parameters('VirtualNetworkSubnetId')]",
         "vnetContentShareEnabled": "[if(empty(parameters('VnetContentShareEnabled')), 'false', parameters('VnetContentShareEnabled'))]",
         "vnetImagePullEnabled": "[if(empty(parameters('VnetImagePullEnabled')), 'false', parameters('VnetImagePullEnabled'))]",
         "vnetRouteAllEnabled": "[if(empty(parameters('VnetRouteAllEnabled')), 'false', parameters('VnetRouteAllEnabled'))]",
@@ -114,6 +115,9 @@
     },
     "Identity": {
       "type": "object"
+    },
+    "VirtualNetworkSubnetId": {
+      "type": "string"
     },
     "VnetContentShareEnabled": {
       "type": "string"

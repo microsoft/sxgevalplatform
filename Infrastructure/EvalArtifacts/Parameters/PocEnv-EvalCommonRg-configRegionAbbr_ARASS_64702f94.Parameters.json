@@ -1,0 +1,12 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "scopeName": {
+      "value": "__L1Name__"
+    },
+    "EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1": {
+      "value": "__EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1Id__"
+    }
+  }
+}

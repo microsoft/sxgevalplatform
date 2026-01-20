@@ -10,7 +10,7 @@
     },
     "ResourceId": {
       "type": "string"
-    },
+    }
   },
     "variables": {},
     "resources": [
@@ -59,6 +59,28 @@
                     "ApiType": "Azure",
                     "ResourceId": "[parameters('ResourceId')]"
                 }
+            }
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts/deployments",
+            "apiVersion": "2025-06-01",
+            "name": "[concat(parameters('L1Name'), '/gpt-4.1')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('L1Name'))]"
+            ],
+            "sku": {
+                "name": "Standard",
+                "capacity": 1000
+            },
+            "properties": {
+                "model": {
+                    "format": "OpenAI",
+                    "name": "gpt-4.1",
+                    "version": "2025-04-14"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable",
+                "currentCapacity": 1000,
+                "raiPolicyName": "Microsoft.DefaultV2"
             }
         },
         {

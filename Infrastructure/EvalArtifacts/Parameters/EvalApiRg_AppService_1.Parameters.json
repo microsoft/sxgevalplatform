@@ -65,6 +65,9 @@
     "Identity": {
       "value": "__Identity__"
     },
+    "VirtualNetworkSubnetId": {
+      "value": "__VirtualNetworkSubnetId__"
+    },
     "VnetContentShareEnabled": {
       "value": "__VnetContentShareEnabled__"
     },

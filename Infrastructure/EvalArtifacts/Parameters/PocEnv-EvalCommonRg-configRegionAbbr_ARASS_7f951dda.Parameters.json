@@ -1,0 +1,12 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "scopeName": {
+      "value": "__L1Name__"
+    },
+    "EvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1": {
+      "value": "__EvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1Id__"
+    }
+  }
+}

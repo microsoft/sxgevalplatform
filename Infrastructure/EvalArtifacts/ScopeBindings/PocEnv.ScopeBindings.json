@@ -242,6 +242,10 @@
           }
         },
         {
+          "find": "__VirtualNetworkSubnetId__",
+          "replaceWith": "$config(EvalApiRg_AppService_1.VirtualNetworkSubnetId)"
+        },
+        {
           "find": "__VnetContentShareEnabled__",
           "replaceWith": "$config(EvalApiRg_AppService_1.VnetContentShareEnabled)"
         },
@@ -8075,6 +8079,58 @@
         },
 	{
           "find": "__EvalApiRg_AppService_1_EvalCommonRg_ApplicationInsights_1Id__",
+          "replaceWith": "$serviceResourceDefinition(EvalCommonRg-UserAssignedManagedIdentity-2).action(deploy).outputs(principalId.value)"
+        }
+      ]
+    },
+    {
+      "scopeTagName": "PocEnv-EvalCommonRg-configRegionAbbrARASSFC8172F8",
+      "bindings": [
+        {
+          "find": "__L1Name__",
+          "replaceWith": "$config(EvalRunRg_Foundry_1.L1Name)"
+        },
+	      {
+          "find": "__EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1Id__",
+          "replaceWith": "$serviceResourceDefinition(EvalCommonRg-UserAssignedManagedIdentity-2).action(deploy).outputs(principalId.value)"
+        }
+      ]
+    },
+    {
+      "scopeTagName": "PocEnv-EvalCommonRg-configRegionAbbrARASS5e0bd9bd",
+      "bindings": [
+        {
+          "find": "__L1Name__",
+          "replaceWith": "$config(EvalRunRg_Foundry_1.L1Name)"
+        },
+	      {
+          "find": "__EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1Id__",
+          "replaceWith": "$serviceResourceDefinition(EvalCommonRg-UserAssignedManagedIdentity-2).action(deploy).outputs(principalId.value)"
+        }
+      ]
+    },
+    {
+      "scopeTagName": "PocEnv-EvalCommonRg-configRegionAbbrARASS64702f94",
+      "bindings": [
+        {
+          "find": "__L1Name__",
+          "replaceWith": "$config(EvalRunRg_Foundry_1.L1Name)"
+        },
+	      {
+          "find": "__EvalRunRg_Foundry_1_EvalRunRg_ContainerApp_1Id__",
+          "replaceWith": "$serviceResourceDefinition(EvalCommonRg-UserAssignedManagedIdentity-2).action(deploy).outputs(principalId.value)"
+        }
+      ]
+    },
+    {
+      "scopeTagName": "PocEnv-EvalCommonRg-configRegionAbbrARASS7f951dda",
+      "bindings": [
+        {
+          "find": "__L1Name__",
+          "replaceWith": "$config(EvalRunRg_ContainerRegistry_1.Name)"
+        },
+	      {
+          "find": "__EvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1Id__",
           "replaceWith": "$serviceResourceDefinition(EvalCommonRg-UserAssignedManagedIdentity-2).action(deploy).outputs(principalId.value)"
         }
       ]

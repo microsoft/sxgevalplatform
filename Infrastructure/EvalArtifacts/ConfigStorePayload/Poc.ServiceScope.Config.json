@@ -878,6 +878,7 @@
       "ContainerSize": 0,
       "ServerFarmId": "/subscriptions/$(Environment.SubscriptionId)/resourcegroups/$(Environment.Name)-EvalApi-$(RegionAbbr)Rg/providers/Microsoft.Web/serverfarms/sxgevalapi$(Environment.Name)$(RegionAbbr)-plan",
       "AlwaysOn": "false",
+      "VirtualNetworkSubnetId":"/subscriptions/$(Environment.SubscriptionId)/resourceGroups/$(Environment.Name)-EvalNetworking-$(RegionAbbr)Rg/providers/Microsoft.Network/virtualNetworks/sxgeval$(Environment.Name)$(RegionAbbr)-vnet/subnets/api-app-subnet",
       "VnetContentShareEnabled": "",
       "VnetImagePullEnabled": "",
       "L1Name": "sxgevalapi$(Environment.Name)$(RegionAbbr)",

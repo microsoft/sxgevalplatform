@@ -49,6 +49,15 @@
       ],
       "serviceResourceDefinitions": [
         {
+          "name": "EvalApiRg-RgCannotDeleteLock",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\RgLock.Template.json",
+              "parametersPath": "Parameters\\RgLock.Parameters.json"
+            }
+          }
+        },
+        {
           "name": "EvalApiRg-AppService-1",
           "composedOf": {
             "arm": {
@@ -153,7 +162,16 @@
         }
       ],
       "serviceResourceDefinitions": [
-	{
+	      {
+          "name": "EvalCommonRg-RgCannotDeleteLock",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\RgLock.Template.json",
+              "parametersPath": "Parameters\\RgLock.Parameters.json"
+            }
+          }
+        },
+        {
           "name": "EvalApiRg-Cacheredis-1",
           "composedOf": {
             "arm": {
@@ -1077,7 +1095,7 @@
             }
           ]
         },
-	{
+	      {
           "name": "2metersEvalCommonRg-ApplicationInsights-1-EvalApiRg-AppService-1",
           "composedOf": {
             "arm": {
@@ -1161,7 +1179,21 @@
             }
           ]
         },
-	{
+        {
+          "name": "7parametersEvalCommonRg-ContainerRegistry-1-EvalRunRg-ContainerApp-1",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_7f951dda.Template.json",
+              "parametersPath": "Parameters\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_7f951dda.Parameters.json"
+            }
+          },
+          "scopeTags": [
+            {
+              "name": "PocEnv-EvalCommonRg-configRegionAbbrARASS7f951dda"
+            }
+          ]
+        },
+	      {
           "name": "EvalCommonRg-CdnProfile-1",
           "composedOf": {
             "arm": {
@@ -1406,6 +1438,15 @@
         }
       ],
       "serviceResourceDefinitions": [
+        {
+          "name": "EvalNetworkingRg-RgCannotDeleteLock",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\RgLock.Template.json",
+              "parametersPath": "Parameters\\RgLock.Parameters.json"
+            }
+          }
+        },
         {
           "name": "EvalNetworkingRg-NatGateway-1",
           "composedOf": {
@@ -1750,6 +1791,15 @@
       ],
       "serviceResourceDefinitions": [
         {
+          "name": "EvalRunRg-RgCannotDeleteLock",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\RgLock.Template.json",
+              "parametersPath": "Parameters\\RgLock.Parameters.json"
+            }
+          }
+        },
+        {
           "name": "EvalRunRg-ContainerApp-1",
           "composedOf": {
             "arm": {
@@ -1777,7 +1827,35 @@
             }
           ]
         },
-	{
+        {
+          "name": "5parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_5e0bd9bd.Template.json",
+              "parametersPath": "Parameters\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_5e0bd9bd.Parameters.json"
+            }
+          },
+          "scopeTags": [
+            {
+              "name": "PocEnv-EvalCommonRg-configRegionAbbrARASS5e0bd9bd"
+            }
+          ]
+        },
+        {
+          "name": "6parametersEvalRunRg-Foundry-1-EvalRunRg-ContainerApp-1",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_64702f94.Template.json",
+              "parametersPath": "Parameters\\PocEnv-EvalCommonRg-configRegionAbbr_ARASS_64702f94.Parameters.json"
+            }
+          },
+          "scopeTags": [
+            {
+              "name": "PocEnv-EvalCommonRg-configRegionAbbrARASS64702f94"
+            }
+          ]
+        },
+	      {
           "name": "EvalCommonRg-StorageAccount-6",
           "composedOf": {
             "arm": {
