@@ -98,16 +98,8 @@ extends:
                 msbuildArguments: '/t:rebuild /p:TargetFramework=net462 /p:OutDir=$(Build.SourcesDirectory)\out\Plugins\ /p:OutputPath=$(Build.SourcesDirectory)\out\Plugins\'
                 clean: true
 
-          - task: onebranch.pipeline.signing@1
-            displayName: 'Sign Plugin DLLs'
-            inputs:
-              command: 'sign'
-              signing_environment: 'azure-ado'
-              files_to_sign: '**/*.dll'
-              search_root: '$(Build.SourcesDirectory)\out\Plugins'
-
           - task: PowerShell@2
-            displayName: 'Copy Signed Plugins to Solution Folder'
+            displayName: 'Copy Plugins to Solution Folder'
             inputs:
               targetType: inline
               script: |
@@ -145,3 +137,11 @@ extends:
                     Write-Host "##vso[task.logissue type=error]Solution folder not found at: $sourcePath"
                     exit 1
                 }
+
+          - task: onebranch.pipeline.signing@1
+            displayName: 'Sign Plugin DLLs'
+            inputs:
+              command: 'sign'
+              signing_environment: 'azure-ado'
+              files_to_sign: '**/*.dll'
+              search_root: '$(Build.SourcesDirectory)\out'
