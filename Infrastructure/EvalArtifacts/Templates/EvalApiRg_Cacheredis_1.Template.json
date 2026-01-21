@@ -6,7 +6,7 @@
       "location": "[parameters('LocationProp')]",
       "name": "[parameters('L1Name')]",
       "properties": {
-        "enableNonSslPort": "[parameters('EnableNonSslPort')]",
+        "enableNonSslPort": false,
         "minimumTlsVersion": "[parameters('MinimumTlsVersion')]",
         "publicNetworkAccess": "Enabled",
         "redisConfiguration": {
@@ -37,9 +37,6 @@
       "type": "string"
     },
     "SkewName": {
-      "type": "string"
-    },
-    "EnableNonSslPort": {
       "type": "string"
     },
     "MinimumTlsVersion": {

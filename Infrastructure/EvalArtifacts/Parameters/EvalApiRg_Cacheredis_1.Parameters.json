@@ -14,9 +14,6 @@
     "SkewName": {
       "value": "__SkewName__"
     },
-    "EnableNonSslPort": {
-      "value": "__EnableNonSslPort__"
-    },
     "MinimumTlsVersion": {
       "value": "__MinimumTlsVersion__"
     },
