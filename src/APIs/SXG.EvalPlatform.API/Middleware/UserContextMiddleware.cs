@@ -31,19 +31,19 @@ public class UserContextMiddleware
    var userEmail = CommonUtils.SanitizeForLog(context.Request.Headers["X-User-Email"].FirstOrDefault());
             var userTenant = CommonUtils.SanitizeForLog(context.Request.Headers["X-User-Tenant"].FirstOrDefault());
 
-        if (!string.IsNullOrEmpty(userId))
+        if (!string.IsNullOrWhiteSpace(userId))
       {
     // Add user context to claims for downstream use in controllers
           var identity = (ClaimsIdentity)context.User.Identity!;
                 
    identity.AddClaim(new Claim("delegated_user_id", userId ?? string.Empty));
 
- if (!string.IsNullOrEmpty(userEmail))
+ if (!string.IsNullOrWhiteSpace(userEmail))
    {
     identity.AddClaim(new Claim("delegated_user_email", userEmail));
  }
 
-           if (!string.IsNullOrEmpty(userTenant))
+           if (!string.IsNullOrWhiteSpace(userTenant))
        {
               identity.AddClaim(new Claim("delegated_user_tenant", userTenant));
      }

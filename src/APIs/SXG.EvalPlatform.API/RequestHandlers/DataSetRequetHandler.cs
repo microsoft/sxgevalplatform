@@ -371,6 +371,10 @@ namespace SxgEvalPlatformApi.RequestHandlers
         private async Task<DataSetTableEntity?> FindExistingDatasetAsync(string agentId, string datasetName, string datasetType)
         {
             var existingDatasets = await _dataSetTableService.GetDataSetsByDatasetNameAsync(agentId, datasetName);
+            if (existingDatasets == null)
+            {
+                return null;
+            }
             return existingDatasets.FirstOrDefault(d =>
        d.DatasetType.Equals(datasetType, StringComparison.OrdinalIgnoreCase));
         }
