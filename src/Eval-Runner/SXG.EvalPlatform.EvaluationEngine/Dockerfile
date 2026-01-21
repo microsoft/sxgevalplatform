@@ -25,13 +25,33 @@ RUN tdnf install -y \
     gcc-c++ \
     glibc-lang \
     python3-pip \
-    && tdnf clean all
+    python3-devel \
+    openssl-devel \
+    libffi-devel \
+    ca-certificates \
+    && tdnf clean all \
+    && update-ca-trust
+
+# Set pip trusted hosts as environment variables for all pip commands
+ENV PIP_TRUSTED_HOST="pypi.org pypi.python.org files.pythonhosted.org"
+
+# Upgrade pip first (with trusted hosts)
+RUN pip3 install --upgrade \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org \
+    pip setuptools wheel
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies (quiet mode + output redirection for ADO pipeline compatibility)
-RUN pip install --no-cache-dir --user --quiet -r requirements.txt 2>&1
+# Install Python dependencies to a specific directory
+# Using --trusted-host flags for OneBranch build environment SSL compatibility
+RUN pip3 install --no-cache-dir --prefix=/install \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org \
+    -r requirements.txt
 
 # Production stage - Azure Linux base Python image
 FROM mcr.microsoft.com/azurelinux/base/python:3
@@ -52,14 +72,14 @@ RUN tdnf install -y shadow-utils && \
     tdnf clean all
 
 # Copy installed packages from builder stage
-COPY --from=builder /root/.local /home/evaluser/.local
+COPY --from=builder /install /usr/local
 
 # Copy application code and all configuration files
 COPY src/ ./src/
 COPY appsettings*.json ./
 
 # Set environment variables
-ENV PATH=/home/evaluser/.local/bin:$PATH \
+ENV PATH=/usr/local/bin:$PATH \
     PYTHONPATH=/app/src
 
 # Set ownership
