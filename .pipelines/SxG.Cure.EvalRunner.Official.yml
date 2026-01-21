@@ -135,7 +135,7 @@ extends:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: 'Build and Push image to ACR (PPE)'
             inputs:
-              dockerFileRelPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine/Dockerfile'
+              dockerFileRelPath: '**/Dockerfile'
               dockerFileContextPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine'
               repositoryName: 'eval-runner-app'
               registry: 'evalcontainerregistryppe.azurecr.io'
@@ -161,7 +161,7 @@ extends:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: 'Build and Push image to ACR (Prod)'
             inputs:
-              dockerFileRelPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine/Dockerfile'
+              dockerFileRelPath: '**/Dockerfile'
               dockerFileContextPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine'
               repositoryName: 'eval-runner-app'
               registry: 'evalcontainerregistryppe.azurecr.io'
