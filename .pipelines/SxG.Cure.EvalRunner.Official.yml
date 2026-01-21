@@ -135,17 +135,17 @@ extends:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: 'Build and Push image to ACR (PPE)'
             inputs:
-              dockerFileRelPath: '**/Dockerfile'
-              dockerFileContextPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine'
+              dockerFileRelPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine/Dockerfile'
+              dockerFileContextPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine'
               repositoryName: 'eval-runner-app'
               registry: 'evalcontainerregistryppe.azurecr.io'
               build_tag: |
                 $(Build.BuildNumber)
                 latest
-              arguments: |
-                LANG=C.UTF-8
-                LC_ALL=C.UTF-8
-                PYTHONIOENCODING=utf-8
+              arguments: >
+                --build-arg LANG=C.UTF-8
+                --build-arg LC_ALL=C.UTF-8
+                --build-arg PYTHONIOENCODING=utf-8
               enable_network: true
               enable_acr_push: true
               saveImageToPath: 'eval-runner-app.tar'
@@ -161,17 +161,17 @@ extends:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: 'Build and Push image to ACR (Prod)'
             inputs:
-              dockerFileRelPath: '**/Dockerfile'
-              dockerFileContextPath: 'linux/src/Eval-Runner/SxG.EvalPlatform.EvaluationEngine'
+              dockerFileRelPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine/Dockerfile'
+              dockerFileContextPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine'
               repositoryName: 'eval-runner-app'
               registry: 'evalcontainerregistryppe.azurecr.io'
               build_tag: |
                 $(Build.BuildNumber)
                 latest
-              arguments: |
-                LANG=C.UTF-8
-                LC_ALL=C.UTF-8
-                PYTHONIOENCODING=utf-8
+              arguments: >
+                --build-arg LANG=C.UTF-8
+                --build-arg LC_ALL=C.UTF-8
+                --build-arg PYTHONIOENCODING=utf-8
               enable_network: true
               enable_acr_push: true
               saveImageToPath: 'eval-runner-app.tar'
