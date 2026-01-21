@@ -84,17 +84,11 @@ extends:
               version: 8.0.x
               includePreviewVersions: true
 
-          - task: NuGetToolInstaller@1
-            displayName: 'Install NuGet'
+          - task: CmdLine@2
+            displayName: 'Restore Plugins Package'
             inputs:
-              versionSpec: '>=5.0.0'
-
-          - task: NuGetCommand@2
-            displayName: 'Restore Plugins NuGet Packages'
-            inputs:
-              command: 'restore'
-              restoreSolution: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj'
-              feedsToUse: 'select'
+              script: 'dotnet restore "$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins\SxG.EvalPlatform.Plugins.csproj"'
+              workingDirectory: '$(Build.SourcesDirectory)\src\Plugins\SxG.EvalPlatform.Plugins'
 
           - task: MSBuild@1
             displayName: "Build and Publish Plugins"
