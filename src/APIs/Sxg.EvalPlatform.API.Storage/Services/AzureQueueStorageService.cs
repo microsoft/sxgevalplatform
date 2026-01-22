@@ -26,7 +26,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
             // Use managed identity for authentication
             _queueServiceClient = new QueueServiceClient(new Uri(queueUri), credential);
-            _logger.LogInformation("Azure Queue Storage service initialized with managed identity for account: {AccountName}", accountName);
+            _logger.LogInformation("Azure Queue Storage service initialized with managed identity for account: {AccountName}", CommonUtils.SanitizeForLog(accountName));
         }
 
         /// <inheritdoc />
@@ -34,7 +34,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
         {
             try
             {
-                _logger.LogInformation("Sending message to queue: {QueueName}", queueName);
+                _logger.LogInformation("Sending message to queue: {QueueName}", CommonUtils.SanitizeForLog(queueName));
 
                 if (string.IsNullOrEmpty(queueName))
                 {
@@ -54,13 +54,13 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Send message to queue
                 await queueClient.SendMessageAsync(messageContent);
 
-                _logger.LogInformation("Successfully sent message to queue: {QueueName}", queueName);
+                _logger.LogInformation("Successfully sent message to queue: {QueueName}", CommonUtils.SanitizeForLog(queueName));
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send message to queue: {QueueName}", queueName);
+                _logger.LogError(ex, "Failed to send message to queue: {QueueName}", CommonUtils.SanitizeForLog(queueName));
                 throw;
             }
         }

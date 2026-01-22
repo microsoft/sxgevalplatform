@@ -45,7 +45,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             _tableClient = new Lazy<TableClient>(InitializeTableClient);
 
             _logger.LogInformation("MetricsConfigTableService initialized (lazy) for table: {TableName}, account: {AccountName}",
-     _tableName, _accountName);
+                CommonUtils.SanitizeForLog(_tableName), CommonUtils.SanitizeForLog(_accountName));
         }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 _logger.LogInformation("Initializing TableClient for table: {TableName}, account: {AccountName}",
-                      _tableName, _accountName);
+                    CommonUtils.SanitizeForLog(_tableName), CommonUtils.SanitizeForLog(_accountName));
 
                 var tableUri = $"https://{_accountName}.table.core.windows.net";
                 var environment = _configHelper.GetASPNetCoreEnvironment() ?? "Production";
@@ -69,14 +69,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 // Ensure table exists
                 tableClient.CreateIfNotExists();
 
-                _logger.LogInformation("TableClient successfully initialized for table: {TableName}", _tableName);
+                _logger.LogInformation("TableClient successfully initialized for table: {TableName}", CommonUtils.SanitizeForLog(_tableName));
 
                 return tableClient;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to initialize TableClient for table: {TableName}, account: {AccountName}",
-           _tableName, _accountName);
+                    CommonUtils.SanitizeForLog(_tableName), CommonUtils.SanitizeForLog(_accountName));
                 throw;
             }
         }

@@ -59,7 +59,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             try
             {
                 var endpoint = _configHelper.GetDatasetEnrichmentRequestAPIEndPoint();
-                _logger.LogInformation("Posting evaluation run data to DataVerse API endpoint: {Endpoint}", endpoint);
+                _logger.LogInformation("Posting evaluation run data to DataVerse API endpoint: {Endpoint}", CommonUtils.SanitizeForLog(endpoint));
 
                 // Get access token
                 var accessToken = await GetAccessTokenAsync();
@@ -81,7 +81,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 request.Headers.Add("OData-Version", "4.0");
                 request.Headers.Add("Accept", "application/json");
 
-                _logger.LogInformation("Sending POST request to DataVerse API with payload: {JsonContent}", jsonContent);
+                _logger.LogInformation("Sending POST request to DataVerse API with payload: {JsonContent}", CommonUtils.SanitizeForLog(jsonContent));
 
                 // Make the request
                 var response = await _httpClient.SendAsync(request);
@@ -102,7 +102,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 else
                 {
                     _logger.LogError("Failed to post data to DataVerse API. Status: {StatusCode}, Response: {ResponseContent}", 
-                        response.StatusCode, responseContent);
+                        response.StatusCode, CommonUtils.SanitizeForLog(responseContent));
                     return new DataVerseApiResponse
                     {
                         Success = false,

@@ -261,16 +261,16 @@ namespace Sxg.EvalPlatform.API.Storage.Services
             {
                 var cacheKey = string.Format(GET_ALL_DATASETS_BY_AGENT_CACHE_KEY, agentId);
                 var cachedEntities = await _cacheManager.GetAsync<List<DataSetTableEntity>>(cacheKey);
+                var agentIdForLogging = CommonUtils.SanitizeForLog(agentId);
 
                 if (cachedEntities != null)
                 {
                     _logger.LogDebug("Cache hit for all datasets by Agent: {AgentId}, Count: {Count}",
-                         agentId, cachedEntities.Count);
+                         agentIdForLogging, cachedEntities.Count);
                     return cachedEntities;
                 }
 
-                _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}", agentId);
-
+                _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}", agentIdForLogging);
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}'";
 
@@ -296,6 +296,7 @@ namespace Sxg.EvalPlatform.API.Storage.Services
 
         public async Task<List<DataSetTableEntity>> GetAllDataSetsByAgentIdAndTypeAsync(string agentId, string datasetType)
         {
+            var agentIdForLogging = CommonUtils.SanitizeForLog(agentId);
             try
             {
                 var cacheKey = string.Format(GET_DATASETS_BY_AGENT_TYPE_CACHE_KEY, agentId, datasetType);
@@ -304,12 +305,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (cachedEntities != null)
                 {
                     _logger.LogDebug("Cache hit for datasets by Agent: {AgentId}, Type: {DatasetType}, Count: {Count}",
-                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType), cachedEntities.Count);
+                        agentIdForLogging, CommonUtils.SanitizeForLog(datasetType), cachedEntities.Count);
                     return cachedEntities;
                 }
 
                 _logger.LogInformation("Retrieving all datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
+                    agentIdForLogging, CommonUtils.SanitizeForLog(datasetType));
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetType eq '{datasetType}'";
@@ -323,20 +324,22 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
+                    entities.Count, agentIdForLogging, CommonUtils.SanitizeForLog(datasetType));
 
                 return entities;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve datasets for Agent: {AgentId}, Type: {DatasetType}",
-                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetType));
+                    agentIdForLogging, CommonUtils.SanitizeForLog(datasetType));
                 throw;
             }
         }
 
         public async Task<List<DataSetTableEntity>> GetDataSetsByDatasetNameAsync(string agentId, string datasetName)
         {
+            var agentIdForLogging = CommonUtils.SanitizeForLog(agentId);
+            var datasetNameForLogging = CommonUtils.SanitizeForLog(datasetName);
             try
             {
                 var cacheKey = string.Format(GET_DATASETS_BY_NAME_CACHE_KEY, agentId, datasetName);
@@ -345,12 +348,12 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 if (cachedEntities != null)
                 {
                     _logger.LogDebug("Cache hit for datasets by Agent: {AgentId}, DatasetName: {DatasetName}, Count: {Count}",
-                        CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName), cachedEntities.Count);
+                        agentIdForLogging, datasetNameForLogging, cachedEntities.Count);
                     return cachedEntities;
                 }
 
                 _logger.LogInformation("Retrieving datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
+                    agentIdForLogging, datasetNameForLogging);
 
                 var entities = new List<DataSetTableEntity>();
                 var filter = $"PartitionKey eq '{agentId}' and DatasetName eq '{datasetName}'";
@@ -364,14 +367,14 @@ namespace Sxg.EvalPlatform.API.Storage.Services
                 await _cacheManager.SetAsync(cacheKey, entities, _configHelper.GetDefaultCacheExpiration());
 
                 _logger.LogInformation("Retrieved {Count} datasets for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    entities.Count, CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
+                    entities.Count, agentIdForLogging, datasetNameForLogging);
 
                 return entities;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve datasets by dataset name for Agent: {AgentId}, DatasetName: {DatasetName}",
-                    CommonUtils.SanitizeForLog(agentId), CommonUtils.SanitizeForLog(datasetName));
+                    agentIdForLogging, datasetNameForLogging);
                 throw;
             }
         }

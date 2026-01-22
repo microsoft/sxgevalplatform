@@ -46,11 +46,11 @@ public abstract class BaseTableService
         try
         {
             tableClient.CreateIfNotExists();
-            _logger.LogInformation("Table client initialized for table: {TableName}", tableName);
+            _logger.LogInformation("Table client initialized for table: {TableName}", CommonUtils.SanitizeForLog(tableName));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create or access table: {TableName}", tableName);
+            _logger.LogError(ex, "Failed to create or access table: {TableName}", CommonUtils.SanitizeForLog(tableName));
             throw;
         }
         
@@ -72,23 +72,23 @@ public abstract class BaseTableService
         try
         {
             _logger.LogInformation("Reading entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
 
             var response = await tableClient.GetEntityAsync<T>(partitionKey, rowKey);
             
-            _logger.LogInformation("Successfully read entity: {OperationName}", operationName);
+            _logger.LogInformation("Successfully read entity: {OperationName}", CommonUtils.SanitizeForLog(operationName));
             return response.Value;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             _logger.LogWarning("Entity not found: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
             return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
             throw;
         }
     }
@@ -107,17 +107,17 @@ public abstract class BaseTableService
         try
         {
             _logger.LogInformation("Writing entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, entity.PartitionKey, entity.RowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(entity.PartitionKey), CommonUtils.SanitizeForLog(entity.RowKey));
 
             var response = await tableClient.UpsertEntityAsync(entity);
             
-            _logger.LogInformation("Successfully wrote entity: {OperationName}", operationName);
+            _logger.LogInformation("Successfully wrote entity: {OperationName}", CommonUtils.SanitizeForLog(operationName));
             return entity;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error writing entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, entity.PartitionKey, entity.RowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(entity.PartitionKey), CommonUtils.SanitizeForLog(entity.RowKey));
             throw;
         }
     }
@@ -135,7 +135,7 @@ public abstract class BaseTableService
     {
         try
         {
-            _logger.LogInformation("Querying entities: {OperationName} - Filter: {Filter}", operationName, filter);
+            _logger.LogInformation("Querying entities: {OperationName} - Filter: {Filter}", CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(filter));
 
             var entities = new List<T>();
             
@@ -144,12 +144,12 @@ public abstract class BaseTableService
                 entities.Add(entity);
             }
             
-            _logger.LogInformation("Successfully queried {Count} entities: {OperationName}", entities.Count, operationName);
+            _logger.LogInformation("Successfully queried {Count} entities: {OperationName}", entities.Count, CommonUtils.SanitizeForLog(operationName));
             return entities;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying entities: {OperationName} - Filter: {Filter}", operationName, filter);
+            _logger.LogError(ex, "Error querying entities: {OperationName} - Filter: {Filter}", CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(filter));
             throw;
         }
     }
@@ -167,23 +167,23 @@ public abstract class BaseTableService
         try
         {
             _logger.LogInformation("Deleting entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
 
             await tableClient.DeleteEntityAsync(partitionKey, rowKey);
             
-            _logger.LogInformation("Successfully deleted entity: {OperationName}", operationName);
+            _logger.LogInformation("Successfully deleted entity: {OperationName}", CommonUtils.SanitizeForLog(operationName));
             return true;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             _logger.LogWarning("Entity not found for deletion: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
             return false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting entity: {OperationName} - PartitionKey: {PartitionKey}, RowKey: {RowKey}", 
-                operationName, partitionKey, rowKey);
+                CommonUtils.SanitizeForLog(operationName), CommonUtils.SanitizeForLog(partitionKey), CommonUtils.SanitizeForLog(rowKey));
             throw;
         }
     }
