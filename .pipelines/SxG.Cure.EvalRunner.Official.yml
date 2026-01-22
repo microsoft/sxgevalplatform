@@ -152,6 +152,7 @@ extends:
                 --build-arg LC_ALL=C.UTF-8
                 --build-arg PYTHONIOENCODING=utf-8
               enable_acr_push: true
+              enable_service_tree_acr_path: false
               endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
 
           # # Login to ACR (Prod)
