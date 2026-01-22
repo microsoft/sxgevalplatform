@@ -30,5 +30,8 @@
   <ItemGroup>
     <ProjectReference Include="..\SXG.EvalPlatform.API\SXG.EvalPlatform.API.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute" />
+  </ItemGroup>
 
 </Project>

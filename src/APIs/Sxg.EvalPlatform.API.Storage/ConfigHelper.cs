@@ -14,7 +14,7 @@ namespace Sxg.EvalPlatform.API.Storage
         public string GetAzureStorageAccountName()
         {
             var accountName = _configuration["AzureStorage:AccountName"];
-            if (string.IsNullOrEmpty(accountName))
+            if (string.IsNullOrWhiteSpace(accountName))
             {
                 throw new InvalidOperationException("Azure Storage connection string is not configured.");
             }
@@ -181,8 +181,16 @@ namespace Sxg.EvalPlatform.API.Storage
 
         public TimeSpan GetDefaultCacheExpiration()
         {
-            var expirationMinutes = _configuration.GetValue<int>("Cache:DefaultExpirationMinutes", 30);
-            return TimeSpan.FromMinutes(expirationMinutes);
+            try
+            {
+                var expirationMinutes = _configuration.GetValue<int>("Cache:DefaultExpirationMinutes", 30);
+                return TimeSpan.FromMinutes(expirationMinutes);
+            }
+            catch
+            {
+                // If parsing fails, return default value
+                return TimeSpan.FromMinutes(30);
+            }
         }
 
         public bool IsDistributedCacheEnabled()
