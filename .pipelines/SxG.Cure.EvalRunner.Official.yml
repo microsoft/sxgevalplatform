@@ -153,31 +153,31 @@ extends:
               enable_acr_push: true
               saveImageToPath: 'eval-runner-app.tar'
 
-          # Login to ACR (Prod)
-          - task: onebranch.pipeline.containercontrol@1
-            displayName: 'Login to ACR (Prod)'
-            inputs:
-              command: 'login'
-              endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
+          # # Login to ACR (Prod)
+          # - task: onebranch.pipeline.containercontrol@1
+          #   displayName: 'Login to ACR (Prod)'
+          #   inputs:
+          #     command: 'login'
+          #     endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
 
-          # Build and push image to ACR (Prod)
-          - task: onebranch.pipeline.imagebuildinfo@1
-            displayName: 'Build and Push image to ACR (Prod)'
-            inputs:
-              dockerFileRelPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine/Dockerfile'
-              dockerFileContextPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine'
-              repositoryName: 'eval-runner-app'
-              registry: 'evalcontainerregistryppe.azurecr.io'
-              build_tag: |
-                $(Build.BuildNumber)
-                latest
-              arguments: >
-                --build-arg LANG=C.UTF-8
-                --build-arg LC_ALL=C.UTF-8
-                --build-arg PYTHONIOENCODING=utf-8
-              enable_network: true
-              enable_acr_push: true
-              saveImageToPath: 'eval-runner-app.tar'
+          # # Build and push image to ACR (Prod)
+          # - task: onebranch.pipeline.imagebuildinfo@1
+          #   displayName: 'Build and Push image to ACR (Prod)'
+          #   inputs:
+          #     dockerFileRelPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine/Dockerfile'
+          #     dockerFileContextPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine'
+          #     repositoryName: 'eval-runner-app'
+          #     registry: 'evalcontainerregistryppe.azurecr.io'
+          #     build_tag: |
+          #       $(Build.BuildNumber)
+          #       latest
+          #     arguments: >
+          #       --build-arg LANG=C.UTF-8
+          #       --build-arg LC_ALL=C.UTF-8
+          #       --build-arg PYTHONIOENCODING=utf-8
+          #     enable_network: true
+          #     enable_acr_push: true
+          #     saveImageToPath: 'eval-runner-app.tar'
 
           # Copy Evaluation Runner EV2 files to region agnostic structure
           - task: CopyFiles@2
