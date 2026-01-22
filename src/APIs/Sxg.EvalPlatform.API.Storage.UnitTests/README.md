@@ -200,17 +200,29 @@ When adding new tests:
 6. Keep tests focused and independent
 7. Mock external dependencies
 
+## Recent Updates
+
+### DataSetTableServiceTests.cs (January 2025)
+- ? **Completed**: 31 comprehensive unit tests covering all cache operations
+- **Test Coverage**: Cache hit/miss scenarios, cache key validation, error handling, cache invalidation
+- **Key Features Tested**:
+  - All read operations with cache integration
+  - Cache key format validation for all query patterns
+  - Write operations with TableClient integration boundaries
+  - Cache invalidation logic for updates and deletes
+  - Error handling and resilience patterns
+- **Notes**: Tests use mocked cache manager to test cache behavior without requiring TableClient mocking
+
 ## Future Enhancements
 
-Additional test files to be created:
-- `AzureBlobStorageServiceTests.cs`
-- `DataSetTableServiceTests.cs`
-- `MetricsConfigTableServiceTests.cs`
-- `EvalRunTableServiceTests.cs`
+Additional test files to be created or enhanced:
+- `AzureBlobStorageServiceTests.cs` (needs enhancement)
+- `MetricsConfigTableServiceTests.cs` (needs enhancement)
+- `EvalRunTableServiceTests.cs` (needs enhancement)
 - `MemoryCacheManagerTests.cs` (enhance existing)
-- `RedisCacheManagerTests.cs`
-- `MetricsConfigurationEntityHelperTests.cs`
-- Entity tests for TableEntities
+- `RedisCacheManagerTests.cs` (needs enhancement)
+- `MetricsConfigurationEntityHelperTests.cs` (existing, may need enhancement)
+- Entity tests for TableEntities (partial coverage exists)
 
 ## References
 
