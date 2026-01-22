@@ -76,7 +76,10 @@ extends:
       # suppression:
       #   suppressionFile: $(Build.SourcesDirectory)\.gdn\global.gdnsuppress
     featureFlags:
-      WindowsHostVersion: 1ESWindows2022
+      WindowsHostVersion:
+        Network: KS1
+      LinuxHostVersion:
+        Network: KS1
 
     ev2ManagedSdpRolloutConfig:
       rolloutType: ${{parameters.rolloutType}}
