@@ -138,20 +138,21 @@ extends:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: 'Build and Push image to ACR (PPE)'
             inputs:
+              repositoryName: 'eval-runner-app'
               dockerFileRelPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine/Dockerfile'
               dockerFileContextPath: 'src/Eval-Runner/SXG.EvalPlatform.EvaluationEngine'
-              repositoryName: 'eval-runner-app'
               registry: 'evalcontainerregistryppe.azurecr.io'
+              saveImageToPath: 'eval-runner-app.tar'
               build_tag: |
                 $(Build.BuildNumber)
                 latest
+              enable_network: true
               arguments: >
                 --build-arg LANG=C.UTF-8
                 --build-arg LC_ALL=C.UTF-8
                 --build-arg PYTHONIOENCODING=utf-8
-              enable_network: true
               enable_acr_push: true
-              saveImageToPath: 'eval-runner-app.tar'
+              endpoint: 'SxGCore_Eval_evalcontainerregistryppe'
 
           # # Login to ACR (Prod)
           # - task: onebranch.pipeline.containercontrol@1
