@@ -149,6 +149,15 @@
       ]
     },
     {
+      "scopeTagName": "AppServiceLock1",
+      "bindings": [
+        {
+          "find": "__ResourceName__",
+          "replaceWith": "$config(EvalApiRg_AppService_1.L1Name)"
+        }
+      ]
+    },
+    {
       "scopeTagName": "EvalApiRgAppService1",
       "bindings": [
         {
@@ -8670,6 +8679,15 @@
         {
           "find": "__ResourceId__",
           "replaceWith": "$config(EvalRunRg_Foundry_1.ResourceId)"
+        }
+      ]
+    },
+    {
+      "scopeTagName": "EvalRunRgFoundry1Deployment1",
+      "bindings": [
+        {
+          "find": "__L1Name__",
+          "replaceWith": "$config(EvalRunRg_Foundry_1.L1Name)"
         }
       ]
     },

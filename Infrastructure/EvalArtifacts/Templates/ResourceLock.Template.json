@@ -1,0 +1,28 @@
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "lockName": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "resourceName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/locks",
+      "apiVersion": "2016-09-01",
+      "name": "[parameters('lockName')]",
+      "scope": "[resourceId('Microsoft.Web/sites', parameters('resourceName'))]",
+      "properties": {
+        "level": "CanNotDelete",
+        "notes": "[parameters('notes')]"
+      }
+    }
+  ]
+}

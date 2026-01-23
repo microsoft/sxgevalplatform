@@ -15,7 +15,7 @@
         "hubResourceId": "[parameters('HubResourceId')]",
         "publicNetworkAccess": "[parameters('PublicNetworkAccess')]",
         "systemDatastoresAuthMode": "[parameters('SystemDatastoresAuthMode')]",
-        "v1LegacyMode": "[parameters('V1LegacyMode')]",
+        "v1LegacyMode": "[parameters('V1LegacyMode')]"
       },
       "sku": "[parameters('Sku')]",
       "type": "Microsoft.MachineLearningServices/workspaces",
