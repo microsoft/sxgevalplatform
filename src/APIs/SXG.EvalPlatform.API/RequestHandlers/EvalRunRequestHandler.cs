@@ -286,6 +286,11 @@ namespace SxgEvalPlatformApi.RequestHandlers
             try
             {
                 var entities = await _evalRunTableService.GetEvalRunsByAgentIdAndDateFilterAsync(agentId, startDateTime, endDateTime);
+                if (entities == null)
+                {
+                    _logger.LogInformation("No evaluation runs found for AgentId: {AgentId}", CommonUtils.SanitizeForLog(agentId));
+                    return new List<EvalRunDto>();
+                }
                 var results = entities.Select(MapEntityToDto).ToList();
                 _logger.LogInformation("Retrieved {Count} evaluation runs for AgentId: {AgentId}",
                   results.Count, CommonUtils.SanitizeForLog(agentId));

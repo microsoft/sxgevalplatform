@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -26,6 +26,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +39,12 @@
   <ItemGroup>
     <ProjectReference Include="..\Sxg.EvalPlatform.API.Storage\Sxg.EvalPlatform.API.Storage.csproj" />
     <ProjectReference Include="..\SXG.EvalPlatform.Common\SXG.EvalPlatform.Common.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="EntitiesTests\" />
   </ItemGroup>
 
 </Project>
